@@ -1,0 +1,137 @@
+export interface Product {
+  id: string;
+  barcode: string;
+  name: string;
+  description?: string;
+  price: number;
+  cost_price?: number;
+  category_id: string;
+  category?: Category;
+  stock_quantity: number;
+  min_stock_level: number;
+  unit: string;
+  tax_rate: number;
+  discount_percent: number;
+  image_url?: string;
+  supplier_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  created_at: string;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  discount: number;
+  total: number;
+}
+
+export interface Sale {
+  id: string;
+  receipt_number: string;
+  items: CartItem[];
+  subtotal: number;
+  tax_amount: number;
+  discount_amount: number;
+  total: number;
+  payment_method: "mpesa" | "cash" | "card" | "split";
+  payment_status: "pending" | "completed" | "failed" | "refunded";
+  mpesa_transaction_id?: string;
+  customer_phone?: string;
+  cashier_id: string;
+  cashier?: User;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: "admin" | "cashier" | "manager";
+  phone?: string;
+  avatar_url?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MpesaTransaction {
+  id: string;
+  sale_id: string;
+  merchant_request_id: string;
+  checkout_request_id: string;
+  phone_number: string;
+  amount: number;
+  status: "pending" | "success" | "failed";
+  result_code?: number;
+  result_desc?: string;
+  mpesa_receipt_number?: string;
+  transaction_date?: string;
+  created_at: string;
+}
+
+export interface InventoryLog {
+  id: string;
+  product_id: string;
+  product?: Product;
+  type: "sale" | "purchase" | "adjustment" | "return";
+  quantity: number;
+  previous_stock: number;
+  new_stock: number;
+  reference_id?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface DailyReport {
+  date: string;
+  total_sales: number;
+  total_transactions: number;
+  total_items_sold: number;
+  average_transaction_value: number;
+  mpesa_total: number;
+  cash_total: number;
+  tax_total: number;
+  discount_total: number;
+}
+
+export interface AppSettings {
+  id: string;
+  shop_name: string;
+  shop_address?: string;
+  shop_phone?: string;
+  shop_email?: string;
+  shop_logo_url?: string;
+  tax_rate: number;
+  currency: string;
+  receipt_footer?: string;
+  mpesa_enabled: boolean;
+  dark_mode_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type PaymentMethod = "mpesa" | "cash" | "card" | "split";
+export type SaleStatus = "pending" | "completed" | "failed" | "refunded";
+export type UserRole = "admin" | "cashier" | "manager";
