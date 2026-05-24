@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       transactionDate: metadata.TransactionDate ? String(metadata.TransactionDate) : null,
     });
 
-    await writeAuditLog({
+    writeAuditLog({
       action: success ? "mpesa_payment_success" : "mpesa_payment_failed",
       entityType: "mpesa_transaction",
       details: {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         amount: metadata.Amount,
         phone_number: metadata.PhoneNumber,
       },
-    });
+    }).catch((err) => console.warn("Audit log failed:", err));
 
     return NextResponse.json({ ResultCode: 0, ResultDesc: "Accepted" });
   } catch (error) {

@@ -88,7 +88,15 @@ export function stkPassword(shortCode: string, passkey: string, timestamp: strin
   return Buffer.from(`${shortCode}${passkey}${timestamp}`).toString("base64");
 }
 
+let cachedToken: string | null = null;
+let tokenExpiryTime = 0;
+
 export async function getMpesaAccessToken() {
+  const now = Date.now();
+  if (cachedToken && now < tokenExpiryTime) {
+    return cachedToken;
+  }
+
   const config = getMpesaConfig();
   const credentials = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString("base64");
 
@@ -106,7 +114,12 @@ export async function getMpesaAccessToken() {
     throw new Error(data.errorMessage || data.error || "Could not get M-Pesa access token.");
   }
 
-  return data.access_token as string;
+  cachedToken = data.access_token as string;
+  const expiresInSeconds = parseInt(data.expires_in || "3599", 10);
+  // Expire token 5 minutes before actual expiry time to prevent race conditions
+  tokenExpiryTime = now + (expiresInSeconds - 300) * 1000;
+
+  return cachedToken;
 }
 
 export function extractCallbackMetadata(items?: { Name: string; Value?: string | number }[]) {

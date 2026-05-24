@@ -37,10 +37,11 @@ export async function GET(request: Request) {
       });
     }
 
-    // ── SLOW PATH: only query Safaricom after 8+ seconds of DB showing pending ──
+    // ── SLOW PATH: only query Safaricom after 8+ seconds and only every 3 seconds ──
     // This avoids hitting Safaricom on every poll (each costs ~1-2s RTT).
-    // The callback will update DB almost instantly when the user pays.
-    if (elapsedSeconds < 8) {
+    const shouldQuerySafaricom = elapsedSeconds >= 8 && (elapsedSeconds % 3 === 0);
+
+    if (!shouldQuerySafaricom) {
       return NextResponse.json({ status: "pending", message: "Waiting for customer to pay..." });
     }
 

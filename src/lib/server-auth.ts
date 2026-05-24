@@ -15,7 +15,11 @@ export type StaffUserRow = {
   created_at: string;
 };
 
+let cachedSupabase: any = null;
+
 export function getAdminClient() {
+  if (cachedSupabase) return cachedSupabase;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -23,12 +27,14 @@ export function getAdminClient() {
     throw new Error("Missing Supabase server credentials. Add SUPABASE_SERVICE_ROLE_KEY to .env.local.");
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  cachedSupabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
   });
+
+  return cachedSupabase;
 }
 
 export function publicUser(user: StaffUserRow) {

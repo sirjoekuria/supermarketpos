@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       result_desc: data.CustomerMessage || data.ResponseDescription || null,
     });
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "mpesa_stk_push_requested",
       entityType: "mpesa_transaction",
       entityId: null,
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         phone_number: phone,
         transaction_type: config.transactionType,
       },
-    });
+    }).catch((err) => console.warn("Audit log failed:", err));
 
     return NextResponse.json({
       success: true,
