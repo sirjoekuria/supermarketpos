@@ -4,6 +4,7 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Package, Search, Plus, Edit2, Trash2, AlertTriangle,
   ArrowUpDown, Filter, Download, Menu, Loader2, ImageIcon, Upload, X,
+  TrendingUp, FileUp, Plus as PlusIcon, Minus as MinusIcon, Check,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,14 @@ export default function InventoryManagement() {
   const [search, setSearch] = useState("");
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [adjustingProduct, setAdjustingProduct] = useState<Product | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [adjustmentForm, setAdjustmentForm] = useState({ quantity: 0, reason: "adjustment" as const });
+  const [receiptForm, setReceiptForm] = useState({ supplier_name: "", notes: "" });
+  const [receiptItems, setReceiptItems] = useState<Array<{ product_id: string; quantity_ordered: number; unit_cost: number }>>([]);
+  const [bulkImportData, setBulkImportData] = useState("");
+  const [importResults, setImportResults] = useState<any>(null);
   const [form, setForm] = useState({
     name: "",
     barcode: "",
@@ -151,6 +160,125 @@ export default function InventoryManagement() {
     await fetchProducts();
   };
 
+  const handleStockAdjustment = async () => {
+    if (!adjustingProduct) return;
+
+    setIsSaving(true);
+    setActionError("");
+
+    try {
+      const response = await fetch("/api/stock/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: adjustingProduct.id,
+          quantity_change: adjustmentForm.quantity,
+          reason: adjustmentForm.reason,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setActionError(error.error || "Failed to adjust stock");
+        setIsSaving(false);
+        return;
+      }
+
+      setAdjustingProduct(null);
+      setAdjustmentForm({ quantity: 0, reason: "adjustment" });
+      await fetchProducts();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to adjust stock");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCreateReceipt = async () => {
+    if (!receiptForm.supplier_name || receiptItems.length === 0) {
+      setActionError("Missing supplier name or items");
+      return;
+    }
+
+    setIsSaving(true);
+    setActionError("");
+
+    try {
+      const items = receiptItems.map(item => ({
+        ...item,
+        subtotal: item.quantity_ordered * item.unit_cost,
+      }));
+
+      const response = await fetch("/api/stock/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          supplier_name: receiptForm.supplier_name,
+          items,
+          notes: receiptForm.notes,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setActionError(error.error || "Failed to create receipt");
+        setIsSaving(false);
+        return;
+      }
+
+      setShowReceiptModal(false);
+      setReceiptForm({ supplier_name: "", notes: "" });
+      setReceiptItems([]);
+      await fetchProducts();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to create receipt");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkImport = async () => {
+    if (!bulkImportData.trim()) {
+      setActionError("CSV data is empty");
+      return;
+    }
+
+    setIsSaving(true);
+    setActionError("");
+
+    try {
+      const lines = bulkImportData.trim().split("\n");
+      const items = lines
+        .map(line => {
+          const [barcode, quantity] = line.split(",").map(s => s.trim());
+          return { barcode, quantity: parseInt(quantity) };
+        })
+        .filter(item => item.barcode && !isNaN(item.quantity));
+
+      const response = await fetch("/api/stock/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, reason: "adjustment" }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setActionError(error.error || "Failed to import stock");
+        setIsSaving(false);
+        return;
+      }
+
+      const result = await response.json();
+      setImportResults(result);
+      setBulkImportData("");
+      await fetchProducts();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to import stock");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto h-full">
       <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -163,6 +291,16 @@ export default function InventoryManagement() {
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <Download className="w-4 h-4" />Export
+          </button>
+          <button
+            onClick={() => setShowReceiptModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">
+            <TrendingUp className="w-4 h-4" />Stock Receipt
+          </button>
+          <button
+            onClick={() => setShowBulkImport(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors">
+            <FileUp className="w-4 h-4" />Bulk Import
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium transition-colors">
             <Plus className="w-4 h-4" />Add Product
@@ -330,6 +468,17 @@ export default function InventoryManagement() {
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1 sm:gap-2">
                         <button
+                          onClick={() => {
+                            setAdjustingProduct(product);
+                            setAdjustmentForm({ quantity: 0, reason: "adjustment" });
+                            setActionError("");
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 transition-colors"
+                          title="Adjust stock"
+                        >
+                          <TrendingUp className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => openEdit(product)}
                           className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600 transition-colors"
                           title="Edit product"
@@ -496,6 +645,241 @@ export default function InventoryManagement() {
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
               >
                 {isSaving ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {adjustingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-pos-border">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Adjust Stock</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{adjustingProduct.name}</p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Stock: {adjustingProduct.stock_quantity}</p>
+              </div>
+
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Adjustment Type</span>
+                <select
+                  value={adjustmentForm.reason}
+                  onChange={(e) => setAdjustmentForm(prev => ({ ...prev, reason: e.target.value as any }))}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="adjustment">Stock Adjustment</option>
+                  <option value="return">Return</option>
+                  <option value="loss">Loss/Damage</option>
+                  <option value="correction">Correction</option>
+                </select>
+              </label>
+
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity Change</span>
+                <input
+                  type="number"
+                  value={adjustmentForm.quantity}
+                  onChange={(e) => setAdjustmentForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+                  placeholder="e.g. +5 or -3"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
+
+              {actionError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
+              <button
+                onClick={() => setAdjustingProduct(null)}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStockAdjustment}
+                disabled={isSaving || adjustmentForm.quantity === 0}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
+              >
+                {isSaving ? "Adjusting..." : "Adjust Stock"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+          <div className="bg-white dark:bg-pos-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-200 dark:border-pos-border sticky top-0 bg-white dark:bg-pos-card">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Stock Receipt</h2>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Supplier Name *</span>
+                <input
+                  type="text"
+                  value={receiptForm.supplier_name}
+                  onChange={(e) => setReceiptForm(prev => ({ ...prev, supplier_name: e.target.value }))}
+                  placeholder="Enter supplier name"
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
+
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Receipt Items</h3>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {receiptItems.length > 0 ? (
+                    receiptItems.map((item, idx) => {
+                      const product = products.find(p => p.id === item.product_id);
+                      return (
+                        <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{product?.name}</p>
+                            <p className="text-xs text-gray-500">Qty: {item.quantity_ordered} @ {formatCurrency(item.unit_cost)}</p>
+                          </div>
+                          <button
+                            onClick={() => setReceiptItems(items => items.filter((_, i) => i !== idx))}
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 rounded transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No items added yet</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Product</span>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const product = products.find(p => p.id === e.target.value);
+                      if (product) {
+                        setReceiptItems(items => [...items, { product_id: product.id, quantity_ordered: 1, unit_cost: product.cost_price || product.price }]);
+                      }
+                      e.target.value = "";
+                    }}
+                    className="w-full px-2 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Select product</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes</span>
+                <textarea
+                  value={receiptForm.notes}
+                  onChange={(e) => setReceiptForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Additional notes"
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
+
+              {actionError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateReceipt}
+                disabled={isSaving || !receiptForm.supplier_name || receiptItems.length === 0}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
+              >
+                {isSaving ? "Creating..." : "Create Receipt"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkImport && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+          <div className="bg-white dark:bg-pos-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-200 dark:border-pos-border">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Bulk Import Stock</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Paste CSV format: barcode,quantity</p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="space-y-1.5 block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">CSV Data *</span>
+                <textarea
+                  value={bulkImportData}
+                  onChange={(e) => setBulkImportData(e.target.value)}
+                  placeholder="123456,10&#10;789012,5&#10;345678,-2"
+                  rows={8}
+                  className="w-full px-3 py-2 font-mono text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </label>
+
+              {importResults && (
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-300">Import Results</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">✓ Successful: {importResults.successful}</p>
+                  <p className="text-sm text-red-700 dark:text-red-400">✗ Failed: {importResults.failed}</p>
+                  {importResults.errors.length > 0 && (
+                    <ul className="mt-2 text-xs text-red-600 dark:text-red-400 space-y-1">
+                      {importResults.errors.slice(0, 3).map((err: string, idx: number) => (
+                        <li key={idx}>• {err}</li>
+                      ))}
+                      {importResults.errors.length > 3 && (
+                        <li>• ... and {importResults.errors.length - 3} more</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {actionError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{actionError}</p>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowBulkImport(false);
+                  setBulkImportData("");
+                  setImportResults(null);
+                }}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleBulkImport}
+                disabled={isSaving || !bulkImportData.trim()}
+                className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
+              >
+                {isSaving ? "Importing..." : "Import Stock"}
               </button>
             </div>
           </div>
