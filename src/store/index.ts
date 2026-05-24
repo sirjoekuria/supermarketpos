@@ -171,3 +171,33 @@ export const useOfflineStore = create<OfflineState>()(
     }
   )
 );
+
+import { supabase } from "@/lib/supabase";
+
+interface ProductState {
+  products: Product[];
+  isLoading: boolean;
+  error: string | null;
+  fetchProducts: () => Promise<void>;
+}
+
+export const useProductStore = create<ProductState>((set) => ({
+  products: [],
+  isLoading: false,
+  error: null,
+  fetchProducts: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      set({ products: data as Product[], isLoading: false });
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      set({ error: error.message, isLoading: false });
+    }
+  },
+}));

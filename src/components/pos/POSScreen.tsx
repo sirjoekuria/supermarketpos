@@ -6,26 +6,16 @@ import {
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
   LogOut, Moon, Sun, Menu,
 } from "lucide-react";
-import { useCartStore, useAuthStore, useUIStore, useSettingsStore } from "@/store";
+import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore } from "@/store";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
+import { supabase } from "@/lib/supabase";
 import BarcodeScanner from "./BarcodeScanner";
 import Cart from "./Cart";
 import MpesaPayment from "./MpesaPayment";
 import ReceiptComponent from "./Receipt";
 import CustomerDisplay from "./CustomerDisplay";
-
-const MOCK_PRODUCTS: Product[] = [
-  { id: "1", barcode: "8901234567890", name: "Fresh Milk 500ml", price: 65.00, stock_quantity: 50, category_id: "1", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "2", barcode: "8901234567891", name: "White Bread 400g", price: 55.00, stock_quantity: 30, category_id: "2", unit: "pcs", tax_rate: 16, discount_percent: 5, min_stock_level: 5, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "3", barcode: "8901234567892", name: "Sugar 1kg", price: 160.00, stock_quantity: 100, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 20, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "4", barcode: "8901234567893", name: "Cooking Oil 1L", price: 280.00, stock_quantity: 40, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "5", barcode: "8901234567894", name: "Rice 2kg", price: 320.00, stock_quantity: 60, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 10, min_stock_level: 15, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "6", barcode: "8901234567895", name: "Wheat Flour 2kg", price: 210.00, stock_quantity: 45, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "7", barcode: "8901234567896", name: "Eggs (Tray)", price: 450.00, stock_quantity: 20, category_id: "1", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 5, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "8", barcode: "8901234567897", name: "Salt 1kg", price: 35.00, stock_quantity: 80, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 20, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;
@@ -35,6 +25,7 @@ export default function POSScreen() {
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
+  const { products, isLoading, error: productsError, fetchProducts } = useProductStore();
 
   const [showScanner, setShowScanner] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,6 +41,10 @@ export default function POSScreen() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totals = getTotals();
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
     let barcodeBuffer = "";
@@ -74,7 +69,7 @@ export default function POSScreen() {
   }, []);
 
   const handleBarcodeScan = (barcode: string) => {
-    const product = MOCK_PRODUCTS.find((p) => p.barcode === barcode);
+    const product = products.find((p) => p.barcode === barcode);
     if (product) {
       addItem(product);
       setError("");
@@ -87,7 +82,7 @@ export default function POSScreen() {
   const handleSearch = debounce((...args: unknown[]) => {
     const query = args[0] as string;
     if (!query.trim()) { setSearchResults([]); return; }
-    const results = MOCK_PRODUCTS.filter(
+    const results = products.filter(
       (p) =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
         p.barcode.includes(query)
@@ -100,8 +95,63 @@ export default function POSScreen() {
     setIsProcessing(true);
     try {
       const receiptNum = generateReceiptNumber();
+      
+      // 1. Insert the sale record into Supabase
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          receipt_number: receiptNum,
+          subtotal: totals.subtotal,
+          tax_amount: totals.taxAmount,
+          discount_amount: totals.discountAmount,
+          total: totals.total,
+          payment_method: paymentMethod,
+          payment_status: "completed",
+          // Leave cashier_id null for now unless auth is fully set up with valid UUIDs
+          cashier_id: null,
+        })
+        .select()
+        .single();
+
+      if (saleError) {
+        console.error("Sale insert error:", saleError);
+        throw new Error("Failed to record sale");
+      }
+
+      // 2. Insert the sale items
+      const saleItems = items.map((item) => ({
+        sale_id: saleData.id,
+        product_id: item.product.id,
+        quantity: item.quantity,
+        unit_price: item.product.price,
+        subtotal: item.product.price * item.quantity,
+        tax_amount: (item.product.price * item.quantity) * (item.product.tax_rate / 100),
+        discount_amount: item.discount || 0,
+        total: item.total,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .insert(saleItems);
+
+      if (itemsError) {
+        console.error("Sale items insert error:", itemsError);
+        throw new Error("Failed to record sale items");
+      }
+
+      // 3. Optional: Deduct stock from products table
+      // (This is better done via a database trigger, but doing it simple here for demo)
+      for (const item of items) {
+        const { error: rpcError } = await supabase.rpc('decrement_stock', {
+          p_product_id: item.product.id,
+          p_quantity: item.quantity
+        });
+        if (rpcError) console.log('Stock decrement error/unimplemented:', rpcError);
+      }
+
+      // Prepare UI state for receipt
       const sale = {
-        id: receiptNum,
+        id: saleData.id,
         receipt_number: receiptNum,
         items: [...items],
         subtotal: totals.subtotal,
@@ -115,15 +165,15 @@ export default function POSScreen() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setCompletedSale(sale);
       setShowReceipt(true);
       clearCart();
       setShowPayment(false);
       setCashReceived("");
       setMobileTab("products");
-    } catch {
-      setError("Payment processing failed");
+    } catch (err: any) {
+      setError(err.message || "Payment processing failed");
     } finally {
       setIsProcessing(false);
     }
@@ -310,35 +360,61 @@ export default function POSScreen() {
 
           {/* Product Grid */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
-              {MOCK_PRODUCTS.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => {
-                    addItem(product);
-                    // On mobile, briefly show cart count badge feedback
-                  }}
-                  className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left"
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary-500" />
+                <p>Loading products...</p>
+              </div>
+            ) : productsError ? (
+              <div className="flex flex-col items-center justify-center h-full text-red-500">
+                <AlertCircle className="w-8 h-8 mb-4" />
+                <p>Error loading products: {productsError}</p>
+                <button 
+                  onClick={() => fetchProducts()}
+                  className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                 >
-                  <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center">
-                    <span className="text-xl sm:text-2xl">📦</span>
-                  </div>
-                  <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">
-                      {formatCurrency(product.price)}
-                    </span>
-                    {product.discount_percent > 0 && (
-                      <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
-                        -{product.discount_percent}%
-                      </span>
-                    )}
-                  </div>
+                  Try Again
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <span className="text-4xl mb-4 opacity-50">📦</span>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">No products found</p>
+                <p className="text-sm">Please add some products in the database.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
+                {products.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => addItem(product)}
+                    className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left flex flex-col"
+                  >
+                    <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center relative overflow-hidden">
+                      <span className="text-2xl sm:text-3xl">📦</span>
+                      {product.stock_quantity <= 0 && (
+                        <div className="absolute inset-0 bg-white/60 dark:bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
+                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1 flex-1">
+                      {product.name}
+                    </h3>
+                    <div className="flex items-center justify-between w-full mt-auto">
+                      <span className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">
+                        {formatCurrency(product.price)}
+                      </span>
+                      {product.discount_percent > 0 && (
+                        <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] sm:text-xs font-medium rounded-full">
+                          -{product.discount_percent}%
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Floating Checkout Bar on mobile when cart has items */}

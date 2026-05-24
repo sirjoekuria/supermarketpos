@@ -1,30 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Package, Search, Plus, Edit2, Trash2, AlertTriangle,
-  ArrowUpDown, Filter, Download, Menu,
+  ArrowUpDown, Filter, Download, Menu, Loader2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
-import { useUIStore } from "@/store";
-
-const MOCK_PRODUCTS: Product[] = [
-  { id: "1", barcode: "8901234567890", name: "Fresh Milk 500ml", price: 65.00, cost_price: 50.00, stock_quantity: 50, category_id: "1", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "2", barcode: "8901234567891", name: "White Bread 400g", price: 55.00, cost_price: 40.00, stock_quantity: 3, category_id: "2", unit: "pcs", tax_rate: 16, discount_percent: 5, min_stock_level: 5, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "3", barcode: "8901234567892", name: "Sugar 1kg", price: 160.00, cost_price: 130.00, stock_quantity: 100, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 20, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "4", barcode: "8901234567893", name: "Cooking Oil 1L", price: 280.00, cost_price: 240.00, stock_quantity: 40, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "5", barcode: "8901234567894", name: "Rice 2kg", price: 320.00, cost_price: 270.00, stock_quantity: 1, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 10, min_stock_level: 15, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "6", barcode: "8901234567895", name: "Wheat Flour 2kg", price: 210.00, cost_price: 175.00, stock_quantity: 45, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "7", barcode: "8901234567896", name: "Eggs (Tray)", price: 450.00, cost_price: 380.00, stock_quantity: 2, category_id: "1", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 5, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: "8", barcode: "8901234567897", name: "Salt 1kg", price: 35.00, cost_price: 25.00, stock_quantity: 80, category_id: "3", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 20, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-];
+import { useUIStore, useProductStore } from "@/store";
 
 export default function InventoryManagement() {
   const [search, setSearch] = useState("");
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
   const { toggleSidebar } = useUIStore();
+  const { products, isLoading, error, fetchProducts } = useProductStore();
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const filtered = products.filter(
     (p) =>
@@ -109,7 +102,30 @@ export default function InventoryManagement() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center p-12 text-gray-500">
+              <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary-500" />
+              <p>Loading inventory from database...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center p-12 text-red-500">
+              <AlertTriangle className="w-8 h-8 mb-4" />
+              <p>Error loading products: {error}</p>
+              <button 
+                onClick={() => fetchProducts()}
+                className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-gray-500">
+              <Package className="w-12 h-12 mb-4 opacity-50" />
+              <p className="text-lg font-medium text-gray-900 dark:text-white">No products found</p>
+              <p className="text-sm">Try adjusting your search or add a new product</p>
+            </div>
+          ) : (
+            <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/50">
                 {[
@@ -202,14 +218,8 @@ export default function InventoryManagement() {
               })}
             </tbody>
           </table>
+          )}
         </div>
-
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No products found</p>
-          </div>
-        )}
       </div>
     </div>
   );
