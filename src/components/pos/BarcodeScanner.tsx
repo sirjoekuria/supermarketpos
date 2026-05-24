@@ -49,8 +49,21 @@ export default function BarcodeScanner({
             Html5QrcodeSupportedFormats.QR_CODE,
           ],
         });
+        
+        const cameras = await Html5Qrcode.getCameras();
+        if (!cameras || cameras.length === 0) {
+          setCamError("No camera found on this device.");
+          return;
+        }
+        
+        let cameraId = cameras[0].id;
+        const backCamera = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
+        if (backCamera) {
+          cameraId = backCamera.id;
+        }
+
         await html5QrCode.start(
-          { facingMode: "environment" },
+          cameraId,
           {
             fps: 10,
             qrbox: { width: 250, height: 200 },

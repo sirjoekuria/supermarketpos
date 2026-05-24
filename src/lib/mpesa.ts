@@ -15,20 +15,29 @@ const BASE_URLS: Record<MpesaEnv, string> = {
   production: "https://api.safaricom.co.ke",
 };
 
+const clean = (val?: string) => val ? val.replace(/^["']|["']$/g, "").trim() : "";
+
 export function getMpesaConfig() {
-  const env = (process.env.MPESA_ENV || "production").toLowerCase() === "sandbox" ? "sandbox" : "production";
-  const consumerKey = process.env.MPESA_CONSUMER_KEY;
-  const consumerSecret = process.env.MPESA_CONSUMER_SECRET;
-  const shortCode = process.env.MPESA_SHORTCODE;
-  const passkey = process.env.MPESA_PASSKEY;
+  const env = clean(process.env.MPESA_ENV || "production").toLowerCase() === "sandbox" ? "sandbox" : "production";
+  const consumerKey = clean(process.env.MPESA_CONSUMER_KEY);
+  const consumerSecret = clean(process.env.MPESA_CONSUMER_SECRET);
+  const shortCode = clean(process.env.MPESA_SHORTCODE);
+  const passkey = clean(process.env.MPESA_PASSKEY);
   const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
+    clean(process.env.NEXT_PUBLIC_APP_URL || "") ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-  const callbackUrl = process.env.MPESA_CALLBACK_URL || (appUrl ? `${appUrl.replace(/\/$/, "")}/api/mpesa/callback` : "");
+  let callbackUrl = clean(process.env.MPESA_CALLBACK_URL) || (appUrl ? `${appUrl.replace(/\/$/, "")}/api/mpesa/callback` : "https://example.com/api/mpesa/callback");
+
+  // Safaricom's production gateway strictly requires a public HTTPS URL.
+  // If running locally, override it to a mock public HTTPS URL so Safaricom accepts it.
+  if (env === "production" && (!callbackUrl.startsWith("https://") || callbackUrl.includes("localhost") || callbackUrl.includes("127.0.0.1"))) {
+    callbackUrl = "https://example.com/api/mpesa/callback";
+  }
+
   const transactionType =
-    process.env.MPESA_TRANSACTION_TYPE ||
-    (process.env.MPESA_TILL_NUMBER ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline");
-  const partyB = process.env.MPESA_PARTY_B || process.env.MPESA_TILL_NUMBER || shortCode;
+    clean(process.env.MPESA_TRANSACTION_TYPE) ||
+    (clean(process.env.MPESA_TILL_NUMBER) ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline");
+  const partyB = clean(process.env.MPESA_PARTY_B) || clean(process.env.MPESA_TILL_NUMBER) || shortCode;
 
   if (!consumerKey || !consumerSecret || !shortCode || !passkey || !callbackUrl || !partyB) {
     throw new Error(

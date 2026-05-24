@@ -89,14 +89,22 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
-  setLoading: (loading) => set({ isLoading: loading }),
-  logout: () => set({ user: null, isAuthenticated: false }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      setUser: (user) => set({ user, isAuthenticated: !!user, isLoading: false }),
+      setLoading: (loading) => set({ isLoading: loading }),
+      logout: () => set({ user: null, isAuthenticated: false }),
+    }),
+    {
+      name: "pos-auth",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
 
 interface UIState {
   darkMode: boolean;
@@ -136,10 +144,18 @@ interface SettingsState {
   setSettings: (settings: AppSettings) => void;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
-  settings: null,
-  setSettings: (settings) => set({ settings }),
-}));
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      settings: null,
+      setSettings: (settings) => set({ settings }),
+    }),
+    {
+      name: "pos-settings",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
 
 interface OfflineState {
   isOnline: boolean;
@@ -201,3 +217,38 @@ export const useProductStore = create<ProductState>((set) => ({
     }
   },
 }));
+
+interface StaffState {
+  staff: User[];
+  addStaff: (user: User) => void;
+  updateStaff: (id: string, user: Partial<User>) => void;
+  deleteStaff: (id: string) => void;
+}
+
+export const useStaffStore = create<StaffState>()(
+  persist(
+    (set) => ({
+      staff: [
+        {
+          id: "1",
+          email: "admin@supermarket.local",
+          full_name: "System Admin",
+          role: "admin",
+          is_active: true,
+          created_at: new Date().toISOString()
+        }
+      ],
+      addStaff: (user) => set((state) => ({ staff: [...state.staff, user] })),
+      updateStaff: (id, user) => set((state) => ({
+        staff: state.staff.map(s => s.id === id ? { ...s, ...user } : s)
+      })),
+      deleteStaff: (id) => set((state) => ({
+        staff: state.staff.filter(s => s.id !== id)
+      })),
+    }),
+    {
+      name: "pos-staff",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
