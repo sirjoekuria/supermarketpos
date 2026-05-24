@@ -2,59 +2,57 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 import { getMpesaAccessToken, getMpesaConfig, mpesaTimestamp, stkPassword, updateMpesaTransaction } from "@/lib/mpesa";
 
+// Cache the last known status per checkout request to avoid redundant Safaricom calls
+const statusCache = new Map<string, { status: string; result: object; ts: number }>();
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const checkoutRequestId = url.searchParams.get("checkoutRequestId");
-    // After how many seconds of pending should we query Safaricom directly
-    const elapsedSeconds = parseInt(url.searchParams.get("elapsed") || "0", 10);
 
     if (!checkoutRequestId) {
       return NextResponse.json({ status: "failed", message: "Missing CheckoutRequestID." }, { status: 400 });
     }
 
-    const supabase = getAdminClient();
-
-    // ── FAST PATH: check the DB first (callback already updates this) ──
-    const { data: existing } = await supabase
-      .from("mpesa_transactions")
-      .select("status, result_desc, mpesa_receipt_number, created_at")
-      .eq("checkout_request_id", checkoutRequestId)
-      .maybeSingle();
-
-    if (existing?.status === "success") {
-      return NextResponse.json({
-        status: "success",
-        message: existing.result_desc,
-        mpesaReceiptNumber: existing.mpesa_receipt_number,
-      });
+    // ── IN-MEMORY CACHE: if we already confirmed success/failed, return instantly ──
+    const cached = statusCache.get(checkoutRequestId);
+    if (cached && cached.status !== "pending" && Date.now() - cached.ts < 300_000) {
+      return NextResponse.json(cached.result);
     }
 
-    if (existing?.status === "failed") {
-      return NextResponse.json({
-        status: "failed",
-        message: existing.result_desc || "Payment failed.",
-      });
+    // ── FAST PATH: check the DB first (works in production where callback updates it) ──
+    try {
+      const supabase = getAdminClient();
+      const { data: existing } = await supabase
+        .from("mpesa_transactions")
+        .select("status, result_desc, mpesa_receipt_number")
+        .eq("checkout_request_id", checkoutRequestId)
+        .maybeSingle();
+
+      if (existing?.status === "success") {
+        const result = {
+          status: "success",
+          message: existing.result_desc,
+          mpesaReceiptNumber: existing.mpesa_receipt_number,
+        };
+        statusCache.set(checkoutRequestId, { status: "success", result, ts: Date.now() });
+        return NextResponse.json(result);
+      }
+
+      if (existing?.status === "failed") {
+        const result = { status: "failed", message: existing.result_desc || "Payment failed." };
+        statusCache.set(checkoutRequestId, { status: "failed", result, ts: Date.now() });
+        return NextResponse.json(result);
+      }
+    } catch {
+      // DB unavailable — fall through to Safaricom direct query
     }
 
-    // Determine elapsed time robustly (either passed from client or computed from DB creation timestamp)
-    const createdAtTime = existing?.created_at ? new Date(existing.created_at).getTime() : Date.now();
-    const serverElapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAtTime) / 1000));
-    const activeElapsed = parseInt(url.searchParams.get("elapsed") || String(serverElapsedSeconds), 10);
-
-    // ── SLOW PATH: only query Safaricom after 3 seconds and only every 2 seconds ──
-    // This avoids hitting Safaricom on every single poll while keeping confirmation instant.
-    const shouldQuerySafaricom = activeElapsed >= 3 && (activeElapsed % 2 === 0);
-
-    if (!shouldQuerySafaricom) {
-      return NextResponse.json({ status: "pending", message: "Waiting for customer to pay..." });
-    }
-
-    // Fallback: directly query Safaricom (used when callback hasn't fired)
+    // ── DIRECT SAFARICOM QUERY (always, every poll, token is cached so it's fast) ──
     try {
       const config = getMpesaConfig();
       const timestamp = mpesaTimestamp();
-      const token = await getMpesaAccessToken();
+      const token = await getMpesaAccessToken(); // cached — only fetches once per hour
 
       const response = await fetch(`${config.baseUrl}/mpesa/stkpushquery/v1/query`, {
         method: "POST",
@@ -71,41 +69,62 @@ export async function GET(request: Request) {
         cache: "no-store",
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        // Safaricom not ready yet, keep pending
-        return NextResponse.json({ status: "pending", message: "Payment is still pending." });
+        // Safaricom not ready yet — customer hasn't been prompted
+        return NextResponse.json({ status: "pending", message: "Waiting for customer to pay..." });
       }
 
+      const data = await response.json();
+
+      // ResultCode "0" = success
       if (String(data.ResultCode) === "0") {
-        await updateMpesaTransaction({
+        const result = {
+          status: "success",
+          message: data.ResultDesc || "Payment successful.",
+          mpesaReceiptNumber: data.MpesaReceiptNumber || undefined,
+        };
+        statusCache.set(checkoutRequestId, { status: "success", result, ts: Date.now() });
+        // Update DB in background (non-blocking)
+        updateMpesaTransaction({
           checkoutRequestId,
           status: "success",
           resultCode: 0,
           resultDesc: data.ResultDesc || "Payment successful.",
-        });
-        return NextResponse.json({ status: "success", message: data.ResultDesc || "Payment successful." });
+        }).catch(() => {});
+        return NextResponse.json(result);
       }
 
-      if (data.ResultCode !== undefined) {
-        await updateMpesaTransaction({
+      // Any other ResultCode = still processing or explicit error
+      if (data.ResultCode !== undefined && String(data.ResultCode) !== "0") {
+        // ResultCode 1032 = request cancelled, 1037 = DS timeout, etc.
+        // These indicate the customer hasn't paid yet, not a terminal failure
+        const pendingCodes = ["1032", "1037", "2001", "1001", "1"];
+        if (pendingCodes.includes(String(data.ResultCode))) {
+          return NextResponse.json({ status: "pending", message: data.ResultDesc || "Still waiting for payment..." });
+        }
+
+        // Terminal failure
+        const result = { status: "failed", message: data.ResultDesc || "Payment failed." };
+        statusCache.set(checkoutRequestId, { status: "failed", result, ts: Date.now() });
+        updateMpesaTransaction({
           checkoutRequestId,
           status: "failed",
           resultCode: Number(data.ResultCode),
           resultDesc: data.ResultDesc || "Payment failed.",
-        });
-        return NextResponse.json({ status: "failed", message: data.ResultDesc || "Payment failed." });
+        }).catch(() => {});
+        return NextResponse.json(result);
       }
-    } catch (err: any) {
-      console.error("Safaricom direct query failed:", err.message || err);
-      // Safaricom query failed — just keep polling DB
-    }
 
-    return NextResponse.json({ status: "pending", message: "Payment is still pending." });
+      // Safaricom returned 200 but no ResultCode — still processing
+      return NextResponse.json({ status: "pending", message: "Payment is being processed..." });
+
+    } catch (err: any) {
+      console.error("Safaricom direct query error:", err.message || err);
+      return NextResponse.json({ status: "pending", message: "Checking payment status..." });
+    }
   } catch (error) {
     return NextResponse.json(
-      { status: "failed", message: error instanceof Error ? error.message : "Could not query M-Pesa payment." },
+      { status: "failed", message: error instanceof Error ? error.message : "Could not query payment." },
       { status: 500 }
     );
   }
