@@ -82,6 +82,7 @@ export default function POSScreen() {
     let lastKeyTime = Date.now();
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.key) return; // guard against undefined key (virtual keyboards, extensions)
       const currentTime = Date.now();
       if (currentTime - lastKeyTime > 100) barcodeBuffer = "";
       lastKeyTime = currentTime;

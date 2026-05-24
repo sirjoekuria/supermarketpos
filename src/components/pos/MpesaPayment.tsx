@@ -157,14 +157,19 @@ export default function MpesaPayment({
 
   useEffect(() => {
     if (status !== "pending" || !checkoutRequestId) return;
+
+    // Prevent React StrictMode double-invoke from creating two parallel polling loops
+    let active = true;
     let elapsed = 0;
 
     const checkStatus = async () => {
+      if (!active) return;
       try {
         const response = await fetch(
           `/api/mpesa/query?checkoutRequestId=${checkoutRequestId}&elapsed=${elapsed}`
         );
         const data = await response.json();
+        if (!active) return; // component unmounted during fetch
         if (data.status === "success") {
           setStatus("success");
           onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
@@ -182,7 +187,7 @@ export default function MpesaPayment({
     // Run first check immediately (fast DB lookup)
     checkStatus();
 
-    const interval = setInterval(checkStatus, 1000); // Poll every 1 second to feel instant
+    const interval = setInterval(checkStatus, 1000);
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -198,6 +203,7 @@ export default function MpesaPayment({
     }, 1000);
 
     return () => {
+      active = false;
       clearInterval(interval);
       clearInterval(timer);
     };
