@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Phone, Loader2, CheckCircle2, XCircle, AlertCircle, Sparkles } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -155,29 +155,29 @@ export default function MpesaPayment({
     }
   };
 
-  const checkPaymentStatus = useCallback(async () => {
-    if (!checkoutRequestId || status !== "pending") return;
-    try {
-      const response = await fetch(
-        `/api/mpesa/query?checkoutRequestId=${checkoutRequestId}`
-      );
-      const data = await response.json();
-      if (data.status === "success") {
-        setStatus("success");
-        onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
-      } else if (data.status === "failed") {
-        setStatus("failed");
-        setError(data.message || "Payment failed");
-        onFailure(data.message || "Payment failed");
-      }
-    } catch (err) {
-      console.error("Status check error:", err);
-    }
-  }, [checkoutRequestId, status, onSuccess, onFailure]);
-
   useEffect(() => {
-    if (status !== "pending") return;
-    const interval = setInterval(checkPaymentStatus, 1000); // Poll every 1 second to feel instant
+    if (status !== "pending" || !checkoutRequestId) return;
+    let elapsed = 0;
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/mpesa/query?checkoutRequestId=${checkoutRequestId}&elapsed=${elapsed}`
+        );
+        const data = await response.json();
+        if (data.status === "success") {
+          setStatus("success");
+          onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+        } else if (data.status === "failed") {
+          setStatus("failed");
+          setError(data.message || "Payment failed");
+          onFailure(data.message || "Payment failed");
+        }
+      } catch (err) {
+        console.error("Status check error:", err);
+      }
+      elapsed += 1;
+    }, 1000); // Poll every 1 second to feel instant
+
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -190,11 +190,12 @@ export default function MpesaPayment({
         return prev - 1;
       });
     }, 1000);
+
     return () => {
       clearInterval(interval);
       clearInterval(timer);
     };
-  }, [status, checkPaymentStatus, onFailure]);
+  }, [status, checkoutRequestId, onSuccess, onFailure]);
 
   return (
     <div className="w-full max-w-md mx-auto">
