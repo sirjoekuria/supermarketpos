@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         AccountReference: accountReference,
         TransactionDesc: transactionDesc,
       }),
+      cache: "no-store",
     });
 
     const data = await response.json();

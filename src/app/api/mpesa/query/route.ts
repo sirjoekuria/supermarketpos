@@ -68,6 +68,7 @@ export async function GET(request: Request) {
           Timestamp: timestamp,
           CheckoutRequestID: checkoutRequestId,
         }),
+        cache: "no-store",
       });
 
       const data = await response.json();
@@ -96,7 +97,8 @@ export async function GET(request: Request) {
         });
         return NextResponse.json({ status: "failed", message: data.ResultDesc || "Payment failed." });
       }
-    } catch {
+    } catch (err: any) {
+      console.error("Safaricom direct query failed:", err.message || err);
       // Safaricom query failed — just keep polling DB
     }
 
