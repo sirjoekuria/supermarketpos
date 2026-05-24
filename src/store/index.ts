@@ -2,11 +2,13 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product, CartItem, User, AppSettings } from "@/types";
+import type { Product, CartItem, User, AppSettings, Customer } from "@/types";
 import { calculateCartTotals } from "@/lib/utils";
 
 interface CartState {
   items: CartItem[];
+  selectedCustomer: Customer | null;
+  pointsRedeemed: number;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -14,12 +16,16 @@ interface CartState {
   clearCart: () => void;
   getTotals: () => { subtotal: number; taxAmount: number; discountAmount: number; total: number };
   getItemCount: () => number;
+  setSelectedCustomer: (customer: Customer | null) => void;
+  setPointsRedeemed: (points: number) => void;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      selectedCustomer: null,
+      pointsRedeemed: 0,
       addItem: (product, quantity = 1) => {
         set((state) => {
           const existingItem = state.items.find((item) => item.product.id === product.id);
@@ -69,9 +75,11 @@ export const useCartStore = create<CartState>()(
           ),
         }));
       },
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], selectedCustomer: null, pointsRedeemed: 0 }),
       getTotals: () => calculateCartTotals(get().items),
       getItemCount: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
+      setSelectedCustomer: (customer) => set({ selectedCustomer: customer, pointsRedeemed: 0 }),
+      setPointsRedeemed: (points) => set({ pointsRedeemed: points }),
     }),
     {
       name: "pos-cart",

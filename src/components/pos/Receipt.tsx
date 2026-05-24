@@ -197,6 +197,37 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
               )}
             </div>
 
+            {/* Loyalty Statement Block */}
+            {sale.customer && (
+              <>
+                <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
+                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <div className="flex justify-between font-semibold text-gray-900 dark:text-white">
+                    <span>Loyalty Account</span>
+                    <span>{sale.customer.name}</span>
+                  </div>
+                  {sale.points_earned !== undefined && sale.points_earned > 0 && (
+                    <div className="flex justify-between text-green-600 dark:text-green-400 font-medium">
+                      <span>Points Earned</span>
+                      <span>+{sale.points_earned} pts</span>
+                    </div>
+                  )}
+                  {sale.points_redeemed !== undefined && sale.points_redeemed > 0 && (
+                    <div className="flex justify-between text-red-600 dark:text-red-400 font-medium">
+                      <span>Points Redeemed</span>
+                      <span>-{sale.points_redeemed} pts</span>
+                    </div>
+                  )}
+                  {sale.loyalty?.final_points_balance !== undefined && (
+                    <div className="flex justify-between font-bold text-gray-900 dark:text-white border-t border-dashed border-gray-200 dark:border-gray-700/50 pt-1 mt-1">
+                      <span>New Points Balance</span>
+                      <span>{sale.loyalty.final_points_balance} pts</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="text-center mt-6 text-xs text-gray-400 dark:text-gray-500">
               <p>Thank you for shopping with us!</p>
               {settings?.receipt_footer && (

@@ -15,6 +15,7 @@ import {
   Menu,
   Sun,
   Moon,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore } from "@/store";
@@ -27,11 +28,14 @@ import SettingsPage from "@/components/settings/SettingsPage";
 import AuthPage from "@/components/auth/AuthPage";
 import UserApprovals from "@/components/admin/UserApprovals";
 import AuditLog from "@/components/admin/AuditLog";
+import CustomersPage from "@/components/customers/CustomersPage";
+
 
 const NAV_ITEMS = [
   { id: "pos", label: "Point of Sale", icon: ShoppingCart, roles: ["admin", "cashier", "manager"] },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "manager"] },
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "manager"] },
+  { id: "customers", label: "Customers", icon: Users, roles: ["admin", "cashier", "manager"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
   { id: "approvals", label: "Approvals", icon: UserCheck, roles: ["admin", "manager"] },
   { id: "audit", label: "Audit Log", icon: ClipboardList, roles: ["admin"] },
@@ -67,6 +71,7 @@ export default function Home() {
       case "pos": return <POSScreen />;
       case "dashboard": return <AdminDashboard />;
       case "inventory": return <InventoryManagement />;
+      case "customers": return <CustomersPage />;
       case "reports": return <Reports />;
       case "approvals": return user ? <UserApprovals user={user} /> : null;
       case "audit": return user ? <AuditLog user={user} /> : null;

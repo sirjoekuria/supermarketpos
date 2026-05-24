@@ -22,7 +22,10 @@ type CompletedSale = any;
 type SplitPaymentMethod = "cash" | "mpesa" | "card";
 
 export default function POSScreen() {
-  const { items, addItem, clearCart, getTotals } = useCartStore();
+  const {
+    items, addItem, clearCart, getTotals,
+    selectedCustomer, pointsRedeemed, setSelectedCustomer, setPointsRedeemed
+  } = useCartStore();
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
@@ -51,6 +54,8 @@ export default function POSScreen() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totals = getTotals();
+  const netTotal = totals.total - pointsRedeemed;
+
   const parseAmount = (value: string) => {
     const amount = Number(value);
     return Number.isFinite(amount) && amount > 0 ? amount : 0;
@@ -60,8 +65,8 @@ export default function POSScreen() {
       parseAmount(splitPayments.mpesa) +
       parseAmount(splitPayments.card)
   );
-  const splitBalance = Math.max(totals.total - splitPaidTotal, 0);
-  const splitChange = Math.max(splitPaidTotal - totals.total, 0);
+  const splitBalance = Math.max(netTotal - splitPaidTotal, 0);
+  const splitChange = Math.max(splitPaidTotal - netTotal, 0);
   const splitBreakdown = (Object.entries(splitPayments) as [SplitPaymentMethod, string][])
     .map(([method, value]) => ({
       method,
@@ -124,7 +129,7 @@ export default function POSScreen() {
 
   const handlePayment = async (mpesaTransactionId?: string) => {
     if (items.length === 0) return;
-    if (paymentMethod === "split" && splitPaidTotal < totals.total) {
+    if (paymentMethod === "split" && splitPaidTotal < netTotal) {
       setError(`Split payment is short by ${formatCurrency(splitBalance)}`);
       return;
     }
@@ -150,12 +155,14 @@ export default function POSScreen() {
           receipt_number: receiptNum,
           subtotal: totals.subtotal,
           tax_amount: totals.taxAmount,
-          discount_amount: totals.discountAmount,
-          total: totals.total,
+          discount_amount: totals.discountAmount + (pointsRedeemed * 1), // treat redemption as a discount
+          total: netTotal,
           payment_method: paymentMethod,
           payment_status: "completed",
           items: saleItems,
           split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+          customer_id: selectedCustomer?.id || null,
+          points_redeemed: pointsRedeemed,
           actor: user
             ? {
                 id: user.id,
@@ -181,11 +188,16 @@ export default function POSScreen() {
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
         discount_amount: totals.discountAmount,
-        total: totals.total,
+        total: netTotal,
         payment_method: paymentMethod,
         payment_status: "completed",
         mpesa_transaction_id: mpesaTransactionId,
         split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+        customer_id: selectedCustomer?.id || "",
+        customer: selectedCustomer || undefined,
+        points_earned: data.loyalty?.points_earned || 0,
+        points_redeemed: pointsRedeemed,
+        loyalty: data.loyalty || undefined,
         cashier_id: user?.id || "",
         cashier: user,
         created_at: new Date().toISOString(),
@@ -212,7 +224,7 @@ export default function POSScreen() {
 
   const cashChange =
     paymentMethod === "cash" && cashReceived
-      ? parseFloat(cashReceived) - totals.total
+      ? parseFloat(cashReceived) - netTotal
       : 0;
 
   return (
@@ -512,13 +524,92 @@ export default function POSScreen() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="text-center mb-6">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Amount Due</p>
-                <p className="text-4xl font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(totals.total)}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-pos-border rounded-2xl p-5 text-center shadow-inner">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Net Amount Due</p>
+                <p className="text-4xl font-extrabold text-primary-600 dark:text-primary-400 mt-1 font-mono">
+                  {formatCurrency(netTotal)}
                 </p>
+                {pointsRedeemed > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-1.5 flex items-center justify-center gap-1">
+                    <Gift className="w-3.5 h-3.5 fill-current" />
+                    Points applied: -{formatCurrency(pointsRedeemed * 1)} ({pointsRedeemed} pts)
+                  </p>
+                )}
               </div>
+
+              {/* ── LOYALTY POINTS REDEMPTION AREA ── */}
+              {selectedCustomer ? (
+                <div className="bg-gradient-to-br from-amber-500/5 to-yellow-500/5 border border-amber-500/20 dark:border-amber-500/10 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <Gift className="w-4 h-4" />
+                      Loyalty Point Rewards
+                    </h4>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-bold">
+                      {selectedCustomer.points_balance} pts available
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal">
+                    {selectedCustomer.name} has KES {selectedCustomer.points_balance.toFixed(2)} worth of reward points. You can redeem up to 50% of the subtotal (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
+                  </p>
+
+                  {selectedCustomer.points_balance >= 100 ? (
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="number"
+                          min="0"
+                          max={Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))}
+                          placeholder="Points to redeem (min 100)..."
+                          value={pointsRedeemed || ""}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
+                            if (val > maxLimit) {
+                              setPointsRedeemed(maxLimit);
+                            } else {
+                              setPointsRedeemed(val);
+                            }
+                          }}
+                          className="flex-1 px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
+                            setPointsRedeemed(pointsRedeemed === maxLimit ? 0 : maxLimit);
+                          }}
+                          className={cn(
+                            "px-3.5 py-2.5 border rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95",
+                            pointsRedeemed > 0
+                              ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-600/10"
+                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300"
+                          )}
+                        >
+                          {pointsRedeemed > 0 ? "Reset" : "Redeem Max"}
+                        </button>
+                      </div>
+                      {pointsRedeemed > 0 && pointsRedeemed < 100 && (
+                        <p className="text-[10px] text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Minimum redemption is 100 points.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-400 text-xs leading-normal">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      Balance is too low (Need {100 - selectedCustomer.points_balance} more points to redeem).
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400 italic text-center py-1">
+                  Assign a loyalty customer on the cart sidebar to enable point discounts.
+                </p>
+              )}
 
               {/* Payment Method Selection */}
               <div className="grid grid-cols-2 gap-3 mb-6">

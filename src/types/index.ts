@@ -51,6 +51,10 @@ export interface Sale {
   }[];
   mpesa_transaction_id?: string;
   customer_phone?: string;
+  customer_id?: string;
+  customer?: Customer;
+  points_earned?: number;
+  points_redeemed?: number;
   cashier_id: string;
   cashier?: User;
   notes?: string;
@@ -141,3 +145,26 @@ export interface Supplier {
 export type PaymentMethod = "mpesa" | "cash" | "card" | "split";
 export type SaleStatus = "pending" | "completed" | "failed" | "refunded";
 export type UserRole = "admin" | "cashier" | "manager";
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  points_balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PointTransaction {
+  id: string;
+  customer_id: string;
+  sale_id?: string;
+  type: "earn" | "redeem" | "expire" | "adjust" | "void_earn" | "void_redeem";
+  points: number;
+  balance_after: number;
+  reference?: string;
+  created_at: string;
+  sale?: { receipt_number: string };
+}
+
