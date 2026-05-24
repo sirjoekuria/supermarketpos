@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     discount_percent DECIMAL(5, 2) DEFAULT 0,
     min_stock_level INTEGER DEFAULT 5,
     is_active BOOLEAN DEFAULT true,
+    image_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -33,6 +34,39 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Create app users table for POS staff authentication and approvals
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'manager', 'cashier')),
+    password_hash TEXT NOT NULL,
+    approval_status VARCHAR(50) NOT NULL DEFAULT 'pending_manager' CHECK (approval_status IN ('approved', 'pending_admin', 'pending_manager', 'rejected')),
+    approved_by UUID REFERENCES public.app_users(id),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Create audit log table visible to admins
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    actor_id UUID,
+    actor_email VARCHAR(255),
+    actor_name VARCHAR(255),
+    actor_role VARCHAR(50),
+    action VARCHAR(255) NOT NULL,
+    entity_type VARCHAR(255) NOT NULL,
+    entity_id UUID,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_users_approval_status ON public.app_users(approval_status);
+CREATE INDEX IF NOT EXISTS idx_app_users_role ON public.app_users(role);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
 
 -- Create sales table
 CREATE TABLE IF NOT EXISTS public.sales (
@@ -63,6 +97,27 @@ CREATE TABLE IF NOT EXISTS public.sale_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Create M-Pesa transactions table for Daraja STK Push tracking
+CREATE TABLE IF NOT EXISTS public.mpesa_transactions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sale_id UUID REFERENCES public.sales(id) ON DELETE SET NULL,
+    merchant_request_id VARCHAR(255),
+    checkout_request_id VARCHAR(255) UNIQUE NOT NULL,
+    phone_number VARCHAR(20) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    account_reference VARCHAR(255),
+    result_code INTEGER,
+    result_desc TEXT,
+    mpesa_receipt_number VARCHAR(255),
+    transaction_date VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_mpesa_transactions_checkout_request_id ON public.mpesa_transactions(checkout_request_id);
+CREATE INDEX IF NOT EXISTS idx_mpesa_transactions_status ON public.mpesa_transactions(status);
+
 -- Create settings table
 CREATE TABLE IF NOT EXISTS public.settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -85,16 +140,22 @@ INSERT INTO public.categories (name, description) VALUES
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mpesa_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow read access for authenticated users
 CREATE POLICY "Enable read access for all authenticated users" ON public.categories FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read access for all authenticated users" ON public.products FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read access for all authenticated users" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable read access for all authenticated users" ON public.app_users FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable read access for all authenticated users" ON public.audit_logs FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read access for all authenticated users" ON public.sales FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read access for all authenticated users" ON public.sale_items FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Enable read access for all authenticated users" ON public.mpesa_transactions FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable read access for all authenticated users" ON public.settings FOR SELECT TO authenticated USING (true);
 
 -- Allow full access for now (you can restrict this later based on user role)

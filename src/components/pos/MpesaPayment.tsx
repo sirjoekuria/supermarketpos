@@ -24,7 +24,7 @@ export default function MpesaPayment({
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(120);
 
   const validatePhone = (phone: string): boolean => {
     const cleaned = phone.replace(/\D/g, "");
@@ -61,7 +61,7 @@ export default function MpesaPayment({
       if (data.success && data.checkoutRequestId) {
         setCheckoutRequestId(data.checkoutRequestId);
         setStatus("pending");
-        setCountdown(60);
+        setCountdown(120);
       } else {
         throw new Error(data.message || "Failed to initiate payment");
       }
@@ -201,6 +201,9 @@ export default function MpesaPayment({
                   {countdown}s
                 </span>
               </div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+                Checkout ID: {checkoutRequestId}
+              </p>
             </div>
           )}
 

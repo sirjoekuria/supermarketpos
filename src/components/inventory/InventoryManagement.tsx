@@ -1,17 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Package, Search, Plus, Edit2, Trash2, AlertTriangle,
-  ArrowUpDown, Filter, Download, Menu, Loader2,
+  ArrowUpDown, Filter, Download, Menu, Loader2, ImageIcon, Upload, X,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
 import { useUIStore, useProductStore } from "@/store";
+import { supabase } from "@/lib/supabase";
 
 export default function InventoryManagement() {
   const [search, setSearch] = useState("");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    barcode: "",
+    price: "",
+    cost_price: "",
+    stock_quantity: "",
+    min_stock_level: "",
+    unit: "",
+    tax_rate: "",
+    discount_percent: "",
+    image_url: "",
+    is_active: true,
+  });
+  const [actionError, setActionError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const { toggleSidebar } = useUIStore();
   const { products, isLoading, error, fetchProducts } = useProductStore();
 
@@ -29,6 +47,108 @@ export default function InventoryManagement() {
     if (product.stock_quantity <= 0) return { label: "Out of Stock", color: "danger" };
     if (product.stock_quantity <= product.min_stock_level) return { label: "Low Stock", color: "warning" };
     return { label: "In Stock", color: "success" };
+  };
+
+  const openEdit = (product: Product) => {
+    setActionError("");
+    setEditingProduct(product);
+    setForm({
+      name: product.name,
+      barcode: product.barcode,
+      price: String(product.price),
+      cost_price: product.cost_price ? String(product.cost_price) : "",
+      stock_quantity: String(product.stock_quantity),
+      min_stock_level: String(product.min_stock_level),
+      unit: product.unit,
+      tax_rate: String(product.tax_rate),
+      discount_percent: String(product.discount_percent),
+      image_url: product.image_url || "",
+      is_active: product.is_active,
+    });
+  };
+
+  const handleImageFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setActionError("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > 1_500_000) {
+      setActionError("Please choose an image smaller than 1.5 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setActionError("");
+      setForm((current) => ({
+        ...current,
+        image_url: String(reader.result || ""),
+      }));
+    };
+    reader.onerror = () => setActionError("Could not read that image file.");
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    if (!editingProduct) return;
+
+    setIsSaving(true);
+    setActionError("");
+
+    const { error: updateError } = await supabase
+      .from("products")
+      .update({
+        name: form.name.trim(),
+        barcode: form.barcode.trim(),
+        price: Number(form.price),
+        cost_price: form.cost_price ? Number(form.cost_price) : null,
+        stock_quantity: Number(form.stock_quantity),
+        min_stock_level: Number(form.min_stock_level),
+        unit: form.unit.trim() || "pcs",
+        tax_rate: Number(form.tax_rate) || 0,
+        discount_percent: Number(form.discount_percent) || 0,
+        image_url: form.image_url.trim() || null,
+        is_active: form.is_active,
+      })
+      .eq("id", editingProduct.id);
+
+    setIsSaving(false);
+
+    if (updateError) {
+      setActionError(updateError.message);
+      return;
+    }
+
+    setEditingProduct(null);
+    await fetchProducts();
+  };
+
+  const handleDelete = async () => {
+    if (!deletingProduct) return;
+
+    setIsSaving(true);
+    setActionError("");
+
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", deletingProduct.id);
+
+    setIsSaving(false);
+
+    if (deleteError) {
+      setActionError(deleteError.message);
+      return;
+    }
+
+    setDeletingProduct(null);
+    await fetchProducts();
   };
 
   return (
@@ -156,11 +276,15 @@ export default function InventoryManagement() {
                   >
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
-                          📦
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-base sm:text-lg flex-shrink-0 overflow-hidden">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            "📦"
+                          )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">{product.name}</p>
                           <p className="text-xs text-gray-400">{product.unit}</p>
                         </div>
                       </div>
@@ -205,10 +329,21 @@ export default function InventoryManagement() {
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-1 sm:gap-2">
-                        <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600 transition-colors">
+                        <button
+                          onClick={() => openEdit(product)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600 transition-colors"
+                          title="Edit product"
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors">
+                        <button
+                          onClick={() => {
+                            setActionError("");
+                            setDeletingProduct(product);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete product"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -221,6 +356,151 @@ export default function InventoryManagement() {
           )}
         </div>
       </div>
+
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+          <div className="bg-white dark:bg-pos-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-200 dark:border-pos-border">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit Product</h2>
+            </div>
+
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-4 rounded-xl border border-gray-200 dark:border-pos-border p-4">
+                <div className="aspect-square rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-pos-border overflow-hidden flex items-center justify-center">
+                  {form.image_url ? (
+                    <img
+                      src={form.image_url}
+                      alt={form.name || "Product image"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon className="w-10 h-10 text-gray-400" />
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <label className="space-y-1.5 block">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Product Image URL</span>
+                    <input
+                      type="url"
+                      value={form.image_url}
+                      onChange={(e) => setForm((current) => ({ ...current, image_url: e.target.value }))}
+                      placeholder="https://example.com/product.jpg"
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium cursor-pointer transition-colors">
+                      <Upload className="w-4 h-4" />
+                      Upload Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFile}
+                        className="sr-only"
+                      />
+                    </label>
+                    {form.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((current) => ({ ...current, image_url: "" }))}
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {[
+                { key: "name", label: "Name", type: "text" },
+                { key: "barcode", label: "Barcode", type: "text" },
+                { key: "price", label: "Price", type: "number" },
+                { key: "cost_price", label: "Cost", type: "number" },
+                { key: "stock_quantity", label: "Stock", type: "number" },
+                { key: "min_stock_level", label: "Minimum Stock", type: "number" },
+                { key: "unit", label: "Unit", type: "text" },
+                { key: "tax_rate", label: "Tax Rate", type: "number" },
+                { key: "discount_percent", label: "Discount", type: "number" },
+              ].map(({ key, label, type }) => (
+                <label key={key} className="space-y-1.5">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                  <input
+                    type={type}
+                    value={form[key as keyof typeof form] as string}
+                    onChange={(e) => setForm((current) => ({ ...current, [key]: e.target.value }))}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </label>
+              ))}
+
+              <label className="sm:col-span-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                Active product
+              </label>
+
+              {actionError && (
+                <p className="sm:col-span-2 text-sm text-red-600 dark:text-red-400">{actionError}</p>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
+              <button
+                onClick={() => setEditingProduct(null)}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !form.name.trim() || !form.barcode.trim() || !form.price}
+                className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-5">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Delete Product</h2>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Delete {deletingProduct.name}? This cannot be undone.
+              </p>
+              {actionError && (
+                <p className="mt-3 text-sm text-red-600 dark:text-red-400">{actionError}</p>
+              )}
+            </div>
+            <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
+              <button
+                onClick={() => setDeletingProduct(null)}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white text-sm font-medium"
+              >
+                {isSaving ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

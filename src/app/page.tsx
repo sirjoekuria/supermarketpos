@@ -7,6 +7,8 @@ import {
   Package,
   BarChart3,
   Settings,
+  UserCheck,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -22,12 +24,17 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 import InventoryManagement from "@/components/inventory/InventoryManagement";
 import Reports from "@/components/reports/Reports";
 import SettingsPage from "@/components/settings/SettingsPage";
+import AuthPage from "@/components/auth/AuthPage";
+import UserApprovals from "@/components/admin/UserApprovals";
+import AuditLog from "@/components/admin/AuditLog";
 
 const NAV_ITEMS = [
   { id: "pos", label: "Point of Sale", icon: ShoppingCart, roles: ["admin", "cashier", "manager"] },
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "manager"] },
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "manager"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
+  { id: "approvals", label: "Approvals", icon: UserCheck, roles: ["admin", "manager"] },
+  { id: "audit", label: "Audit Log", icon: ClipboardList, roles: ["admin"] },
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin"] },
 ];
 
@@ -50,53 +57,7 @@ export default function Home() {
   }, [setSidebarOpen]);
 
   if (!isAuthenticated) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-pos-dark p-4", darkMode && "dark")}>
-        <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-pos-card rounded-2xl shadow-xl border border-gray-200 dark:border-pos-border p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary-500 flex items-center justify-center">
-                <ShoppingCart className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">SuperMarket POS</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sign in to your account</p>
-            </div>
-            <div className="space-y-3">
-              <button
-                onClick={() => setUser({ id: "1", email: "admin@pos.com", full_name: "Admin User", role: "admin", is_active: true, created_at: "" })}
-                className="w-full flex items-center gap-3 p-4 bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">A</div>
-                <div className="text-left">
-                  <p className="font-semibold text-gray-900 dark:text-white">Admin</p>
-                  <p className="text-xs text-gray-500">Full system access</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setUser({ id: "2", email: "cashier@pos.com", full_name: "John Doe", role: "cashier", is_active: true, created_at: "" })}
-                className="w-full flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">C</div>
-                <div className="text-left">
-                  <p className="font-semibold text-gray-900 dark:text-white">Cashier</p>
-                  <p className="text-xs text-gray-500">POS and checkout access</p>
-                </div>
-              </button>
-              <button
-                onClick={() => setUser({ id: "3", email: "manager@pos.com", full_name: "Jane Smith", role: "manager", is_active: true, created_at: "" })}
-                className="w-full flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">M</div>
-                <div className="text-left">
-                  <p className="font-semibold text-gray-900 dark:text-white">Manager</p>
-                  <p className="text-xs text-gray-500">Reports and inventory access</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <AuthPage darkMode={darkMode} onAuthenticated={setUser} />;
   }
 
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(user?.role || "cashier"));
@@ -107,6 +68,8 @@ export default function Home() {
       case "dashboard": return <AdminDashboard />;
       case "inventory": return <InventoryManagement />;
       case "reports": return <Reports />;
+      case "approvals": return user ? <UserApprovals user={user} /> : null;
+      case "audit": return user ? <AuditLog user={user} /> : null;
       case "settings": return <SettingsPage />;
       default: return <POSScreen />;
     }

@@ -44,6 +44,11 @@ export interface Sale {
   total: number;
   payment_method: "mpesa" | "cash" | "card" | "split";
   payment_status: "pending" | "completed" | "failed" | "refunded";
+  split_payments?: {
+    method: "cash" | "mpesa" | "card";
+    amount: number;
+    reference?: string;
+  }[];
   mpesa_transaction_id?: string;
   customer_phone?: string;
   cashier_id: string;
@@ -58,6 +63,7 @@ export interface User {
   email: string;
   full_name: string;
   role: "admin" | "cashier" | "manager";
+  approval_status?: "approved" | "pending_admin" | "pending_manager" | "rejected";
   phone?: string;
   avatar_url?: string;
   is_active: boolean;

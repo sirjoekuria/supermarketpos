@@ -10,7 +10,6 @@ import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductSto
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
-import { supabase } from "@/lib/supabase";
 import BarcodeScanner from "./BarcodeScanner";
 import Cart from "./Cart";
 import MpesaPayment from "./MpesaPayment";
@@ -19,6 +18,8 @@ import CustomerDisplay from "./CustomerDisplay";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;
+
+type SplitPaymentMethod = "cash" | "mpesa" | "card";
 
 export default function POSScreen() {
   const { items, addItem, clearCart, getTotals } = useCartStore();
@@ -36,11 +37,41 @@ export default function POSScreen() {
   const [completedSale, setCompletedSale] = useState<CompletedSale>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
+  const [splitPayments, setSplitPayments] = useState<Record<SplitPaymentMethod, string>>({
+    cash: "",
+    mpesa: "",
+    card: "",
+  });
+  const [splitReferences, setSplitReferences] = useState<Record<"mpesa" | "card", string>>({
+    mpesa: "",
+    card: "",
+  });
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totals = getTotals();
+  const parseAmount = (value: string) => {
+    const amount = Number(value);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
+  };
+  const splitPaidTotal = Math.round(
+    parseAmount(splitPayments.cash) +
+      parseAmount(splitPayments.mpesa) +
+      parseAmount(splitPayments.card)
+  );
+  const splitBalance = Math.max(totals.total - splitPaidTotal, 0);
+  const splitChange = Math.max(splitPaidTotal - totals.total, 0);
+  const splitBreakdown = (Object.entries(splitPayments) as [SplitPaymentMethod, string][])
+    .map(([method, value]) => ({
+      method,
+      amount: parseAmount(value),
+      reference:
+        method === "mpesa" || method === "card"
+          ? splitReferences[method].trim() || undefined
+          : undefined,
+    }))
+    .filter((payment) => payment.amount > 0);
 
   useEffect(() => {
     fetchProducts();
@@ -90,37 +121,18 @@ export default function POSScreen() {
     setSearchResults(results);
   }, 300);
 
-  const handlePayment = async () => {
+  const handlePayment = async (mpesaTransactionId?: string) => {
     if (items.length === 0) return;
+    if (paymentMethod === "split" && splitPaidTotal < totals.total) {
+      setError(`Split payment is short by ${formatCurrency(splitBalance)}`);
+      return;
+    }
+
     setIsProcessing(true);
+    setError("");
     try {
       const receiptNum = generateReceiptNumber();
-      
-      // 1. Insert the sale record into Supabase
-      const { data: saleData, error: saleError } = await supabase
-        .from('sales')
-        .insert({
-          receipt_number: receiptNum,
-          subtotal: totals.subtotal,
-          tax_amount: totals.taxAmount,
-          discount_amount: totals.discountAmount,
-          total: totals.total,
-          payment_method: paymentMethod,
-          payment_status: "completed",
-          // Leave cashier_id null for now unless auth is fully set up with valid UUIDs
-          cashier_id: null,
-        })
-        .select()
-        .single();
-
-      if (saleError) {
-        console.error("Sale insert error:", saleError);
-        throw new Error("Failed to record sale");
-      }
-
-      // 2. Insert the sale items
       const saleItems = items.map((item) => ({
-        sale_id: saleData.id,
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: item.product.price,
@@ -130,28 +142,39 @@ export default function POSScreen() {
         total: item.total,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('sale_items')
-        .insert(saleItems);
+      const response = await fetch("/api/sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receipt_number: receiptNum,
+          subtotal: totals.subtotal,
+          tax_amount: totals.taxAmount,
+          discount_amount: totals.discountAmount,
+          total: totals.total,
+          payment_method: paymentMethod,
+          payment_status: "completed",
+          items: saleItems,
+          split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+          actor: user
+            ? {
+                id: user.id,
+                email: user.email,
+                full_name: user.full_name,
+                role: user.role,
+              }
+            : undefined,
+        }),
+      });
 
-      if (itemsError) {
-        console.error("Sale items insert error:", itemsError);
-        throw new Error("Failed to record sale items");
-      }
+      const data = await response.json();
 
-      // 3. Optional: Deduct stock from products table
-      // (This is better done via a database trigger, but doing it simple here for demo)
-      for (const item of items) {
-        const { error: rpcError } = await supabase.rpc('decrement_stock', {
-          p_product_id: item.product.id,
-          p_quantity: item.quantity
-        });
-        if (rpcError) console.log('Stock decrement error/unimplemented:', rpcError);
+      if (!response.ok) {
+        throw new Error(`Failed to record sale: ${data.error || "Server error"}`);
       }
 
       // Prepare UI state for receipt
       const sale = {
-        id: saleData.id,
+        id: data.sale.id,
         receipt_number: receiptNum,
         items: [...items],
         subtotal: totals.subtotal,
@@ -160,7 +183,9 @@ export default function POSScreen() {
         total: totals.total,
         payment_method: paymentMethod,
         payment_status: "completed",
-        cashier_id: user?.id || "demo",
+        mpesa_transaction_id: mpesaTransactionId,
+        split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+        cashier_id: user?.id || "",
         cashier: user,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -171,6 +196,8 @@ export default function POSScreen() {
       clearCart();
       setShowPayment(false);
       setCashReceived("");
+      setSplitPayments({ cash: "", mpesa: "", card: "" });
+      setSplitReferences({ mpesa: "", card: "" });
       setMobileTab("products");
     } catch (err: any) {
       setError(err.message || "Payment processing failed");
@@ -179,7 +206,7 @@ export default function POSScreen() {
     }
   };
 
-  const handleMpesaSuccess = () => { handlePayment(); };
+  const handleMpesaSuccess = (transactionId: string) => { handlePayment(transactionId); };
   const handleMpesaFailure = (err: string) => { setError(err); setIsProcessing(false); };
 
   const cashChange =
@@ -391,7 +418,15 @@ export default function POSScreen() {
                     className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left flex flex-col"
                   >
                     <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center relative overflow-hidden">
-                      <span className="text-2xl sm:text-3xl">📦</span>
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-2xl sm:text-3xl">📦</span>
+                      )}
                       {product.stock_quantity <= 0 && (
                         <div className="absolute inset-0 bg-white/60 dark:bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
                           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
@@ -494,7 +529,10 @@ export default function POSScreen() {
                 ].map(({ id, label, icon: Icon, color }) => (
                   <button
                     key={id}
-                    onClick={() => setPaymentMethod(id)}
+                    onClick={() => {
+                      setPaymentMethod(id);
+                      setError("");
+                    }}
                     className={cn(
                       "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
                       paymentMethod === id
@@ -533,6 +571,12 @@ export default function POSScreen() {
               {/* Cash Payment */}
               {paymentMethod === "cash" && (
                 <div className="space-y-4">
+                  {error && (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {error}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Cash Received
@@ -555,7 +599,7 @@ export default function POSScreen() {
                     </div>
                   )}
                   <button
-                    onClick={handlePayment}
+                    onClick={() => handlePayment()}
                     disabled={parseFloat(cashReceived) < totals.total || isProcessing}
                     className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
@@ -578,20 +622,109 @@ export default function POSScreen() {
                 />
               )}
 
-              {/* Card / Split */}
-              {(paymentMethod === "card" || paymentMethod === "split") && (
+              {/* Card */}
+              {paymentMethod === "card" && (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
                     <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
                   </div>
-                  <p className="text-gray-900 dark:text-white font-medium">
-                    {paymentMethod === "card" ? "Card Reader Required" : "Split Payment"}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {paymentMethod === "card"
-                      ? "Please connect a card reader device."
-                      : "Split payment functionality coming soon."}
-                  </p>
+                  <p className="text-gray-900 dark:text-white font-medium">Card Reader Required</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Please connect a card reader device.</p>
+                </div>
+              )}
+
+              {/* Split Payment */}
+              {paymentMethod === "split" && (
+                <div className="space-y-4">
+                  {error && (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Paid</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitPaidTotal)}</p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Balance</p>
+                      <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400")}>
+                        {formatCurrency(splitBalance)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Change</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitChange)}</p>
+                    </div>
+                  </div>
+
+                  {[
+                    { method: "cash" as const, label: "Cash", icon: Banknote },
+                    { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
+                    { method: "card" as const, label: "Card", icon: CreditCard },
+                  ].map(({ method, label, icon: Icon }) => {
+                    const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
+                    const remainingForMethod = Math.max(totals.total - otherPaid, 0);
+
+                    return (
+                      <div key={method} className="rounded-xl border border-gray-200 dark:border-pos-border p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <Icon className="w-4 h-4 text-gray-400" />
+                            {label}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSplitPayments((current) => ({
+                                ...current,
+                                [method]: remainingForMethod > 0 ? String(remainingForMethod) : "",
+                              }))
+                            }
+                            className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                          >
+                            Fill balance
+                          </button>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={splitPayments[method]}
+                          onChange={(e) =>
+                            setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
+                          }
+                          placeholder="0"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                        {(method === "mpesa" || method === "card") && (
+                          <input
+                            type="text"
+                            value={splitReferences[method]}
+                            onChange={(e) =>
+                              setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
+                            }
+                            placeholder={method === "mpesa" ? "M-Pesa code" : "Card reference"}
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => handlePayment()}
+                    disabled={splitPaidTotal < totals.total || isProcessing}
+                    className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    {isProcessing ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" />Processing...</>
+                    ) : (
+                      <><CheckCircle2 className="w-5 h-5" />Complete Split Payment</>
+                    )}
+                  </button>
                 </div>
               )}
             </div>

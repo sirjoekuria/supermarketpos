@@ -9,7 +9,8 @@ export function formatCurrency(amount: number, currency = "KES"): string {
   return new Intl.NumberFormat("en-KE", {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -70,10 +71,10 @@ export function calculateCartTotals(
   });
 
   return {
-    subtotal: Math.round(subtotal * 100) / 100,
-    taxAmount: Math.round(taxAmount * 100) / 100,
-    discountAmount: Math.round(discountAmount * 100) / 100,
-    total: Math.round((subtotal - discountAmount + taxAmount) * 100) / 100,
+    subtotal: Math.round(subtotal),
+    taxAmount: Math.round(taxAmount),
+    discountAmount: Math.round(discountAmount),
+    total: Math.round(subtotal - discountAmount + taxAmount),
   };
 }
 

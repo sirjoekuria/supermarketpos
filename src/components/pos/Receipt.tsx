@@ -179,6 +179,16 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
                 <span>Payment Method</span>
                 <span className="uppercase font-medium">{sale.payment_method}</span>
               </div>
+              {sale.payment_method === "split" &&
+                sale.split_payments?.map((payment) => (
+                  <div key={payment.method} className="flex justify-between">
+                    <span className="capitalize">{payment.method}</span>
+                    <span>
+                      {formatCurrency(payment.amount)}
+                      {payment.reference ? ` (${payment.reference})` : ""}
+                    </span>
+                  </div>
+                ))}
               {sale.mpesa_transaction_id && (
                 <div className="flex justify-between">
                   <span>Transaction ID</span>
