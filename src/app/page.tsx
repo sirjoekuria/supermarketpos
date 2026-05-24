@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingCart,
   LayoutDashboard,
@@ -10,6 +10,9 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Menu,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore } from "@/store";
@@ -30,9 +33,21 @@ const NAV_ITEMS = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("pos");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user, isAuthenticated, setUser, logout } = useAuthStore();
-  const { darkMode } = useUIStore();
+  const { sidebarOpen, setSidebarOpen, toggleSidebar, darkMode, toggleDarkMode } = useUIStore();
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [setSidebarOpen]);
 
   if (!isAuthenticated) {
     return (
@@ -116,7 +131,7 @@ export default function Home() {
             </div>
           )}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={() => toggleSidebar()}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
           >
             {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -127,7 +142,12 @@ export default function Home() {
           {filteredNav.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                if (window.innerWidth < 1024) {
+                  setSidebarOpen(false);
+                }
+              }}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all",
                 activeTab === item.id
@@ -156,8 +176,34 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-hidden">
-        {renderContent()}
+      <main className="flex-1 min-w-0 overflow-hidden flex flex-col h-screen">
+        {/* Mobile Header (Hidden on POS tab because POS Screen has its own custom header) */}
+        {activeTab !== "pos" && (
+          <header className="lg:hidden h-16 bg-white dark:bg-pos-card border-b border-gray-200 dark:border-pos-border flex items-center justify-between px-4 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => toggleSidebar()}
+                className="p-2 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                {NAV_ITEMS.find((item) => item.id === activeTab)?.label}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleDarkMode}
+                className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            </div>
+          </header>
+        )}
+        <div className="flex-1 overflow-hidden">
+          {renderContent()}
+        </div>
       </main>
 
       {/* Mobile overlay */}

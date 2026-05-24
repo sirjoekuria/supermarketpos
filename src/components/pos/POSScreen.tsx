@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   ScanLine, ShoppingCart, CreditCard, Banknote, Monitor, Search, X,
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
-  LogOut, Moon, Sun,
+  LogOut, Moon, Sun, Menu,
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore } from "@/store";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
@@ -33,7 +33,7 @@ type CompletedSale = any;
 export default function POSScreen() {
   const { items, addItem, clearCart, getTotals } = useCartStore();
   const { user, logout } = useAuthStore();
-  const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay } = useUIStore();
+  const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
 
   const [showScanner, setShowScanner] = useState(false);
@@ -46,6 +46,7 @@ export default function POSScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [error, setError] = useState("");
+  const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const totals = getTotals();
@@ -83,7 +84,8 @@ export default function POSScreen() {
     }
   };
 
-  const handleSearch = debounce((query: string) => {
+  const handleSearch = debounce((...args: unknown[]) => {
+    const query = args[0] as string;
     if (!query.trim()) { setSearchResults([]); return; }
     const results = MOCK_PRODUCTS.filter(
       (p) =>
@@ -119,6 +121,7 @@ export default function POSScreen() {
       clearCart();
       setShowPayment(false);
       setCashReceived("");
+      setMobileTab("products");
     } catch {
       setError("Payment processing failed");
     } finally {
@@ -139,19 +142,26 @@ export default function POSScreen() {
       {/* Header */}
       <header className="h-16 bg-white dark:bg-pos-card border-b border-gray-200 dark:border-pos-border flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
         <div className="flex items-center gap-2">
+          {/* Mobile hamburger menu */}
+          <button
+            onClick={() => toggleSidebar()}
+            className="lg:hidden p-2 -ml-2 mr-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
           <div className="w-9 h-9 rounded-xl bg-primary-500 flex items-center justify-center">
             <ShoppingCart className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-tight">
               {settings?.shop_name || "SuperMarket POS"}
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
               {user?.full_name || "Cashier"} &mdash; {user?.role || "cashier"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={toggleCustomerDisplay}
             className={cn(
@@ -179,16 +189,55 @@ export default function POSScreen() {
         </div>
       </header>
 
+      {/* Mobile Tab Selector — only shown on small screens */}
+      <div className="lg:hidden flex border-b border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card flex-shrink-0">
+        <button
+          onClick={() => setMobileTab("products")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
+            mobileTab === "products"
+              ? "border-primary-500 text-primary-600 dark:text-primary-400"
+              : "border-transparent text-gray-500 dark:text-gray-400"
+          )}
+        >
+          <Search className="w-4 h-4" />
+          Products
+        </button>
+        <button
+          onClick={() => setMobileTab("cart")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2 relative",
+            mobileTab === "cart"
+              ? "border-primary-500 text-primary-600 dark:text-primary-400"
+              : "border-transparent text-gray-500 dark:text-gray-400"
+          )}
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Cart
+          {items.length > 0 && (
+            <span className="absolute top-2 right-[calc(50%-20px)] w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              {items.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel — Product Grid */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div
+          className={cn(
+            "flex-1 flex flex-col min-w-0",
+            // On mobile: hide unless "products" tab is selected
+            mobileTab !== "products" ? "hidden lg:flex" : "flex"
+          )}
+        >
           {/* Search Bar */}
-          <div className="p-4 border-b border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card flex-shrink-0">
-            <div className="flex gap-3">
+          <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card flex-shrink-0">
+            <div className="flex gap-2 sm:gap-3">
               <button
                 onClick={() => setShowScanner(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex-shrink-0"
+                className="flex items-center gap-2 px-3 sm:px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex-shrink-0"
               >
                 <ScanLine className="w-5 h-5" />
                 <span className="hidden sm:inline">Scan</span>
@@ -203,8 +252,8 @@ export default function POSScreen() {
                     setSearchQuery(e.target.value);
                     handleSearch(e.target.value);
                   }}
-                  placeholder="Search products or type barcode..."
-                  className="w-full pl-11 pr-10 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                  placeholder="Search products..."
+                  className="w-full pl-11 pr-10 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm"
                 />
                 {searchQuery && (
                   <button
@@ -260,27 +309,29 @@ export default function POSScreen() {
           </div>
 
           {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
               {MOCK_PRODUCTS.map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => addItem(product)}
-                  className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.98] text-left"
+                  onClick={() => {
+                    addItem(product);
+                    // On mobile, briefly show cart count badge feedback
+                  }}
+                  className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left"
                 >
-                  <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-3 flex items-center justify-center">
-                    <span className="text-2xl">📦</span>
+                  <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center">
+                    <span className="text-xl sm:text-2xl">📦</span>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
                     {product.name}
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{product.barcode}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                    <span className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">
                       {formatCurrency(product.price)}
                     </span>
                     {product.discount_percent > 0 && (
-                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+                      <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
                         -{product.discount_percent}%
                       </span>
                     )}
@@ -289,10 +340,32 @@ export default function POSScreen() {
               ))}
             </div>
           </div>
+
+          {/* Floating Checkout Bar on mobile when cart has items */}
+          {items.length > 0 && (
+            <div className="lg:hidden p-3 bg-white dark:bg-pos-card border-t border-gray-200 dark:border-pos-border flex-shrink-0">
+              <button
+                onClick={() => setShowPayment(true)}
+                className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                Checkout {formatCurrency(totals.total)}
+                <span className="bg-white/20 text-white text-xs font-bold rounded-full px-2 py-0.5 ml-1">
+                  {items.reduce((s, i) => s + i.quantity, 0)} items
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Panel — Cart */}
-        <div className="w-full max-w-md bg-white dark:bg-pos-card border-l border-gray-200 dark:border-pos-border flex flex-col flex-shrink-0">
+        <div
+          className={cn(
+            "w-full lg:w-auto lg:max-w-md bg-white dark:bg-pos-card border-l border-gray-200 dark:border-pos-border flex flex-col flex-shrink-0",
+            // On mobile: show only if "cart" tab is selected
+            mobileTab !== "cart" ? "hidden lg:flex" : "flex"
+          )}
+        >
           <Cart />
           {items.length > 0 && (
             <div className="p-4 border-t border-gray-200 dark:border-pos-border space-y-3 flex-shrink-0">
@@ -316,9 +389,9 @@ export default function POSScreen() {
 
       {/* Payment Modal */}
       {showPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-pos-border">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white dark:bg-pos-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-pos-border flex-shrink-0">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Payment</h3>
               <button
                 onClick={() => { setShowPayment(false); setCashReceived(""); }}
@@ -327,7 +400,7 @@ export default function POSScreen() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               <div className="text-center mb-6">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Amount Due</p>
                 <p className="text-4xl font-bold text-gray-900 dark:text-white">
@@ -367,7 +440,7 @@ export default function POSScreen() {
                     />
                     <span
                       className={cn(
-                        "font-medium",
+                        "font-medium text-sm",
                         paymentMethod === id
                           ? color === "green"
                             ? "text-green-600 dark:text-green-400"

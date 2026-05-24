@@ -42,8 +42,8 @@ export default function Reports() {
   const avgTicket = totalSales / totalTransactions;
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto h-full">
+      <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Detailed insights into your business performance</p>
@@ -75,7 +75,7 @@ export default function Reports() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-pos-card rounded-2xl p-6 border border-gray-200 dark:border-pos-border">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center">
@@ -139,7 +139,7 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Sales by Category</h3>
               <div className="space-y-4">

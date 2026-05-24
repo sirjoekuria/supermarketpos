@@ -105,6 +105,7 @@ interface UIState {
   customerDisplay: boolean;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
   setActiveScreen: (screen: UIState["activeScreen"]) => void;
   toggleCustomerDisplay: () => void;
 }
@@ -118,6 +119,7 @@ export const useUIStore = create<UIState>()(
       customerDisplay: false,
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setActiveScreen: (screen) => set({ activeScreen: screen }),
       toggleCustomerDisplay: () =>
         set((state) => ({ customerDisplay: !state.customerDisplay })),

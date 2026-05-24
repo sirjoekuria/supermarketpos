@@ -86,8 +86,8 @@ export default function AdminDashboard() {
   const maxSales = Math.max(...HOURLY_SALES.map((d) => d.sales));
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto h-full">
+      <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -112,14 +112,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Total Sales" value={formatCurrency(DAILY_STATS.totalSales)} icon={DollarSign} trend={DAILY_STATS.comparedToYesterday} trendUp={true} color="bg-primary-500" />
         <StatCard title="Transactions" value={formatNumber(DAILY_STATS.totalTransactions)} icon={ShoppingBag} trend={8.2} trendUp={true} color="bg-green-500" />
         <StatCard title="Items Sold" value={formatNumber(DAILY_STATS.totalItems)} icon={Package} trend={3.1} trendUp={false} color="bg-orange-500" />
         <StatCard title="Avg. Ticket" value={formatCurrency(DAILY_STATS.averageTicket)} icon={BarChart3} trend={5.7} trendUp={true} color="bg-purple-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Hourly Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Sales Overview</h3>
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Recent Sales */}
         <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6">
           <div className="flex items-center justify-between mb-6">

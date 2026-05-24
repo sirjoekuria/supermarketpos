@@ -3,11 +3,12 @@
 import { useState } from "react";
 import {
   Package, Search, Plus, Edit2, Trash2, AlertTriangle,
-  ArrowUpDown, Filter, Download,
+  ArrowUpDown, Filter, Download, Menu,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
+import { useUIStore } from "@/store";
 
 const MOCK_PRODUCTS: Product[] = [
   { id: "1", barcode: "8901234567890", name: "Fresh Milk 500ml", price: 65.00, cost_price: 50.00, stock_quantity: 50, category_id: "1", unit: "pcs", tax_rate: 16, discount_percent: 0, min_stock_level: 10, is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
@@ -23,6 +24,7 @@ const MOCK_PRODUCTS: Product[] = [
 export default function InventoryManagement() {
   const [search, setSearch] = useState("");
   const [products] = useState<Product[]>(MOCK_PRODUCTS);
+  const { toggleSidebar } = useUIStore();
 
   const filtered = products.filter(
     (p) =>
@@ -37,8 +39,8 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto h-full">
+      <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -55,42 +57,54 @@ export default function InventoryManagement() {
         </div>
       </div>
 
+      {/* Mobile action bar */}
+      <div className="flex lg:hidden items-center gap-3">
+        <button className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Export</span>
+        </button>
+        <button className="flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium transition-colors ml-auto">
+          <Plus className="w-4 h-4" />
+          <span>Add Product</span>
+        </button>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Total Products", value: products.length, icon: Package, color: "bg-primary-500" },
           { label: "Low Stock", value: products.filter((p) => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level).length, icon: AlertTriangle, color: "bg-yellow-500" },
           { label: "Out of Stock", value: products.filter((p) => p.stock_quantity <= 0).length, icon: AlertTriangle, color: "bg-red-500" },
           { label: "Active Items", value: products.filter((p) => p.is_active).length, icon: Package, color: "bg-green-500" },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white dark:bg-pos-card rounded-2xl p-5 border border-gray-200 dark:border-pos-border">
-            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", color)}>
-              <Icon className="w-5 h-5 text-white" />
+          <div key={label} className="bg-white dark:bg-pos-card rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-pos-border">
+            <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3", color)}>
+              <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Search & Filter */}
       <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border overflow-hidden">
-        <div className="p-4 border-b border-gray-200 dark:border-pos-border flex items-center gap-3">
-          <div className="flex-1 relative">
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-pos-border flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex-1 min-w-[160px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or barcode..."
+              placeholder="Search products..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            <Filter className="w-4 h-4" />Filter
+          <button className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <Filter className="w-4 h-4" /><span className="hidden sm:inline">Filter</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            <ArrowUpDown className="w-4 h-4" />Sort
+          <button className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <ArrowUpDown className="w-4 h-4" /><span className="hidden sm:inline">Sort</span>
           </button>
         </div>
 
@@ -98,12 +112,20 @@ export default function InventoryManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/50">
-                {["Product", "Barcode", "Price", "Cost", "Stock", "Status", "Actions"].map((h) => (
+                {[
+                  { label: "Product", cls: "" },
+                  { label: "Barcode", cls: "hidden md:table-cell" },
+                  { label: "Price", cls: "" },
+                  { label: "Cost", cls: "hidden sm:table-cell" },
+                  { label: "Stock", cls: "" },
+                  { label: "Status", cls: "hidden sm:table-cell" },
+                  { label: "Actions", cls: "" },
+                ].map(({ label, cls }) => (
                   <th
-                    key={h}
-                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    key={label}
+                    className={cn("text-left px-3 sm:px-6 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider", cls)}
                   >
-                    {h}
+                    {label}
                   </th>
                 ))}
               </tr>
@@ -116,9 +138,9 @@ export default function InventoryManagement() {
                     key={product.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors"
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-lg">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-base sm:text-lg flex-shrink-0">
                           📦
                         </div>
                         <div>
@@ -127,17 +149,17 @@ export default function InventoryManagement() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-gray-600 dark:text-gray-300">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 font-mono text-xs text-gray-600 dark:text-gray-300 hidden md:table-cell">
                       {product.barcode}
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-semibold text-gray-900 dark:text-white">
                       {formatCurrency(product.price)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                       {product.cost_price ? formatCurrency(product.cost_price) : "—"}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <span
                           className={cn(
                             "text-sm font-bold",
@@ -150,10 +172,10 @@ export default function InventoryManagement() {
                         >
                           {product.stock_quantity}
                         </span>
-                        <span className="text-xs text-gray-400">/ min {product.min_stock_level}</span>
+                        <span className="text-xs text-gray-400 hidden sm:inline">/ min {product.min_stock_level}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                       <span
                         className={cn(
                           "px-2.5 py-1 rounded-full text-xs font-medium",
@@ -165,8 +187,8 @@ export default function InventoryManagement() {
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-600 transition-colors">
                           <Edit2 className="w-4 h-4" />
                         </button>
