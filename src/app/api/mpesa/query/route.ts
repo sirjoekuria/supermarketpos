@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     // ── FAST PATH: check the DB first (callback already updates this) ──
     const { data: existing } = await supabase
       .from("mpesa_transactions")
-      .select("status, result_desc, mpesa_receipt_number")
+      .select("status, result_desc, mpesa_receipt_number, created_at")
       .eq("checkout_request_id", checkoutRequestId)
       .maybeSingle();
 
@@ -37,9 +37,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // ── SLOW PATH: only query Safaricom after 8+ seconds and only every 3 seconds ──
-    // This avoids hitting Safaricom on every poll (each costs ~1-2s RTT).
-    const shouldQuerySafaricom = elapsedSeconds >= 8 && (elapsedSeconds % 3 === 0);
+    // Determine elapsed time robustly (either passed from client or computed from DB creation timestamp)
+    const createdAtTime = existing?.created_at ? new Date(existing.created_at).getTime() : Date.now();
+    const serverElapsedSeconds = Math.max(0, Math.floor((Date.now() - createdAtTime) / 1000));
+    const activeElapsed = parseInt(url.searchParams.get("elapsed") || String(serverElapsedSeconds), 10);
+
+    // ── SLOW PATH: only query Safaricom after 3 seconds and only every 2 seconds ──
+    // This avoids hitting Safaricom on every single poll while keeping confirmation instant.
+    const shouldQuerySafaricom = activeElapsed >= 3 && (activeElapsed % 2 === 0);
 
     if (!shouldQuerySafaricom) {
       return NextResponse.json({ status: "pending", message: "Waiting for customer to pay..." });

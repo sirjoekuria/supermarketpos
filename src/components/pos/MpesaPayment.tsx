@@ -158,7 +158,8 @@ export default function MpesaPayment({
   useEffect(() => {
     if (status !== "pending" || !checkoutRequestId) return;
     let elapsed = 0;
-    const interval = setInterval(async () => {
+
+    const checkStatus = async () => {
       try {
         const response = await fetch(
           `/api/mpesa/query?checkoutRequestId=${checkoutRequestId}&elapsed=${elapsed}`
@@ -176,7 +177,12 @@ export default function MpesaPayment({
         console.error("Status check error:", err);
       }
       elapsed += 1;
-    }, 1000); // Poll every 1 second to feel instant
+    };
+
+    // Run first check immediately (fast DB lookup)
+    checkStatus();
+
+    const interval = setInterval(checkStatus, 1000); // Poll every 1 second to feel instant
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
