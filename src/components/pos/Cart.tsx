@@ -4,20 +4,28 @@ import { useState, useEffect } from "react";
 import {
   Minus, Plus, Trash2, ShoppingCart, Tag, Percent,
   User, UserCheck, Search, X, Star, UserPlus, Loader2, Check,
-  AlertCircle, Gift
+  AlertCircle, Gift, Lock, Eye
 } from "lucide-react";
 import { useCartStore } from "@/store";
+import { useAuthStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Customer } from "@/types";
+import ManagerAuth from "./ManagerAuth";
+import AuditLog from "./AuditLog";
 
 export default function Cart() {
   const {
     items, removeItem, updateQuantity, updateDiscount, getTotals,
     selectedCustomer, setSelectedCustomer
   } = useCartStore();
+  const { user } = useAuthStore();
 
   const [discountInput, setDiscountInput] = useState<Record<string, string>>({});
+  const [showManagerAuth, setShowManagerAuth] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null);
+  const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [showAuditLog, setShowAuditLog] = useState(false);
   const totals = getTotals();
 
   // Loyalty Customer Search state
@@ -99,6 +107,39 @@ export default function Cart() {
     } catch (err) {
       setRegError("Network connection failed.");
     }
+  };
+
+  const handleRemoveItemAuth = (productId: string, productName: string) => {
+    setPendingAction({ type: "remove_item", data: { productId, productName } });
+    setShowManagerAuth(true);
+  };
+
+  const handleApplyDiscountAuth = (productId: string, productName: string) => {
+    setPendingAction({ type: "apply_discount", data: { productId, productName } });
+    setShowManagerAuth(true);
+  };
+
+  const handleManagerAuthorize = (managerId: string) => {
+    if (!pendingAction) return;
+
+    const { type, data } = pendingAction;
+    const timestamp = new Date().toISOString();
+
+    if (type === "remove_item") {
+      const item = items.find(i => i.product.id === data.productId);
+      removeItem(data.productId);
+      setAuditLog([...auditLog, {
+        id: Date.now().toString(),
+        action: "remove_item",
+        description: `Removed item from cart`,
+        itemName: data.productName,
+        manager: { name: user?.full_name || "Unknown", email: user?.email || "" },
+        timestamp,
+        authorizedAt: timestamp,
+      }]);
+    }
+
+    setPendingAction(null);
   };
 
   if (items.length === 0) {
@@ -336,10 +377,12 @@ export default function Cart() {
               </div>
 
               <button
-                onClick={() => removeItem(item.product.id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0"
+                onClick={() => handleRemoveItemAuth(item.product.id, item.product.name)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0 relative group/trash"
+                title="Requires manager authorization"
               >
                 <Trash2 className="w-4 h-4" />
+                <Lock className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-amber-500" />
               </button>
             </div>
           </div>
@@ -368,7 +411,7 @@ export default function Cart() {
             {formatCurrency(totals.taxAmount)}
           </span>
         </div>
-        
+
         {/* Estimated Earning Display (if customer selected) */}
         {selectedCustomer && (
           <div className="flex justify-between text-xs text-amber-600 dark:text-amber-400 font-semibold border-t border-dashed border-gray-200 dark:border-gray-700/50 pt-2">
@@ -386,7 +429,30 @@ export default function Cart() {
             {formatCurrency(totals.total)}
           </span>
         </div>
+
+        {auditLog.length > 0 && (
+          <button
+            onClick={() => setShowAuditLog(true)}
+            className="w-full mt-2 py-2 text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors flex items-center justify-center gap-1"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            View Manager Actions ({auditLog.length})
+          </button>
+        )}
       </div>
+
+      <ManagerAuth
+        isOpen={showManagerAuth}
+        onClose={() => { setShowManagerAuth(false); setPendingAction(null); }}
+        onAuthorize={handleManagerAuthorize}
+        action={pendingAction ? `${pendingAction.type.replace(/_/g, " ")}: ${pendingAction.data.productName || "transaction"}` : ""}
+      />
+
+      <AuditLog
+        entries={auditLog}
+        isOpen={showAuditLog}
+        onClose={() => setShowAuditLog(false)}
+      />
     </div>
   );
 }

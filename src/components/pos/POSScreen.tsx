@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import {
   ScanLine, ShoppingCart, CreditCard, Banknote, Monitor, Search, X,
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
-  LogOut, Moon, Sun, Menu, Gift,
+  LogOut, Moon, Sun, Menu, Gift, Lock,
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore } from "@/store";
+import ManagerAuth from "./ManagerAuth";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -33,7 +34,6 @@ export default function POSScreen() {
   const { products, isLoading, error: productsError, fetchProducts } = useProductStore();
 
   const [showScanner, setShowScanner] = useState(false);
-  const [continuousScanning, setContinuousScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [showPayment, setShowPayment] = useState(false);
@@ -53,6 +53,7 @@ export default function POSScreen() {
   });
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
+  const [showVoidAuth, setShowVoidAuth] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // ── Scan feedback state ────────────────────────────────────────────────
@@ -531,10 +532,12 @@ export default function POSScreen() {
                 Checkout {formatCurrency(totals.total)}
               </button>
               <button
-                onClick={clearCart}
-                className="w-full py-2.5 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 text-sm font-medium transition-colors"
+                onClick={() => setShowVoidAuth(true)}
+                className="w-full py-2.5 text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-sm font-medium transition-colors flex items-center justify-center gap-1"
+                title="Requires manager authorization"
               >
-                Clear Cart
+                <Lock className="w-3.5 h-3.5" />
+                Void Transaction
               </button>
             </div>
           )}
@@ -879,8 +882,17 @@ export default function POSScreen() {
         isOpen={showScanner}
         onScan={handleBarcodeScan}
         onClose={() => setShowScanner(false)}
-        continuousMode={continuousScanning}
-        onToggleContinuous={setContinuousScanning}
+      />
+
+      <ManagerAuth
+        isOpen={showVoidAuth}
+        onClose={() => setShowVoidAuth(false)}
+        onAuthorize={() => {
+          clearCart();
+          setShowVoidAuth(false);
+          setMobileTab("products");
+        }}
+        action="Void entire transaction"
       />
       {customerDisplay && <CustomerDisplay />}
 
