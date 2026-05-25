@@ -174,7 +174,7 @@ export default function ManagerAuth({
                 }}
                 placeholder="Enter manager PIN"
                 className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono text-center tracking-widest focus:outline-none focus:ring-2 focus:ring-primary-500"
-                maxLength="6"
+                maxLength={6}
               />
               <button
                 onClick={verifyPin}
