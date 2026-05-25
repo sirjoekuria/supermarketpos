@@ -9,24 +9,31 @@ interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
   onClose: () => void;
   isOpen: boolean;
+  continuousMode?: boolean;
+  onToggleContinuous?: (enabled: boolean) => void;
 }
 
 export default function BarcodeScanner({
   onScan,
   onClose,
   isOpen,
+  continuousMode = false,
+  onToggleContinuous,
 }: BarcodeScannerProps) {
   const [scanMode, setScanMode] = useState<"camera" | "usb">("camera");
   const [usbInput, setUsbInput] = useState("");
   const [camError, setCamError] = useState("");
+  const [isContinuous, setIsContinuous] = useState(continuousMode);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleScanSuccess = useCallback(
     (decodedText: string) => {
       onScan(decodedText);
-      onClose();
+      if (!isContinuous) {
+        onClose();
+      }
     },
-    [onScan, onClose]
+    [onScan, onClose, isContinuous]
   );
 
   useEffect(() => {
@@ -114,6 +121,11 @@ export default function BarcodeScanner({
     };
   }, [isOpen, scanMode, usbInput, handleScanSuccess]);
 
+  const toggleContinuousMode = () => {
+    setIsContinuous(!isContinuous);
+    onToggleContinuous?.(!isContinuous);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -123,13 +135,32 @@ export default function BarcodeScanner({
           <div className="flex items-center gap-3">
             <ScanLine className="w-6 h-6 text-primary-500" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Scan Barcode</h2>
+            {isContinuous && (
+              <span className="ml-2 px-2.5 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-xs font-bold rounded-full">
+                Continuous
+              </span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleContinuousMode}
+              className={cn(
+                "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                isContinuous
+                  ? "bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+              )}
+              title="Keep scanner open for continuous scanning"
+            >
+              Keep Open
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </button>
+          </div>
         </div>
 
         <div className="flex p-2 mx-6 mt-4 bg-gray-100 dark:bg-gray-800 rounded-xl">

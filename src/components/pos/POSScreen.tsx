@@ -33,6 +33,7 @@ export default function POSScreen() {
   const { products, isLoading, error: productsError, fetchProducts } = useProductStore();
 
   const [showScanner, setShowScanner] = useState(false);
+  const [continuousScanning, setContinuousScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [showPayment, setShowPayment] = useState(false);
@@ -878,6 +879,8 @@ export default function POSScreen() {
         isOpen={showScanner}
         onScan={handleBarcodeScan}
         onClose={() => setShowScanner(false)}
+        continuousMode={continuousScanning}
+        onToggleContinuous={setContinuousScanning}
       />
       {customerDisplay && <CustomerDisplay />}
 
