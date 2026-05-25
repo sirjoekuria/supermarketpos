@@ -1,0 +1,244 @@
+/* ScanFeedback.css ─────────────────────────────────────────────────────────
+   Visual overlay shown on each barcode scan event.
+   Supports success (green) and error (red) states with animated SVG icons,
+   a shrinking progress bar, and shake/pulse micro-animations.
+   Dark-mode aware via @media (prefers-color-scheme: dark).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Container ─────────────────────────────────────────────────────────── */
+.scan-feedback-container {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scan-feedback-container.position-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.scan-feedback-container.position-top {
+  top: 72px; /* below header */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.scan-feedback-container.position-bottom {
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.scan-feedback {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 20px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 270px;
+  max-width: 380px;
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+/* ── Success ────────────────────────────────────────────────────────────── */
+.scan-feedback-success {
+  border: 2px solid #22c55e;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.scan-feedback-success .scan-feedback-icon { color: #16a34a; }
+
+/* Pulse ring */
+.scan-feedback-success::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 18px;
+  border: 2px solid #22c55e;
+  opacity: 0;
+  animation: successPulse 0.65s ease-out;
+}
+
+/* ── Error ──────────────────────────────────────────────────────────────── */
+.scan-feedback-error {
+  border: 2px solid #ef4444;
+  background: linear-gradient(135deg, #fff1f2 0%, #ffffff 100%);
+}
+
+.scan-feedback-error .scan-feedback-icon { color: #dc2626; }
+
+/* ── Icon ───────────────────────────────────────────────────────────────── */
+.scan-feedback-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Content ────────────────────────────────────────────────────────────── */
+.scan-feedback-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.scan-feedback-message {
+  font-family: "Inter", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scan-feedback-barcode {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 1.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Progress bar ───────────────────────────────────────────────────────── */
+.scan-feedback-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.scan-feedback-progress-bar {
+  height: 100%;
+  border-radius: 0 3px 3px 0;
+  animation: progressShrink linear forwards;
+}
+
+.scan-feedback-progress-success { background: #22c55e; }
+.scan-feedback-progress-error   { background: #ef4444; }
+
+/* ── Enter / Exit animations ────────────────────────────────────────────── */
+.scan-feedback.animate-in {
+  animation: scanFeedbackIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.scan-feedback.animate-out {
+  animation: scanFeedbackOut 0.25s ease-in forwards;
+}
+
+/* Error adds shake on top of standard enter */
+.scan-feedback-error.animate-in {
+  animation:
+    scanFeedbackIn 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+    errorShake 0.45s 0.1s ease;
+}
+
+/* ── SVG icon path animations ───────────────────────────────────────────── */
+
+/* Circle (both icons) */
+.icon-circle {
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: drawPath 0.4s ease forwards;
+}
+
+/* Checkmark */
+.icon-check {
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  animation: drawPath 0.3s 0.22s ease forwards;
+}
+
+/* Cross lines */
+.icon-cross-1,
+.icon-cross-2 {
+  stroke-dasharray: 10;
+  stroke-dashoffset: 10;
+}
+
+.icon-cross-1 { animation: drawPath 0.28s 0.22s ease forwards; }
+.icon-cross-2 { animation: drawPath 0.28s 0.28s ease forwards; }
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes scanFeedbackIn {
+  from { opacity: 0; transform: scale(0.82) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+@keyframes scanFeedbackOut {
+  from { opacity: 1; transform: scale(1)    translateY(0);    }
+  to   { opacity: 0; transform: scale(0.92) translateY(-8px); }
+}
+
+@keyframes progressShrink {
+  from { width: 100%; }
+  to   { width: 0%;   }
+}
+
+@keyframes drawPath {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes successPulse {
+  0%   { opacity: 0.55; transform: scale(1);    }
+  100% { opacity: 0;    transform: scale(1.08); }
+}
+
+@keyframes errorShake {
+  0%, 100%    { transform: translateX(0);  }
+  15%, 55%, 85% { transform: translateX(-4px); }
+  35%, 70%    { transform: translateX(4px);  }
+}
+
+/* ── Mobile tweaks ──────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .scan-feedback {
+    min-width: 230px;
+    padding: 11px 16px;
+    gap: 10px;
+  }
+
+  .scan-feedback-message { font-size: 12px; }
+  .scan-feedback-barcode  { font-size: 10px; }
+
+  .scan-feedback-container.position-top    { top: 68px; }
+  .scan-feedback-container.position-bottom { bottom: 16px; }
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .scan-feedback {
+    background: #1e2330;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  }
+
+  .scan-feedback-message { color: #e5e7eb; }
+  .scan-feedback-barcode  { color: #9ca3af; }
+
+  .scan-feedback-success {
+    border-color: #16a34a;
+    background: linear-gradient(135deg, #052e16 0%, #1e2330 100%);
+  }
+
+  .scan-feedback-error {
+    border-color: #dc2626;
+    background: linear-gradient(135deg, #2d0a0a 0%, #1e2330 100%);
+  }
+}

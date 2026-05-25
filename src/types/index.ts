@@ -58,6 +58,11 @@ export interface Sale {
   cashier_id: string;
   cashier?: User;
   notes?: string;
+  loyalty?: {
+    points_earned: number;
+    points_redeemed: number;
+    final_points_balance: number;
+  };
   created_at: string;
   updated_at: string;
 }

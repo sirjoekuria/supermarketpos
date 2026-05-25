@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   Minus, Plus, Trash2, ShoppingCart, Tag, Percent,
-  User, UserCheck, Search, X, Star, UserPlus, Loader2, Check
+  User, UserCheck, Search, X, Star, UserPlus, Loader2, Check,
+  AlertCircle, Gift
 } from "lucide-react";
 import { useCartStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";

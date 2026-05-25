@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   ScanLine, ShoppingCart, CreditCard, Banknote, Monitor, Search, X,
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
-  LogOut, Moon, Sun, Menu,
+  LogOut, Moon, Sun, Menu, Gift,
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore } from "@/store";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
@@ -15,6 +15,7 @@ import Cart from "./Cart";
 import MpesaPayment from "./MpesaPayment";
 import ReceiptComponent from "./Receipt";
 import CustomerDisplay from "./CustomerDisplay";
+import ScanFeedback from "./ScanFeedback";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;
@@ -52,6 +53,20 @@ export default function POSScreen() {
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Scan feedback state ────────────────────────────────────────────────
+  const [scanFeedback, setScanFeedback] = useState<{
+    show: boolean;
+    type: "success" | "error";
+    message: string;
+    barcode: string;
+  }>({
+    show: false,
+    type: "success",
+    message: "",
+    barcode: "",
+  });
+  const scanFeedbackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const totals = getTotals();
   const netTotal = totals.total - pointsRedeemed;
@@ -107,11 +122,25 @@ export default function POSScreen() {
 
   const handleBarcodeScan = (barcode: string) => {
     const product = products.find((p) => p.barcode === barcode);
+
+    // Helper: flash the ScanFeedback overlay
+    const flash = (type: "success" | "error", msg: string) => {
+      // Reset to false first so the component re-triggers even for duplicate barcodes
+      if (scanFeedbackTimerRef.current) clearTimeout(scanFeedbackTimerRef.current);
+      setScanFeedback({ show: false, type, message: msg, barcode });
+      // Let one render pass before turning show on
+      scanFeedbackTimerRef.current = setTimeout(() => {
+        setScanFeedback({ show: true, type, message: msg, barcode });
+      }, 10);
+    };
+
     if (product) {
       addItem(product);
       setError("");
+      flash("success", `${product.name}`);
     } else {
       setError(`Product not found: ${barcode}`);
+      flash("error", `Not found: ${barcode}`);
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -851,6 +880,20 @@ export default function POSScreen() {
         onClose={() => setShowScanner(false)}
       />
       {customerDisplay && <CustomerDisplay />}
+
+      {/* ── Barcode scan audio-visual feedback overlay ── */}
+      <ScanFeedback
+        show={scanFeedback.show}
+        type={scanFeedback.type}
+        message={scanFeedback.message}
+        barcode={scanFeedback.barcode}
+        duration={850}
+        position="top"
+        enableSound={true}
+        onAnimationComplete={() =>
+          setScanFeedback((prev) => ({ ...prev, show: false }))
+        }
+      />
     </div>
   );
 }
