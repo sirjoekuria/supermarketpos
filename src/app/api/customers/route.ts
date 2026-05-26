@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
+import { sanitizeString } from "@/lib/sanitize";
 
 // GET /api/customers - List all customers or search by name/phone
 export async function GET(request: Request) {
@@ -37,7 +38,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, email } = body;
+    const name = sanitizeString(body.name);
+    const phone = sanitizeString(body.phone);
+    const email = sanitizeString(body.email);
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Customer name is required." }, { status: 400 });
@@ -66,9 +69,9 @@ export async function POST(request: Request) {
     const { data: customer, error } = await supabase
       .from("customers")
       .insert({
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email?.trim() || null,
+        name: name,
+        phone: phone,
+        email: email || null,
         points_balance: 0,
       })
       .select()

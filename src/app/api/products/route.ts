@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { writeAuditLog } from "@/lib/server-auth";
+import { sanitizeString } from "@/lib/sanitize";
 
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,16 +28,16 @@ export async function POST(request: Request) {
     const { data: product, error } = await supabase
       .from("products")
       .insert({
-        name: body.name.trim(),
-        barcode: body.barcode.trim(),
+        name: sanitizeString(body.name),
+        barcode: sanitizeString(body.barcode),
         price: Number(body.price),
         cost_price: body.cost_price ? Number(body.cost_price) : null,
         stock_quantity: Number(body.stock_quantity) || 0,
         min_stock_level: Number(body.min_stock_level) || 5,
-        unit: body.unit.trim() || "pcs",
+        unit: sanitizeString(body.unit) || "pcs",
         tax_rate: Number(body.tax_rate) || 0,
         discount_percent: Number(body.discount_percent) || 0,
-        image_url: body.image_url ? body.image_url.trim() : null,
+        image_url: body.image_url ? sanitizeString(body.image_url) : null,
         is_active: body.is_active !== false,
       })
       .select()
@@ -80,16 +81,16 @@ export async function PATCH(request: Request) {
     const { data: product, error } = await supabase
       .from("products")
       .update({
-        name: updateFields.name?.trim(),
-        barcode: updateFields.barcode?.trim(),
+        name: updateFields.name ? sanitizeString(updateFields.name) : undefined,
+        barcode: updateFields.barcode ? sanitizeString(updateFields.barcode) : undefined,
         price: updateFields.price !== undefined ? Number(updateFields.price) : undefined,
         cost_price: updateFields.cost_price !== undefined ? (updateFields.cost_price ? Number(updateFields.cost_price) : null) : undefined,
         stock_quantity: updateFields.stock_quantity !== undefined ? Number(updateFields.stock_quantity) : undefined,
         min_stock_level: updateFields.min_stock_level !== undefined ? Number(updateFields.min_stock_level) : undefined,
-        unit: updateFields.unit !== undefined ? (updateFields.unit?.trim() || "pcs") : undefined,
+        unit: updateFields.unit !== undefined ? (sanitizeString(updateFields.unit) || "pcs") : undefined,
         tax_rate: updateFields.tax_rate !== undefined ? Number(updateFields.tax_rate) : undefined,
         discount_percent: updateFields.discount_percent !== undefined ? Number(updateFields.discount_percent) : undefined,
-        image_url: updateFields.image_url !== undefined ? (updateFields.image_url?.trim() || null) : undefined,
+        image_url: updateFields.image_url !== undefined ? (sanitizeString(updateFields.image_url) || null) : undefined,
         is_active: updateFields.is_active !== undefined ? updateFields.is_active : undefined,
       })
       .eq("id", id)

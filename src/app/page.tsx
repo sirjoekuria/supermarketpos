@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore } from "@/store";
 
+import { AppLoadingSkeleton } from "@/components/ui/Skeleton";
 import POSScreen from "@/components/pos/POSScreen";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import InventoryManagement from "@/components/inventory/InventoryManagement";
@@ -73,11 +74,7 @@ export default function Home() {
   }, [setSidebarOpen]);
 
   if (!isMounted) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-pos-dark", darkMode && "dark")}>
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <AppLoadingSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -189,8 +186,10 @@ export default function Home() {
             </div>
           </header>
         )}
-        <div className="flex-1 overflow-hidden">
-          {renderContent()}
+        <div className="flex-1 overflow-hidden relative">
+          <div key={activeTab} className="absolute inset-0 animate-fade-in overflow-hidden">
+            {renderContent()}
+          </div>
         </div>
       </main>
 
