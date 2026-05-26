@@ -4,11 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && next export -o out || next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cap:sync": "npm run build && npx cap sync android",
+    "cap:dev": "npm run cap:sync && npx cap open android",
+    "cap:update": "npx cap sync android",
+    "cap:copy": "npx cap copy android",
+    "cap:run": "npm run cap:sync && npx cap run android --external",
+    "android:build": "cd android && ./gradlew assembleDebug && cd ..",
+    "android:release": "cd android && ./gradlew assembleRelease && cd .."
   },
   "dependencies": {
+    "@capacitor/android": "^5.5.0",
+    "@capacitor/biometric": "^5.5.0",
+    "@capacitor/camera": "^5.5.0",
+    "@capacitor/core": "^5.5.0",
+    "@capacitor/device": "^5.5.0",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/supabase-js": "^2.39.0",
     "@types/uuid": "^9.0.7",
@@ -33,6 +45,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^5.5.0",
     "@netlify/plugin-nextjs": "^5.15.11",
     "@types/node": "^20.10.4",
     "@types/react": "^18.2.43",

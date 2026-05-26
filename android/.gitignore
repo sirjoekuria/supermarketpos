@@ -1,0 +1,45 @@
+# Android
+*.apk
+*.aar
+*.so
+*.jnilib
+*.dylib
+*.dll
+*.exe
+
+# Gradle
+.gradle
+build/
+gradlew
+gradlew.bat
+gradle/
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+.DS_Store
+
+# Logs
+*.log
+*.swp
+*~
+
+# Build outputs
+out/
+app/build/
+app/.cxx/
+
+# Local properties
+gradle.properties
+
+# Keystore files
+*.keystore
+*.jks
+
+# Generated
+captures/
+.externalNativeBuild
+.cxx/
