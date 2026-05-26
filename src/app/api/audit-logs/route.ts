@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { findApprovedActor, getAdminClient } from "@/lib/server-auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const actorId = new URL(request.url).searchParams.get("actorId");

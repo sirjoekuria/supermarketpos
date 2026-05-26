@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ScanLine, ShoppingCart, CreditCard, Banknote, Monitor, Search, X,
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
-  LogOut, Moon, Sun, Menu, Gift, Lock,
+  LogOut, Moon, Sun, Menu, Gift, Lock, WifiOff, Wifi, RefreshCw,
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore } from "@/store";
 import ManagerAuth from "./ManagerAuth";
@@ -55,6 +55,75 @@ export default function POSScreen() {
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Online / Offline detection ─────────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState(true);
+  const [syncingOffline, setSyncingOffline] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  // ── Auto-sync offline queue when network recovers ─────────────────────────
+  const syncOfflineQueue = useCallback(async () => {
+    const raw = localStorage.getItem("pos_offline_queue");
+    if (!raw) return;
+    let queue: any[] = [];
+    try { queue = JSON.parse(raw); } catch { return; }
+    if (!queue.length) return;
+
+    setSyncingOffline(true);
+    const failed: any[] = [];
+    for (const payload of queue) {
+      try {
+        const res = await fetch("/api/sales", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) failed.push(payload);
+      } catch {
+        failed.push(payload);
+      }
+    }
+    localStorage.setItem("pos_offline_queue", JSON.stringify(failed));
+    setSyncingOffline(false);
+    if (failed.length === 0) {
+      fetchProducts(); // refresh stock after sync
+    }
+  }, [fetchProducts]);
+
+  useEffect(() => {
+    if (isOnline) syncOfflineQueue();
+  }, [isOnline, syncOfflineQueue]);
+
+  // ── Pull-to-refresh ────────────────────────────────────────────────────────
+  const pullStartY = useRef<number | null>(null);
+  const [pullDelta, setPullDelta] = useState(0);
+  const PULL_THRESHOLD = 70;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    // Only trigger at top of scroll
+    const el = e.currentTarget as HTMLDivElement;
+    if (el.scrollTop === 0) pullStartY.current = e.touches[0].clientY;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (pullStartY.current === null) return;
+    const delta = Math.max(0, e.touches[0].clientY - pullStartY.current);
+    setPullDelta(Math.min(delta, PULL_THRESHOLD * 1.5));
+  };
+  const onTouchEnd = () => {
+    if (pullDelta >= PULL_THRESHOLD) fetchProducts();
+    pullStartY.current = null;
+    setPullDelta(0);
+  };
 
   // ── Scan feedback state ────────────────────────────────────────────────
   const [scanFeedback, setScanFeedback] = useState<{
@@ -179,30 +248,66 @@ export default function POSScreen() {
         total: item.total,
       }));
 
+      const payload = {
+        receipt_number: receiptNum,
+        subtotal: totals.subtotal,
+        tax_amount: totals.taxAmount,
+        discount_amount: totals.discountAmount + (pointsRedeemed * 1),
+        total: netTotal,
+        payment_method: paymentMethod,
+        payment_status: "completed",
+        items: saleItems,
+        split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+        customer_id: selectedCustomer?.id || null,
+        points_redeemed: pointsRedeemed,
+        actor: user ? { id: user.id, email: user.email, full_name: user.full_name, role: user.role } : undefined,
+      };
+
+      // ── Offline mode: queue the sale and proceed optimistically ────────────
+      if (!isOnline) {
+        const raw = localStorage.getItem("pos_offline_queue") || "[]";
+        const queue = JSON.parse(raw);
+        queue.push(payload);
+        localStorage.setItem("pos_offline_queue", JSON.stringify(queue));
+
+        const offlineSale = {
+          id: `offline-${receiptNum}`,
+          receipt_number: receiptNum,
+          items: [...items],
+          subtotal: totals.subtotal,
+          tax_amount: totals.taxAmount,
+          discount_amount: totals.discountAmount,
+          total: netTotal,
+          payment_method: paymentMethod,
+          payment_status: "pending_sync",
+          mpesa_transaction_id: mpesaTransactionId,
+          split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
+          customer_id: selectedCustomer?.id || "",
+          customer: selectedCustomer || undefined,
+          points_earned: 0,
+          points_redeemed: pointsRedeemed,
+          cashier_id: user?.id || "",
+          cashier: user,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          offline: true,
+        };
+        setCompletedSale(offlineSale);
+        setShowReceipt(true);
+        clearCart();
+        setShowPayment(false);
+        setCashReceived("");
+        setSplitPayments({ cash: "", mpesa: "", card: "" });
+        setSplitReferences({ mpesa: "", card: "" });
+        setMobileTab("products");
+        return;
+      }
+
+      // ── Online mode: submit to server as before ────────────────────────────
       const response = await fetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          receipt_number: receiptNum,
-          subtotal: totals.subtotal,
-          tax_amount: totals.taxAmount,
-          discount_amount: totals.discountAmount + (pointsRedeemed * 1), // treat redemption as a discount
-          total: netTotal,
-          payment_method: paymentMethod,
-          payment_status: "completed",
-          items: saleItems,
-          split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
-          customer_id: selectedCustomer?.id || null,
-          points_redeemed: pointsRedeemed,
-          actor: user
-            ? {
-                id: user.id,
-                email: user.email,
-                full_name: user.full_name,
-                role: user.role,
-              }
-            : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -310,7 +415,22 @@ export default function POSScreen() {
         </div>
       </header>
 
-      {/* Mobile Tab Selector — only shown on small screens */}
+      {/* Offline / Syncing Banner */}
+      {(!isOnline || syncingOffline) && (
+        <div className={cn(
+          "flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold flex-shrink-0",
+          !isOnline
+            ? "bg-red-600 text-white"
+            : "bg-amber-500 text-white"
+        )}>
+          {!isOnline ? (
+            <><WifiOff className="w-3.5 h-3.5" /> Offline &mdash; Sales will be queued and synced when connection is restored.</>
+          ) : (
+            <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Syncing {JSON.parse(localStorage.getItem("pos_offline_queue") || "[]").length} offline sale(s)...</>
+          )}
+        </div>
+      )}
+
       <div className="lg:hidden flex border-b border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card flex-shrink-0">
         <button
           onClick={() => setMobileTab("products")}
@@ -430,7 +550,27 @@ export default function POSScreen() {
           </div>
 
           {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+          <div
+            className="flex-1 overflow-y-auto p-3 sm:p-4 relative"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {/* Pull-to-refresh indicator */}
+            {pullDelta > 10 && (
+              <div
+                className="absolute top-0 left-0 right-0 flex items-center justify-center z-10 pointer-events-none transition-all"
+                style={{ height: `${pullDelta * 0.6}px` }}
+              >
+                <div className={cn(
+                  "flex items-center gap-2 text-xs font-semibold text-primary-600 dark:text-primary-400",
+                  pullDelta >= PULL_THRESHOLD && "text-green-600 dark:text-green-400"
+                )}>
+                  <RefreshCw className={cn("w-4 h-4", pullDelta >= PULL_THRESHOLD && "animate-spin")} />
+                  {pullDelta >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+                </div>
+              </div>
+            )}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-500">
                 <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary-500" />

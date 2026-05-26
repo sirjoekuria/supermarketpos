@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
 import { getAdminClient, publicUser, verifyPassword, writeAuditLog, type StaffUserRow } from "@/lib/server-auth";
+import { isRateLimited } from "@/lib/rate-limit";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "127.0.0.1";
+    if (isRateLimited(ip, 5, 60)) {
+      return NextResponse.json({ error: "Too many login attempts. Please wait a minute and try again." }, { status: 429 });
+    }
+
     const body = await request.json();
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
+
+    // Input validation
+    if (!EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (!password || password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+    }
 
     const supabase = getAdminClient();
     const { data, error } = await supabase.from("app_users").select("*").eq("email", email).maybeSingle();

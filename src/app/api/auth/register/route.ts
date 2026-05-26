@@ -1,18 +1,37 @@
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, publicUser, type ApprovalStatus, type StaffRole, writeAuditLog } from "@/lib/server-auth";
+import { isRateLimited } from "@/lib/rate-limit";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE = /^[a-zA-ZÀ-ÿ\s'\-]{2,80}$/; // letters, spaces, hyphens, apostrophes
 
 const ROLES: StaffRole[] = ["admin", "manager", "cashier"];
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "127.0.0.1";
+    if (isRateLimited(ip, 3, 60)) {
+      return NextResponse.json({ error: "Too many registration attempts. Please wait a minute." }, { status: 429 });
+    }
+
     const body = await request.json();
     const fullName = String(body.full_name || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
     const role = body.role as StaffRole;
 
-    if (!fullName || !email || password.length < 6 || !ROLES.includes(role)) {
-      return NextResponse.json({ error: "Enter a name, valid role, email, and password with at least 6 characters." }, { status: 400 });
+    // Input validation
+    if (!NAME_RE.test(fullName)) {
+      return NextResponse.json({ error: "Full name must be 2–80 characters and contain only letters." }, { status: 400 });
+    }
+    if (!EMAIL_RE.test(email)) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+    }
+    if (!ROLES.includes(role)) {
+      return NextResponse.json({ error: "Please select a valid role." }, { status: 400 });
     }
 
     const supabase = getAdminClient();

@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 
+const isProd = process.env.NODE_ENV === 'production';
+const isCapacitorBuild = process.env.CAPACITOR_BUILD === 'true';
+
 const nextConfig = {
-  // Export as static HTML for Capacitor
-  output: 'export',
-  
+  // Only use static export when building for Capacitor (not during dev or regular prod)
+  ...(isCapacitorBuild ? { output: 'export' } : {}),
+
   // Disable image optimization for static export
   images: {
     unoptimized: true,
@@ -11,38 +14,40 @@ const nextConfig = {
 
   // Optimize for mobile
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    removeConsole: isProd,
   },
 
   // Strict mode for development
   reactStrictMode: true,
 
-  // Headers for security
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-        ],
-      },
-    ];
-  },
+  // Headers for security (only applies when NOT in static export mode)
+  ...(!isCapacitorBuild ? {
+    async headers() {
+      return [
+        {
+          source: '/:path*',
+          headers: [
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff',
+            },
+            {
+              key: 'X-Frame-Options',
+              value: 'SAMEORIGIN',
+            },
+            {
+              key: 'X-XSS-Protection',
+              value: '1; mode=block',
+            },
+            {
+              key: 'Referrer-Policy',
+              value: 'strict-origin-when-cross-origin',
+            },
+          ],
+        },
+      ];
+    },
+  } : {}),
 
   // Webpack configuration
   webpack: (config, { dev }) => {
@@ -53,11 +58,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-
-  // Environment variables available to browser
-  publicRuntimeConfig: {
-    isDev: process.env.NODE_ENV === 'development',
   },
 };
 

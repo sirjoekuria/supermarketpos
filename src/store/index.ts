@@ -119,11 +119,13 @@ interface UIState {
   sidebarOpen: boolean;
   activeScreen: "pos" | "inventory" | "reports" | "settings" | "admin";
   customerDisplay: boolean;
+  activeTab: string;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setActiveScreen: (screen: UIState["activeScreen"]) => void;
   toggleCustomerDisplay: () => void;
+  setActiveTab: (tab: string) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -133,12 +135,14 @@ export const useUIStore = create<UIState>()(
       sidebarOpen: true,
       activeScreen: "pos",
       customerDisplay: false,
+      activeTab: "pos",
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setActiveScreen: (screen) => set({ activeScreen: screen }),
       toggleCustomerDisplay: () =>
         set((state) => ({ customerDisplay: !state.customerDisplay })),
+      setActiveTab: (tab) => set({ activeTab: tab }),
     }),
     {
       name: "pos-ui",

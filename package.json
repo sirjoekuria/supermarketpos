@@ -16,11 +16,7 @@
     "android:release": "cd android && ./gradlew assembleRelease && cd .."
   },
   "dependencies": {
-    "@capacitor/android": "^5.5.0",
-    "@capacitor/biometric": "^5.5.0",
-    "@capacitor/camera": "^5.5.0",
     "@capacitor/core": "^5.5.0",
-    "@capacitor/device": "^5.5.0",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/supabase-js": "^2.39.0",
     "@types/uuid": "^9.0.7",

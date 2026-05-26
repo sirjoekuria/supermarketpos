@@ -20,8 +20,11 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  
-  // Registration Modal State
+
+  // Pagination
+  const PAGE_SIZE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [showRegModal, setShowRegModal] = useState(false);
   const [regForm, setRegForm] = useState({ name: "", phone: "", email: "" });
   const [regError, setRegError] = useState("");
@@ -37,6 +40,7 @@ export default function CustomersPage() {
   // Fetch Customers list
   const fetchCustomers = async (search = "") => {
     setIsLoading(true);
+    setCurrentPage(1); // reset to page 1 on any new fetch
     try {
       const response = await fetch(`/api/customers?search=${encodeURIComponent(search)}`);
       const data = await response.json();
@@ -87,6 +91,10 @@ export default function CustomersPage() {
     e.preventDefault();
     fetchCustomers(searchQuery);
   };
+
+  // Pagination helpers
+  const totalPages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
+  const pagedCustomers = customers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Handle Customer Selection
   const handleSelectCustomer = (customer: Customer) => {
@@ -269,7 +277,7 @@ export default function CustomersPage() {
               <p className="text-xs mt-1">Register a customer to start loyalty tracking.</p>
             </div>
           ) : (
-            customers.map((cust) => {
+            pagedCustomers.map((cust) => {
               const tier = getLoyaltyTier(cust.points_balance);
               const isSelected = selectedCustomer?.id === cust.id;
 
@@ -307,6 +315,29 @@ export default function CustomersPage() {
             })
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {!isLoading && customers.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-pos-border flex-shrink-0 bg-white dark:bg-pos-card">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Prev
+            </button>
+            <span className="text-xs text-gray-500">
+              Page {currentPage} of {totalPages} &nbsp;·&nbsp; {customers.length} total
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* RIGHT COLUMN: Customer Details & Points Audit Timeline */}

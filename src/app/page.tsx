@@ -43,9 +43,21 @@ const NAV_ITEMS = [
 ];
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState("pos");
+  const [isMounted, setIsMounted] = useState(false);
   const { user, isAuthenticated, setUser, logout } = useAuthStore();
-  const { sidebarOpen, setSidebarOpen, toggleSidebar, darkMode, toggleDarkMode } = useUIStore();
+  const {
+    sidebarOpen,
+    setSidebarOpen,
+    toggleSidebar,
+    darkMode,
+    toggleDarkMode,
+    activeTab,
+    setActiveTab,
+  } = useUIStore();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,6 +71,14 @@ export default function Home() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [setSidebarOpen]);
+
+  if (!isMounted) {
+    return (
+      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-pos-dark", darkMode && "dark")}>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <AuthPage darkMode={darkMode} onAuthenticated={setUser} />;

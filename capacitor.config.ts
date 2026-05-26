@@ -18,7 +18,7 @@ const config: CapacitorConfig = {
       keystorePassword: 'android',
       keystoreAlias: 'androiddebugkey',
       keystoreAliasPassword: 'android',
-      releaseType: 'debug',
+      releaseType: 'APK',
     },
   },
   plugins: {

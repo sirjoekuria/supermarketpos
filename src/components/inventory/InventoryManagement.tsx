@@ -15,6 +15,8 @@ export default function InventoryManagement() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "price" | "stock">("name");
   const [filterBy, setFilterBy] = useState<"all" | "active" | "low_stock" | "out_of_stock">("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -65,6 +67,9 @@ export default function InventoryManagement() {
     if (sortBy === "stock") return b.stock_quantity - a.stock_quantity;
     return 0;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pagedFiltered = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const stockStatus = (product: Product) => {
     if (product.stock_quantity <= 0) return { label: "Out of Stock", color: "danger" };
@@ -451,7 +456,7 @@ export default function InventoryManagement() {
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               placeholder="Search products..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
@@ -485,7 +490,7 @@ export default function InventoryManagement() {
                 ].map(opt => (
                   <button
                     key={opt.id}
-                    onClick={() => { setFilterBy(opt.id as any); setShowFilterDropdown(false); }}
+                     onClick={() => { setFilterBy(opt.id as any); setShowFilterDropdown(false); setCurrentPage(1); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
                   >
                     {opt.label}
@@ -516,7 +521,7 @@ export default function InventoryManagement() {
                 ].map(opt => (
                   <button
                     key={opt.id}
-                    onClick={() => { setSortBy(opt.id as any); setShowSortDropdown(false); }}
+                     onClick={() => { setSortBy(opt.id as any); setShowSortDropdown(false); setCurrentPage(1); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
                   >
                     {opt.label}
@@ -584,7 +589,7 @@ export default function InventoryManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-pos-border">
-                {filtered.map((product) => {
+                {pagedFiltered.map((product) => {
                   const status = stockStatus(product);
                   return (
                     <tr
@@ -680,6 +685,29 @@ export default function InventoryManagement() {
             </table>
           )}
         </div>
+
+        {/* Inventory Pagination */}
+        {!isLoading && filtered.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-t border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/40">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              &larr; Previous
+            </button>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Page {currentPage} of {totalPages} &nbsp;&middot;&nbsp; {filtered.length} items
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next &rarr;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add / Edit Product Modal */}
