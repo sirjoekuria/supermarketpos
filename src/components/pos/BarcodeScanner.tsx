@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-import { X, ScanLine, Camera, Smartphone, AlertCircle } from "lucide-react";
+import { X, ScanLine, Camera, Smartphone, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCapacitor } from "@/hooks/useCapacitor";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -16,17 +17,54 @@ export default function BarcodeScanner({
   onClose,
   isOpen,
 }: BarcodeScannerProps) {
+  const { config, playScannerBeep, hapticFeedback } = useCapacitor();
   const [scanMode, setScanMode] = useState<"camera" | "usb">("camera");
   const [usbInput, setUsbInput] = useState("");
   const [camError, setCamError] = useState("");
+  const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null);
+  const [scanCooldown, setScanCooldown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleScanSuccess = useCallback(
-    (decodedText: string) => {
+    async (decodedText: string) => {
+      // Prevent duplicate scans of the same barcode
+      if (lastScannedBarcode === decodedText || scanCooldown) {
+        return;
+      }
+
+      // Record this barcode and activate cooldown
+      setLastScannedBarcode(decodedText);
+      setScanCooldown(true);
+
+      // Play native feedback on successful scan
+      if (config.isNative) {
+        await playScannerBeep();
+      }
+
       onScan(decodedText);
+
+      // Reset cooldown after 1.5 seconds to allow scanning different products
+      if (cooldownTimerRef.current) {
+        clearTimeout(cooldownTimerRef.current);
+      }
+
+      cooldownTimerRef.current = setTimeout(() => {
+        setScanCooldown(false);
+        setLastScannedBarcode(null);
+      }, 1500);
     },
-    [onScan]
+    [onScan, config.isNative, playScannerBeep, lastScannedBarcode, scanCooldown]
   );
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearTimeout(cooldownTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen || scanMode !== "camera") return;
@@ -161,16 +199,37 @@ export default function BarcodeScanner({
         <div className="p-6">
           {scanMode === "camera" ? (
             <div className="relative">
-              <div id="reader" className="rounded-xl overflow-hidden bg-black" style={{ minHeight: "250px" }} />
-              <div className="absolute inset-0 pointer-events-none border-2 border-primary-500/30 rounded-xl" />
+              <div
+                id="reader"
+                className={cn(
+                  "rounded-xl overflow-hidden bg-black transition-opacity",
+                  scanCooldown && "opacity-70"
+                )}
+                style={{ minHeight: "250px" }}
+              />
+              <div className={cn(
+                "absolute inset-0 pointer-events-none border-2 rounded-xl transition-colors",
+                scanCooldown ? "border-yellow-500" : "border-primary-500/30"
+              )} />
               {camError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 rounded-xl p-4 text-center">
                   <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
                   <p className="text-white text-sm font-medium">{camError}</p>
                 </div>
               )}
+              {scanCooldown && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-yellow-500/20 mb-2">
+                      <CheckCircle2 className="w-6 h-6 text-yellow-500" />
+                    </div>
+                    <p className="text-white text-sm font-semibold">Scanned!</p>
+                    <p className="text-yellow-300 text-xs mt-1">Move product away</p>
+                  </div>
+                </div>
+              )}
               <p className="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">
-                Position barcode within the frame
+                {scanCooldown ? "Move the product away from camera" : "Position barcode within the frame"}
               </p>
             </div>
           ) : (
