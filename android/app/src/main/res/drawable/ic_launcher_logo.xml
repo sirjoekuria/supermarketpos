@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    
+    <!-- White "R" letter -->
+    <group>
+        <!-- Vertical stroke -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M80,40 L80,140 L100,140 L100,40 Z" />
+        
+        <!-- Curved top (P part) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M100,40 Q130,40 130,65 Q130,85 100,85 L100,40" />
+        
+        <!-- Diagonal leg -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M100,85 L140,140 L120,140 L80,90 Z" />
+    </group>
+
+    <!-- Green accent bar at bottom -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M80,145 L130,145 L130,155 L80,155 Z" />
+</vector>

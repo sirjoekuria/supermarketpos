@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item android:drawable="@color/splash_background" />
+    
+    <!-- Logo container centered -->
+    <item android:gravity="center">
+        <layer-list>
+            <!-- Blue rounded square background -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/primary" />
+                    <corners android:radius="24dp" />
+                    <size android:width="120dp" android:height="120dp" />
+                </shape>
+            </item>
+            
+            <!-- White "R" logo centered -->
+            <item android:drawable="@drawable/ic_launcher_logo" />
+        </layer-list>
+    </item>
+</layer-list>

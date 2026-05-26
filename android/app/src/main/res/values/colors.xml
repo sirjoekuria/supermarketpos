@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#2563EB</color>
+    <color name="primary_dark">#1E40AF</color>
+    <color name="accent">#10B981</color>
+
+    <!-- Splash Screen Colors -->
+    <color name="splash_background">#FFFFFF</color>
+    <color name="splash_text">#2563EB</color>
+
+    <!-- Status Bar -->
+    <color name="status_bar">@color/primary_dark</color>
+
+    <!-- Navigation Bar -->
+    <color name="nav_bar">@color/primary</color>
+</resources>

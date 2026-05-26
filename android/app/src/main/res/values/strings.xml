@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RC Stores</string>
+    <string name="title_activity_main">RC Stores POS</string>
+    <string name="package_name">com.rocscrewsupermarket.pos</string>
+</resources>
