@@ -7,6 +7,7 @@ import androidx.biometric.BiometricPrompt;
 import androidx.fragment.app.FragmentActivity;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import com.getcapacitor.BridgeActivity;
 
 /**
  * Service for handling biometric authentication (fingerprint/face ID)
@@ -59,9 +60,9 @@ public class BiometricService {
                 .setDescription("Place your finger on the sensor or look at the camera")
                 .setNegativeButtonText("Cancel")
                 .setAllowedAuthenticators(
-                    BiometricPrompt.AUTHENTICATORS.BIOMETRIC_STRONG |
-                    BiometricPrompt.AUTHENTICATORS.DEVICE_CREDENTIAL
-                )
+    androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG |
+    androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+)
                 .build();
     }
     
@@ -105,9 +106,11 @@ public class BiometricService {
         );
         
         // Execute JavaScript callback in the web view
-        if (activity instanceof MainActivity) {
-            ((MainActivity) activity).executeJavaScript(
-                "window.onBiometricResult && window.onBiometricResult(" + resultJson + ")"
+        if (activity instanceof com.getcapacitor.BridgeActivity) {
+            com.getcapacitor.BridgeActivity bridgeActivity = (com.getcapacitor.BridgeActivity) activity;
+            bridgeActivity.getBridge().getWebView().evaluateJavascript(
+                "window.onBiometricResult && window.onBiometricResult(" + resultJson + ")",
+                null
             );
         }
     }
