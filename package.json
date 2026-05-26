@@ -4,18 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && next export -o out || next build",
+    "build": "next build",
+    "build:capacitor": "cross-env CAPACITOR_BUILD=true next build",
     "start": "next start",
     "lint": "next lint",
-    "cap:sync": "npm run build && npx cap sync android",
-    "cap:dev": "npm run cap:sync && npx cap open android",
+    "cap:sync": "npm run build:capacitor && npx cap sync android",
+    "cap:dev": "npm run build:capacitor && npx cap open android",
     "cap:update": "npx cap sync android",
     "cap:copy": "npx cap copy android",
-    "cap:run": "npm run cap:sync && npx cap run android --external",
-    "android:build": "cd android && ./gradlew assembleDebug && cd ..",
-    "android:release": "cd android && ./gradlew assembleRelease && cd .."
+    "cap:run": "npm run build:capacitor && npx cap run android --external",
+    "android:build": "cd android && .\\gradlew.bat assembleDebug",
+    "android:release": "cd android && .\\gradlew.bat assembleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "^5.7.8",
     "@capacitor/core": "^5.5.0",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "@supabase/supabase-js": "^2.39.0",
@@ -47,6 +49,7 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/ws": "^8.5.10",
+    "cross-env": "^10.1.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "14.2.0",
     "typescript": "^5.3.3"

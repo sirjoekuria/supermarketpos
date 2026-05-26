@@ -1,0 +1,26 @@
+{
+	"appId": "com.rocscrewsupermarket.pos",
+	"appName": "Rocscrew Supermarket POS",
+	"webDir": "out",
+	"server": {
+		"androidScheme": "https",
+		"url": "https://rocscrewsupermarket.netlify.app",
+		"cleartext": true
+	},
+	"ios": {
+		"scheme": "rocscrew"
+	},
+	"android": {},
+	"plugins": {
+		"Camera": {
+			"permissions": [
+				"CAMERA"
+			]
+		},
+		"BiometricAuth": {
+			"android": {
+				"useStrength": "strong"
+			}
+		}
+	}
+}
