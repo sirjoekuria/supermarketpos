@@ -66,22 +66,29 @@ export default function BarcodeScanner({
     };
   }, []);
 
+  const handleScanSuccessRef = useRef(handleScanSuccess);
+  useEffect(() => {
+    handleScanSuccessRef.current = handleScanSuccess;
+  }, [handleScanSuccess]);
+
   useEffect(() => {
     if (!isOpen || scanMode !== "camera") return;
     
     let html5QrCode: Html5Qrcode | null = null;
+    let isComponentMounted = true;
     setCamError("");
 
     const startScanner = async () => {
       try {
-        // Explicitly request native permissions first to avoid WebView rejection
         if (config.isNative) {
           const hasPerm = await requestCamera();
-          if (!hasPerm) {
+          if (!hasPerm && isComponentMounted) {
             setCamError("Camera permission denied. Please enable it in Settings.");
             return;
           }
         }
+
+        if (!isComponentMounted) return;
 
         html5QrCode = new Html5Qrcode("reader", {
           verbose: false,
@@ -98,7 +105,7 @@ export default function BarcodeScanner({
         
         const cameras = await Html5Qrcode.getCameras();
         if (!cameras || cameras.length === 0) {
-          setCamError("No camera found on this device.");
+          if (isComponentMounted) setCamError("No camera found on this device.");
           return;
         }
         
@@ -108,6 +115,8 @@ export default function BarcodeScanner({
           cameraId = backCamera.id;
         }
 
+        if (!isComponentMounted) return;
+
         await html5QrCode.start(
           cameraId,
           {
@@ -115,7 +124,7 @@ export default function BarcodeScanner({
             qrbox: { width: 250, height: 200 },
           },
           (decodedText) => {
-            handleScanSuccess(decodedText);
+            handleScanSuccessRef.current(decodedText);
           },
           () => {
             // ignore scan errors (they happen every frame no barcode is found)
@@ -123,7 +132,7 @@ export default function BarcodeScanner({
         );
       } catch (err) {
         console.error("Camera access error:", err);
-        setCamError("Could not access camera. Please check permissions.");
+        if (isComponentMounted) setCamError("Could not access camera. Please check permissions.");
       }
     };
 
@@ -133,12 +142,13 @@ export default function BarcodeScanner({
     }, 100);
 
     return () => {
+      isComponentMounted = false;
       clearTimeout(timer);
       if (html5QrCode && html5QrCode.isScanning) {
         html5QrCode.stop().then(() => html5QrCode?.clear()).catch(console.error);
       }
     };
-  }, [isOpen, scanMode, handleScanSuccess]);
+  }, [isOpen, scanMode, config.isNative, requestCamera]);
 
   useEffect(() => {
     if (!isOpen || scanMode !== "usb") return;

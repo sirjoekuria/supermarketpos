@@ -1,22 +1,22 @@
 # Rocscrew Supermarket POS - Deployment Guide
 
-This guide covers building the app for Android, deployment to Netlify, and live app configuration.
+This guide covers building the app for Android, deployment to vercel, and live app configuration.
 
 ## Live App Setup
 
-Your app is configured to load from: **https://rocscrewsupermarket.netlify.app**
+Your app is configured to load from: **https://supermarketpos.vercel.app**
 
 ### Benefits
 - No need to rebuild APK for small changes
-- Changes deploy instantly via Netlify
+- Changes deploy instantly via vercel
 - Use Android emulator or physical device for testing
 - Development cycle is rapid (push → deploy → test)
 
 ## Prerequisites
 
-### For Web (Netlify)
+### For Web (vercel)
 - GitHub account
-- Netlify account (free tier available)
+- vercel account (free tier available)
 
 ### For Android (Capacitor)
 - Node.js v16+
@@ -24,7 +24,7 @@ Your app is configured to load from: **https://rocscrewsupermarket.netlify.app**
 - Android SDK
 - Android Studio
 
-## Step 1: Deploy Web App to Netlify
+## Step 1: Deploy Web App to vercel
 
 ### Using GitHub Integration (Recommended)
 
@@ -35,8 +35,8 @@ git commit -m "feat: add capacitor android support"
 git push origin main
 ```
 
-2. **Connect to Netlify:**
-   - Go to https://netlify.com
+2. **Connect to vercel:**
+   - Go to https://vercel.com
    - Click "Add new site" → "Import an existing project"
    - Choose GitHub and select your repository
    - Configure build settings:
@@ -50,11 +50,11 @@ git push origin main
 
 4. **Deploy:**
    - Push to main branch
-   - Netlify auto-deploys
+   - vercel auto-deploys
 
 ### Verify Deployment
 ```bash
-curl https://rocscrewsupermarket.netlify.app
+curl https://supermarketpos.vercel.app
 ```
 
 ## Step 2: Build Android APK
@@ -142,7 +142,7 @@ adb shell am start -n com.rocscrewsupermarket.pos/.MainActivity
    git push origin main
    ```
 
-3. **Netlify auto-deploys** (usually <2 minutes)
+3. **vercel auto-deploys** (usually <2 minutes)
 
 4. **Refresh app on device:**
    - Force refresh: Swipe down then up on Android
@@ -171,7 +171,7 @@ adb shell am start -n com.rocscrewsupermarket.pos/.MainActivity
 Create `.github/workflows/deploy.yml`:
 
 ```yaml
-name: Deploy to Netlify
+name: Deploy to vercel
 
 on:
   push:
@@ -192,12 +192,12 @@ jobs:
       - run: npm ci
       - run: npm run build
       
-      - uses: netlify/actions/cli@master
+      - uses: vercel/actions/cli@master
         with:
           args: deploy --prod
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          vercel_AUTH_TOKEN: ${{ secrets.vercel_AUTH_TOKEN }}
+          vercel_SITE_ID: ${{ secrets.vercel_SITE_ID }}
 ```
 
 ## Testing
@@ -239,7 +239,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
 ### App Won't Load Website
 - Check internet connection
-- Verify Netlify deployment succeeded
+- Verify vercel deployment succeeded
 - Check `capacitor.config.ts` has correct URL
 - Verify no CORS issues
 
@@ -328,7 +328,7 @@ cd ..
 
 - **Capacitor Docs:** https://capacitorjs.com
 - **Android Docs:** https://developer.android.com
-- **Netlify Docs:** https://docs.netlify.com
+- **vercel Docs:** https://docs.vercel.com
 - **Next.js Docs:** https://nextjs.org/docs
 
 ---

@@ -69,7 +69,7 @@ npx cap add android
 
 ## Live App Development
 
-The app is configured to load from: **https://rocscrewsupermarket.netlify.app**
+The app is configured to load from: **https://supermarketpos.vercel.app**
 
 ### How It Works
 - The Android app is a **web container** that loads the live website
@@ -125,7 +125,7 @@ git add -A
 git commit -m "your changes"
 git push origin main
 
-# Netlify auto-deploys on push
+# vercel auto-deploys on push
 # Changes are live in the app immediately (may need to refresh)
 ```
 
@@ -205,7 +205,7 @@ cd android
 - Grant permission in Settings
 
 ### Live URL Not Loading
-- Ensure Netlify deployment is successful
+- Ensure vercel deployment is successful
 - Check internet connection
 - Verify `server.url` in capacitor.config.ts matches deployed URL
 

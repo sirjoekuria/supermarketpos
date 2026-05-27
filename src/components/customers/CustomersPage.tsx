@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Search, Plus, UserPlus, Gift, Star, Award, ShieldAlert,
   ArrowUpRight, ArrowDownLeft, Settings, History, Loader2,
-  X, Check, AlertCircle, RefreshCw, Smartphone, Mail, Calendar,
+  X, Check, AlertCircle, RefreshCw, Smartphone, Mail, Calendar, ChevronLeft,
 } from "lucide-react";
 import { useAuthStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";
@@ -219,7 +219,10 @@ export default function CustomersPage() {
     <div className="flex h-full bg-gray-50 dark:bg-pos-dark text-gray-900 dark:text-white overflow-hidden">
       
       {/* LEFT COLUMN: Customer Listing & Search */}
-      <div className="w-full lg:w-96 flex flex-col border-r border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card">
+      <div className={cn(
+        "w-full lg:w-96 flex-col border-r border-gray-200 dark:border-pos-border bg-white dark:bg-pos-card",
+        selectedCustomer ? "hidden lg:flex" : "flex"
+      )}>
         
         {/* Search & Actions Header */}
         <div className="p-4 border-b border-gray-200 dark:border-pos-border space-y-3">
@@ -341,7 +344,10 @@ export default function CustomersPage() {
       </div>
 
       {/* RIGHT COLUMN: Customer Details & Points Audit Timeline */}
-      <div className="hidden lg:flex flex-1 flex-col overflow-hidden bg-gray-50 dark:bg-pos-dark">
+      <div className={cn(
+        "flex-1 flex-col overflow-hidden bg-gray-50 dark:bg-pos-dark",
+        selectedCustomer ? "flex" : "hidden lg:flex"
+      )}>
         {selectedCustomer ? (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Customer Details Header Panel */}
@@ -387,6 +393,15 @@ export default function CustomersPage() {
                 {/* Profile Stats Columns */}
                 <div className="flex-1 space-y-4">
                   <div>
+                    <div className="flex items-center gap-2 mb-2 lg:hidden">
+                      <button 
+                        onClick={() => setSelectedCustomer(null)}
+                        className="p-1.5 -ml-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <span className="text-sm font-semibold text-gray-500">Back to List</span>
+                    </div>
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                       {selectedCustomer.name}
                     </h3>

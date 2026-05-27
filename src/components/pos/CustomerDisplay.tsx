@@ -136,12 +136,6 @@ export default function CustomerDisplay() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-base sm:text-lg">
-                <span className="text-gray-400">Tax</span>
-                <span className="text-white font-medium">
-                  {formatCurrency(totals.taxAmount)}
-                </span>
-              </div>
             </div>
           </div>
 

@@ -299,12 +299,6 @@ export default function Cart() {
             </span>
           </div>
         )}
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Tax (VAT)</span>
-          <span className="text-gray-900 dark:text-white font-medium">
-            {formatCurrency(totals.taxAmount)}
-          </span>
-        </div>
 
         {/* Estimated Earning Display (if customer selected) */}
         {selectedCustomer && (

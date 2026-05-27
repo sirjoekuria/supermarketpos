@@ -102,7 +102,7 @@ export default function Home() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:static inset-y-0 left-0 z-40 bg-white dark:bg-pos-card border-r border-gray-200 dark:border-pos-border transition-all duration-300 flex flex-col",
+          "fixed lg:static inset-y-0 left-0 z-40 bg-white dark:bg-pos-card border-r border-gray-200 dark:border-pos-border transition-all duration-300 flex flex-col overflow-hidden",
           sidebarOpen ? "w-64" : "w-0 lg:w-20"
         )}
       >

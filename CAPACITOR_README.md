@@ -98,9 +98,9 @@ npm run cap:dev
 ```
 GitHub → Push Code
   ↓
-Netlify → Auto-Deploy
+vercel → Auto-Deploy
   ↓
-https://rocscrewsupermarket.netlify.app
+https://supermarketpos.vercel.app
   ↓
 Android App → Loads Website
   ↓
@@ -110,7 +110,7 @@ Device Display
 ### Workflow
 1. **Make code changes** in your IDE
 2. **Push to GitHub** (`git push origin main`)
-3. **Netlify auto-deploys** (usually <2 min)
+3. **vercel auto-deploys** (usually <2 min)
 4. **Refresh app** on Android device
 5. **See changes instantly** (no APK rebuild needed)
 
@@ -152,7 +152,7 @@ npm run android:release # Build release APK
 - ✅ Custom tones for feedback
 
 ### Network
-- ✅ Live app from Netlify
+- ✅ Live app from vercel
 - ✅ Network state detection
 - ✅ Offline support (future)
 
@@ -184,7 +184,7 @@ npm run android:release # Build release APK
 
 ### Network
 - HTTPS enforced
-- Clear text traffic from trusted Netlify domain only
+- Clear text traffic from trusted vercel domain only
 - No sensitive data in localStorage
 
 ### Permissions
@@ -218,7 +218,7 @@ npx cap add android
 - For emulator, enable in AVD settings
 
 ### Live URL Not Loading
-- Verify Netlify deployment
+- Verify vercel deployment
 - Check network connection
 - Ensure `capacitor.config.ts` has correct URL
 
@@ -285,7 +285,7 @@ project-root/
 
 - **Capacitor:** https://capacitorjs.com/docs
 - **Android:** https://developer.android.com
-- **Netlify:** https://docs.netlify.com
+- **vercel:** https://docs.vercel.com
 - **Next.js:** https://nextjs.org/docs
 
 ---

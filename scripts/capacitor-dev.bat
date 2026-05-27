@@ -5,7 +5,7 @@ echo.
 echo 🚀 Starting Capacitor Development Mode...
 echo.
 echo This script sets up live development with Capacitor
-echo The app will connect to: https://rocscrewsupermarket.netlify.app
+echo The app will connect to: https://supermarketpos.vercel.app
 echo.
 
 REM Check if we're in the right directory
@@ -42,7 +42,7 @@ echo Next steps:
 echo 1. Android Studio should open automatically
 echo 2. Select a virtual device or connect a physical Android phone
 echo 3. Click 'Run' to build and deploy the app
-echo 4. Changes to https://rocscrewsupermarket.netlify.app will be live
+echo 4. Changes to https://supermarketpos.vercel.app will be live
 echo.
 echo For live reload during development:
 echo npm run dev  (In one terminal for local testing)

@@ -56,25 +56,21 @@ export function calculateCartTotals(
   items: { product: { price: number; tax_rate: number; discount_percent: number }; quantity: number }[]
 ) {
   let subtotal = 0;
-  let taxAmount = 0;
   let discountAmount = 0;
 
   items.forEach((item) => {
     const itemTotal = item.product.price * item.quantity;
     const itemDiscount = itemTotal * (item.product.discount_percent / 100);
-    const itemTaxable = itemTotal - itemDiscount;
-    const itemTax = itemTaxable * (item.product.tax_rate / 100);
 
     subtotal += itemTotal;
     discountAmount += itemDiscount;
-    taxAmount += itemTax;
   });
 
   return {
     subtotal: Math.round(subtotal),
-    taxAmount: Math.round(taxAmount),
+    taxAmount: 0,
     discountAmount: Math.round(discountAmount),
-    total: Math.round(subtotal - discountAmount + taxAmount),
+    total: Math.round(subtotal - discountAmount),
   };
 }
 
