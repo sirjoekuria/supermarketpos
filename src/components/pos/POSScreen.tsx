@@ -62,6 +62,7 @@ export default function POSScreen() {
   const [lookupError, setLookupError] = useState("");
   const [showCheckoutQuickReg, setShowCheckoutQuickReg] = useState(false);
   const [checkoutNewName, setCheckoutNewName] = useState("");
+  const [showLoyaltyPrompt, setShowLoyaltyPrompt] = useState(false);
 
   // ── Online / Offline detection ─────────────────────────────────────────────
   const [isOnline, setIsOnline] = useState(true);
@@ -242,34 +243,53 @@ export default function POSScreen() {
     setIsLookingUp(true);
     setLookupError("");
     setShowCheckoutQuickReg(false);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     try {
-      const response = await fetch(`/api/customers?search=${encodeURIComponent(checkoutPhone)}`);
+      const response = await fetch(
+        `/api/customers?search=${encodeURIComponent(checkoutPhone)}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(timeoutId);
       const data = await response.json();
       if (response.ok) {
-        // Find exact phone match or closest result
+        // Phone match: exact digits or ends-with comparison (min 9 digits)
         const sanitizedSearch = checkoutPhone.replace(/\D/g, "");
         const matched = data.customers?.find((c: any) => {
-          const sanitizedCustPhone = c.phone.replace(/\D/g, "");
-          return sanitizedCustPhone === sanitizedSearch || sanitizedCustPhone.endsWith(sanitizedSearch) || sanitizedSearch.endsWith(sanitizedCustPhone);
-        }) || data.customers?.[0];
+          const sanitizedCustPhone = (c.phone || "").replace(/\D/g, "");
+          return (
+            sanitizedCustPhone === sanitizedSearch ||
+            (sanitizedCustPhone.length >= 9 &&
+              sanitizedSearch.length >= 9 &&
+              sanitizedCustPhone.endsWith(sanitizedSearch))
+          );
+        });
 
         if (matched) {
           setSelectedCustomer(matched);
           setCheckoutPhone("");
           setLookupError("");
+          setShowLoyaltyPrompt(false);
         } else {
-          setLookupError("Customer not found.");
-          setShowCheckoutQuickReg(true); // Allow quick adding
+          setLookupError("Customer not registered. Proceeding without points.");
         }
       } else {
         setLookupError(data.error || "Failed to search customer.");
       }
-    } catch (err) {
-      setLookupError("Connection error.");
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setLookupError("Request timed out. Check your internet connection.");
+      } else {
+        setLookupError("Connection error. Please try again.");
+      }
     } finally {
       setIsLookingUp(false);
     }
   };
+
 
   const handleCheckoutQuickRegSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -758,10 +778,13 @@ export default function POSScreen() {
             <div className="lg:hidden p-3 bg-white dark:bg-pos-card border-t border-gray-200 dark:border-pos-border flex-shrink-0">
               <button
                 onClick={() => {
+                  setSelectedCustomer(null);
+                  setPointsRedeemed(0);
                   setCheckoutPhone("");
                   setLookupError("");
                   setShowCheckoutQuickReg(false);
                   setCheckoutNewName("");
+                  setShowLoyaltyPrompt(false);
                   setShowPayment(true);
                 }}
                 className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
@@ -789,10 +812,13 @@ export default function POSScreen() {
             <div className="p-4 border-t border-gray-200 dark:border-pos-border space-y-3 flex-shrink-0">
               <button
                 onClick={() => {
+                  setSelectedCustomer(null);
+                  setPointsRedeemed(0);
                   setCheckoutPhone("");
                   setLookupError("");
                   setShowCheckoutQuickReg(false);
                   setCheckoutNewName("");
+                  setShowLoyaltyPrompt(false);
                   setShowPayment(true);
                 }}
                 className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
@@ -827,6 +853,8 @@ export default function POSScreen() {
                   setLookupError("");
                   setShowCheckoutQuickReg(false);
                   setCheckoutNewName("");
+                  setShowLoyaltyPrompt(false);
+                  setIsLookingUp(false);
                 }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
@@ -914,120 +942,71 @@ export default function POSScreen() {
                     </div>
                   )}
                 </div>
-              ) : netTotal > 100 ? (
+              ) : showLoyaltyPrompt ? (
                 /* Loyalty Lookup Card */
                 <div className="bg-gradient-to-br from-indigo-500/5 to-primary-500/5 border border-indigo-500/10 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-sm font-bold text-primary-600 dark:text-primary-400 flex items-center gap-1.5">
-                    <User className="w-4 h-4" />
-                    Assign Loyalty Customer
-                  </h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-primary-600 dark:text-primary-400 flex items-center gap-1.5">
+                      <User className="w-4 h-4" />
+                      Add Loyalty Points
+                    </h4>
+                    <button onClick={() => setShowLoyaltyPrompt(false)} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal">
-                    This order is eligible for loyalty points! Enter the customer's phone number to assign.
+                    Enter the customer's registered phone number to assign loyalty points.
                   </p>
                   
-                  {showCheckoutQuickReg ? (
-                    <form onSubmit={handleCheckoutQuickRegSubmit} className="space-y-3 pt-1">
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Name..."
-                          value={checkoutNewName}
-                          onChange={(e) => setCheckoutNewName(e.target.value)}
-                          className="px-3.5 py-2.5 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          required
-                        />
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center gap-3">
+                      <div className="relative flex-1">
+                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="tel"
-                          placeholder="Phone..."
+                          placeholder="Phone number (e.g. 0712345678)..."
                           value={checkoutPhone}
-                          disabled
-                          className="px-3.5 py-2.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-pos-border rounded-xl text-gray-400 font-mono"
+                          onChange={(e) => {
+                            setCheckoutPhone(e.target.value);
+                            setLookupError("");
+                          }}
+                          className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
                         />
                       </div>
-                      {lookupError && (
+                      <button
+                        type="button"
+                        onClick={handleCheckoutPhoneLookup}
+                        disabled={isLookingUp}
+                        className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95 flex items-center gap-1.5"
+                      >
+                        {isLookingUp ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                        Lookup
+                      </button>
+                    </div>
+                    {lookupError && (
+                      <div className="flex items-center justify-between gap-2">
                         <p className="text-[10px] text-red-500 flex items-center gap-1">
                           <AlertCircle className="w-3.5 h-3.5" />
                           {lookupError}
                         </p>
-                      )}
-                      <div className="flex gap-2">
-                        <button
-                          type="submit"
-                          disabled={isLookingUp}
-                          className="flex-1 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
-                        >
-                          {isLookingUp && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                          Register & Link
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCheckoutQuickReg(false);
-                            setLookupError("");
-                          }}
-                          className="px-4 py-2.5 border border-gray-200 dark:border-pos-border text-gray-500 dark:text-gray-400 rounded-xl text-xs font-bold"
-                        >
-                          Cancel
-                        </button>
                       </div>
-                    </form>
-                  ) : (
-                    <div className="space-y-3 pt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="tel"
-                            placeholder="Phone number (e.g. 0712345678)..."
-                            value={checkoutPhone}
-                            onChange={(e) => {
-                              setCheckoutPhone(e.target.value);
-                              setLookupError("");
-                            }}
-                            className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleCheckoutPhoneLookup}
-                          disabled={isLookingUp}
-                          className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95 flex items-center gap-1.5"
-                        >
-                          {isLookingUp ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Search className="w-3.5 h-3.5" />
-                          )}
-                          Link
-                        </button>
-                      </div>
-                      {lookupError && (
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[10px] text-red-500 flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            {lookupError}
-                          </p>
-                          {lookupError === "Customer not found." && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowCheckoutQuickReg(true);
-                                setLookupError("");
-                              }}
-                              className="text-[10px] text-primary-600 dark:text-primary-400 font-bold hover:underline"
-                            >
-                              Register customer?
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-gray-400 italic text-center py-1">
-                  Assign a loyalty customer on the cart sidebar to enable point discounts.
-                </p>
+                <div className="flex justify-center py-2">
+                  <button
+                    onClick={() => setShowLoyaltyPrompt(true)}
+                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/30 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <Gift className="w-4 h-4" />
+                    Add Loyalty Points
+                  </button>
+                </div>
               )}
 
               {/* Payment Method Selection */}
