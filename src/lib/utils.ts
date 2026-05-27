@@ -29,10 +29,12 @@ export function formatDate(date: string | Date): string {
 }
 
 export function generateReceiptNumber(): string {
-  const prefix = "RCP";
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-  return `${prefix}-${timestamp}-${random}`;
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `RCP-${code}`;
 }
 
 export function generateBarcode(): string {

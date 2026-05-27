@@ -24,7 +24,19 @@ export default function MpesaPayment({
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(45); // Set to 45 seconds countdown window
+  const [countdown, setCountdown] = useState(45);
+  const [inputMode, setInputMode] = useState<"stk" | "manual">("stk");
+  const [manualCode, setManualCode] = useState("");
+  const [manualError, setManualError] = useState("");
+
+  const handleManualConfirm = () => {
+    const code = manualCode.trim().toUpperCase();
+    if (code.length < 8) {
+      setManualError("Enter the full M-Pesa confirmation code (e.g. QKL1A2B3C4)");
+      return;
+    }
+    onSuccess(code);
+  };
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -246,40 +258,101 @@ export default function MpesaPayment({
 
           {status === "idle" && (
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Customer M-Pesa Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              {/* Mode toggle */}
+              <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+                <button
+                  onClick={() => setInputMode("stk")}
+                  className={cn(
+                    "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
+                    inputMode === "stk"
+                      ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400"
+                  )}
+                >
+                  STK Push
+                </button>
+                <button
+                  onClick={() => setInputMode("manual")}
+                  className={cn(
+                    "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
+                    inputMode === "manual"
+                      ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400"
+                  )}
+                >
+                  Enter Code
+                </button>
+              </div>
+
+              {inputMode === "stk" ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Customer M-Pesa Phone Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setError(""); }}
+                      placeholder="e.g. 0712345678"
+                      className={cn(
+                        "w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-medium text-lg",
+                        error
+                          ? "border-red-300 focus:ring-red-500"
+                          : "border-gray-200 dark:border-pos-border focus:ring-green-500"
+                      )}
+                    />
+                  </div>
+                  {error && (
+                    <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    A payment prompt (STK Push) will be sent instantly to the phone number entered above.
+                  </p>
+                  <button
+                    onClick={initiateSTKPush}
+                    className="w-full mt-4 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg"
+                  >
+                    Request STK Push
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    M-Pesa Confirmation Code
+                  </label>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setError(""); }}
-                    placeholder="e.g. 0712345678"
+                    type="text"
+                    value={manualCode}
+                    onChange={(e) => { setManualCode(e.target.value.toUpperCase()); setManualError(""); }}
+                    placeholder="e.g. QKL1A2B3C4"
+                    maxLength={12}
                     className={cn(
-                      "w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-medium text-lg",
-                      error
+                      "w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
+                      manualError
                         ? "border-red-300 focus:ring-red-500"
                         : "border-gray-200 dark:border-pos-border focus:ring-green-500"
                     )}
                   />
-                </div>
-                {error && (
-                  <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
-                    <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                  {manualError && (
+                    <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+                    Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
                   </p>
-                )}
-                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                  A payment prompt (STK Push) will be sent instantly to the phone number entered above.
-                </p>
-              </div>
-              <button
-                onClick={initiateSTKPush}
-                className="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg"
-              >
-                Request STK Push
-              </button>
+                  <button
+                    onClick={handleManualConfirm}
+                    className="w-full mt-4 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg"
+                  >
+                    Confirm M-Pesa Payment
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
