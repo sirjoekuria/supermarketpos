@@ -352,6 +352,9 @@ export default function POSScreen() {
         }
 
         const optimisticPoints = selectedCustomer ? Math.floor(netTotal / 100) : 0;
+        const newLoyaltyBalance = selectedCustomer
+          ? (selectedCustomer.points_balance - pointsRedeemed + optimisticPoints)
+          : undefined;
         const offlineSale = {
           id: `offline-${receiptNum}`,
           receipt_number: receiptNum,
@@ -368,6 +371,11 @@ export default function POSScreen() {
           customer: selectedCustomer || undefined,
           points_earned: optimisticPoints,
           points_redeemed: pointsRedeemed,
+          loyalty: selectedCustomer ? {
+            points_earned: optimisticPoints,
+            points_redeemed: pointsRedeemed,
+            final_points_balance: newLoyaltyBalance,
+          } : undefined,
           cashier_id: user?.id || "",
           cashier: user,
           created_at: new Date().toISOString(),
@@ -749,7 +757,13 @@ export default function POSScreen() {
           {items.length > 0 && (
             <div className="lg:hidden p-3 bg-white dark:bg-pos-card border-t border-gray-200 dark:border-pos-border flex-shrink-0">
               <button
-                onClick={() => setShowPayment(true)}
+                onClick={() => {
+                  setCheckoutPhone("");
+                  setLookupError("");
+                  setShowCheckoutQuickReg(false);
+                  setCheckoutNewName("");
+                  setShowPayment(true);
+                }}
                 className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-5 h-5" />
@@ -774,7 +788,13 @@ export default function POSScreen() {
           {items.length > 0 && (
             <div className="p-4 border-t border-gray-200 dark:border-pos-border space-y-3 flex-shrink-0">
               <button
-                onClick={() => setShowPayment(true)}
+                onClick={() => {
+                  setCheckoutPhone("");
+                  setLookupError("");
+                  setShowCheckoutQuickReg(false);
+                  setCheckoutNewName("");
+                  setShowPayment(true);
+                }}
                 className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
               >
                 <CreditCard className="w-5 h-5" />
@@ -1091,7 +1111,7 @@ export default function POSScreen() {
                   )}
                   <button
                     onClick={() => handlePayment()}
-                    disabled={parseFloat(cashReceived) < totals.total || isProcessing}
+                    disabled={parseFloat(cashReceived) < netTotal || isProcessing}
                     className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
                     {isProcessing ? (
@@ -1207,7 +1227,7 @@ export default function POSScreen() {
 
                   <button
                     onClick={() => handlePayment()}
-                    disabled={splitPaidTotal < totals.total || isProcessing}
+                    disabled={splitPaidTotal < netTotal || isProcessing}
                     className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
                     {isProcessing ? (
