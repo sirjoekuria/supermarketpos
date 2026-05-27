@@ -47,6 +47,7 @@ const NAV_ITEMS = [
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set());
   const { user, isAuthenticated, setUser, logout } = useAuthStore();
   const {
     sidebarOpen,
@@ -61,6 +62,14 @@ export default function Home() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    setMountedTabs((prev) => {
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -85,19 +94,8 @@ export default function Home() {
 
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(user?.role || "cashier"));
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case "pos": return <POSScreen />;
-      case "dashboard": return <AdminDashboard />;
-      case "inventory": return <InventoryManagement />;
-      case "customers": return <CustomersPage />;
-      case "reports": return <Reports />;
-      case "approvals": return user ? <UserApprovals user={user} /> : null;
-      case "audit": return user ? <AuditLog user={user} /> : null;
-      case "settings": return <SettingsPage />;
-      default: return <POSScreen />;
-    }
-  };
+  const isTabActive = (id: string) => activeTab === id;
+  const isTabMounted = (id: string) => mountedTabs.has(id);
 
   return (
     <div className={cn("min-h-screen bg-gray-50 dark:bg-pos-dark flex", darkMode && "dark")}>
@@ -189,9 +187,48 @@ export default function Home() {
           </header>
         )}
         <div className="flex-1 overflow-hidden relative">
-          <div key={activeTab} className="absolute inset-0 animate-fade-in overflow-hidden">
-            {renderContent()}
-          </div>
+          {/* We keep visited tabs mounted in the DOM and just toggle their visibility. 
+              This makes switching between pages 100% instantaneous. */}
+          {isTabMounted("pos") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("pos") && "hidden")}>
+              <POSScreen />
+            </div>
+          )}
+          {isTabMounted("dashboard") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("dashboard") && "hidden")}>
+              <AdminDashboard />
+            </div>
+          )}
+          {isTabMounted("inventory") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("inventory") && "hidden")}>
+              <InventoryManagement />
+            </div>
+          )}
+          {isTabMounted("customers") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("customers") && "hidden")}>
+              <CustomersPage />
+            </div>
+          )}
+          {isTabMounted("reports") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("reports") && "hidden")}>
+              <Reports />
+            </div>
+          )}
+          {isTabMounted("approvals") && user && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("approvals") && "hidden")}>
+              <UserApprovals user={user} />
+            </div>
+          )}
+          {isTabMounted("audit") && user && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("audit") && "hidden")}>
+              <AuditLog user={user} />
+            </div>
+          )}
+          {isTabMounted("settings") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("settings") && "hidden")}>
+              <SettingsPage />
+            </div>
+          )}
         </div>
       </main>
 
