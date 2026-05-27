@@ -158,9 +158,9 @@ export default function MpesaPayment({
   useEffect(() => {
     if (status !== "pending" || !checkoutRequestId) return;
 
-    // Prevent React StrictMode double-invoke from creating two parallel polling loops
     let active = true;
     let elapsed = 0;
+    let timeoutId: NodeJS.Timeout;
 
     const checkStatus = async () => {
       if (!active) return;
@@ -173,26 +173,33 @@ export default function MpesaPayment({
         if (data.status === "success") {
           setStatus("success");
           onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+          return; // Stop polling on success
         } else if (data.status === "failed") {
           setStatus("failed");
           setError(data.message || "Payment failed");
           onFailure(data.message || "Payment failed");
+          return; // Stop polling on failure
         }
       } catch (err) {
         console.error("Status check error:", err);
       }
-      elapsed += 1;
+      elapsed += 3;
+      
+      // Schedule next check if still active
+      if (active) {
+        timeoutId = setTimeout(checkStatus, 3000);
+      }
     };
 
     // Run first check immediately (fast DB lookup)
     checkStatus();
 
-    const interval = setInterval(checkStatus, 1000);
-
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          active = false;
+          clearTimeout(timeoutId);
+          clearInterval(timer);
           setStatus("failed");
           setError("Payment timed out. Customer did not enter their PIN within 45 seconds.");
           onFailure("Payment timeout");
@@ -204,7 +211,7 @@ export default function MpesaPayment({
 
     return () => {
       active = false;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
       clearInterval(timer);
     };
   }, [status, checkoutRequestId, onSuccess, onFailure]);

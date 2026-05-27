@@ -8,7 +8,7 @@ import StaffDirectory from "./StaffDirectory";
 
 export default function SettingsPage() {
   const { settings, setSettings } = useSettingsStore();
-  const { darkMode, toggleDarkMode } = useUIStore();
+  const { darkMode, toggleDarkMode, themeColor, setThemeColor } = useUIStore();
 
   const [activeTab, setActiveTab] = useState("general");
   const [shopName, setShopName] = useState(settings?.shop_name || "SuperMarket POS");
@@ -329,23 +329,26 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Theme Color</p>
                 <div className="flex gap-3 flex-wrap">
                   {[
-                    { name: "Blue", color: "bg-blue-500" },
-                    { name: "Green", color: "bg-emerald-500" },
-                    { name: "Purple", color: "bg-violet-500" },
-                    { name: "Orange", color: "bg-orange-500" },
-                    { name: "Red", color: "bg-red-500" },
+                    { name: "blue", color: "bg-sky-500" },
+                    { name: "green", color: "bg-emerald-500" },
+                    { name: "purple", color: "bg-violet-500" },
+                    { name: "orange", color: "bg-orange-500" },
+                    { name: "red", color: "bg-red-500" },
                   ].map(({ name, color }) => (
                     <button
                       key={name}
                       title={name}
+                      onClick={() => setThemeColor(name)}
                       className={cn(
-                        "w-8 h-8 rounded-full border-2 border-white dark:border-gray-700 shadow-md hover:scale-110 transition-transform",
-                        color
+                        "w-8 h-8 rounded-full border-2 shadow-md transition-transform",
+                        color,
+                        themeColor === name
+                          ? "border-gray-900 dark:border-white scale-125"
+                          : "border-white dark:border-gray-700 hover:scale-110"
                       )}
                     />
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">Theme color customization coming soon</p>
               </div>
             </div>
           )}

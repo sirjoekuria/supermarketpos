@@ -249,7 +249,7 @@ export default function POSScreen() {
       }));
 
       const payload = {
-        receipt_number: receiptNum,
+        receipt_number: mpesaTransactionId || receiptNum,
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
         discount_amount: totals.discountAmount + (pointsRedeemed * 1),
@@ -263,13 +263,20 @@ export default function POSScreen() {
         actor: user ? { id: user.id, email: user.email, full_name: user.full_name, role: user.role } : undefined,
       };
 
-      // ── Offline mode: queue the sale and proceed optimistically ────────────
-      if (!isOnline) {
+      // ── Offline mode or Instant Payment (Cash/Card) optimistic execution ────
+      const isInstantPayment = paymentMethod === "cash" || paymentMethod === "card";
+
+      if (!isOnline || isInstantPayment) {
         const raw = localStorage.getItem("pos_offline_queue") || "[]";
         const queue = JSON.parse(raw);
-        queue.push(payload);
-        localStorage.setItem("pos_offline_queue", JSON.stringify(queue));
+        
+        // If actually offline, queue the payload right away
+        if (!isOnline) {
+          queue.push(payload);
+          localStorage.setItem("pos_offline_queue", JSON.stringify(queue));
+        }
 
+        const optimisticPoints = selectedCustomer ? Math.floor(netTotal / 100) : 0;
         const offlineSale = {
           id: `offline-${receiptNum}`,
           receipt_number: receiptNum,
@@ -279,19 +286,20 @@ export default function POSScreen() {
           discount_amount: totals.discountAmount,
           total: netTotal,
           payment_method: paymentMethod,
-          payment_status: "pending_sync",
+          payment_status: isOnline ? "completed" : "pending_sync",
           mpesa_transaction_id: mpesaTransactionId,
           split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
           customer_id: selectedCustomer?.id || "",
           customer: selectedCustomer || undefined,
-          points_earned: 0,
+          points_earned: optimisticPoints,
           points_redeemed: pointsRedeemed,
           cashier_id: user?.id || "",
           cashier: user,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          offline: true,
+          offline: !isOnline,
         };
+
         setCompletedSale(offlineSale);
         setShowReceipt(true);
         clearCart();
@@ -300,10 +308,36 @@ export default function POSScreen() {
         setSplitPayments({ cash: "", mpesa: "", card: "" });
         setSplitReferences({ mpesa: "", card: "" });
         setMobileTab("products");
+
+        // Fire API request in background if online
+        if (isOnline) {
+          fetch("/api/sales", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              console.warn("Background checkout failed, saving offline:", errData.error);
+              const curQueue = JSON.parse(localStorage.getItem("pos_offline_queue") || "[]");
+              curQueue.push(payload);
+              localStorage.setItem("pos_offline_queue", JSON.stringify(curQueue));
+            } else {
+              fetchProducts(); // Refresh stocks in background
+            }
+          }).catch((err) => {
+            console.warn("Background checkout connection error, saving offline:", err);
+            const curQueue = JSON.parse(localStorage.getItem("pos_offline_queue") || "[]");
+            curQueue.push(payload);
+            localStorage.setItem("pos_offline_queue", JSON.stringify(curQueue));
+          });
+        }
+
+        setIsProcessing(false);
         return;
       }
 
-      // ── Online mode: submit to server as before ────────────────────────────
+      // ── Online mode (M-Pesa or Split): submit to server synchronously ──────
       const response = await fetch("/api/sales", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -319,7 +353,7 @@ export default function POSScreen() {
       // Prepare UI state for receipt
       const sale = {
         id: data.sale.id,
-        receipt_number: receiptNum,
+        receipt_number: mpesaTransactionId || receiptNum,
         items: [...items],
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
@@ -725,7 +759,7 @@ export default function POSScreen() {
                   </div>
 
                   <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal">
-                    {selectedCustomer.name} has KES {selectedCustomer.points_balance.toFixed(2)} worth of reward points. You can redeem up to 50% of the subtotal (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
+                    {selectedCustomer.name} has {selectedCustomer.points_balance} points available. <strong className="text-amber-600 dark:text-amber-400">Conversion: 1 Point = 1 KES.</strong> You can convert up to 50% of the subtotal into real money at checkout (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
                   </p>
 
                   {selectedCustomer.points_balance >= 100 ? (

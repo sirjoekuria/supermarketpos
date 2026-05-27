@@ -17,7 +17,7 @@ export default function BarcodeScanner({
   onClose,
   isOpen,
 }: BarcodeScannerProps) {
-  const { config, playScannerBeep, hapticFeedback } = useCapacitor();
+  const { config, playScannerBeep, hapticFeedback, requestCamera } = useCapacitor();
   const [scanMode, setScanMode] = useState<"camera" | "usb">("camera");
   const [usbInput, setUsbInput] = useState("");
   const [camError, setCamError] = useState("");
@@ -74,6 +74,15 @@ export default function BarcodeScanner({
 
     const startScanner = async () => {
       try {
+        // Explicitly request native permissions first to avoid WebView rejection
+        if (config.isNative) {
+          const hasPerm = await requestCamera();
+          if (!hasPerm) {
+            setCamError("Camera permission denied. Please enable it in Settings.");
+            return;
+          }
+        }
+
         html5QrCode = new Html5Qrcode("reader", {
           verbose: false,
           formatsToSupport: [

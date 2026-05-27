@@ -20,16 +20,18 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore } from "@/store";
 
+import dynamic from "next/dynamic";
 import { AppLoadingSkeleton } from "@/components/ui/Skeleton";
-import POSScreen from "@/components/pos/POSScreen";
-import AdminDashboard from "@/components/admin/AdminDashboard";
-import InventoryManagement from "@/components/inventory/InventoryManagement";
-import Reports from "@/components/reports/Reports";
-import SettingsPage from "@/components/settings/SettingsPage";
-import AuthPage from "@/components/auth/AuthPage";
-import UserApprovals from "@/components/admin/UserApprovals";
-import AuditLog from "@/components/admin/AuditLog";
-import CustomersPage from "@/components/customers/CustomersPage";
+
+const POSScreen = dynamic(() => import("@/components/pos/POSScreen"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const AdminDashboard = dynamic(() => import("@/components/admin/AdminDashboard"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const InventoryManagement = dynamic(() => import("@/components/inventory/InventoryManagement"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const Reports = dynamic(() => import("@/components/reports/Reports"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const SettingsPage = dynamic(() => import("@/components/settings/SettingsPage"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const AuthPage = dynamic(() => import("@/components/auth/AuthPage"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const UserApprovals = dynamic(() => import("@/components/admin/UserApprovals"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const AuditLog = dynamic(() => import("@/components/admin/AuditLog"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const CustomersPage = dynamic(() => import("@/components/customers/CustomersPage"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 
 
 const NAV_ITEMS = [

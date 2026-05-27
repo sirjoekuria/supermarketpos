@@ -120,12 +120,14 @@ interface UIState {
   activeScreen: "pos" | "inventory" | "reports" | "settings" | "admin";
   customerDisplay: boolean;
   activeTab: string;
+  themeColor: string;
   toggleDarkMode: () => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setActiveScreen: (screen: UIState["activeScreen"]) => void;
   toggleCustomerDisplay: () => void;
   setActiveTab: (tab: string) => void;
+  setThemeColor: (color: string) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -136,6 +138,7 @@ export const useUIStore = create<UIState>()(
       activeScreen: "pos",
       customerDisplay: false,
       activeTab: "pos",
+      themeColor: "blue",
       toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -143,6 +146,7 @@ export const useUIStore = create<UIState>()(
       toggleCustomerDisplay: () =>
         set((state) => ({ customerDisplay: !state.customerDisplay })),
       setActiveTab: (tab) => set({ activeTab: tab }),
+      setThemeColor: (color) => set({ themeColor: color }),
     }),
     {
       name: "pos-ui",
