@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     androidScheme: 'https',
-    url: 'https://rocscrewsupermarket.netlify.app',
+    url: 'https://supermarketpos.vercel.app',
     cleartext: true,
   },
   ios: {
