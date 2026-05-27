@@ -21,6 +21,7 @@ interface AuditLogProps {
   user: User;
 }
 
+export default function AuditLog({ user }: AuditLogProps) {
   const [logs, setLogs] = useState<AuditLogRow[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
