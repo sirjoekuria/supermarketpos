@@ -24,18 +24,54 @@ export default function MpesaPayment({
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(45);
+  const [countdown, setCountdown] = useState(60);
   const [inputMode, setInputMode] = useState<"stk" | "manual">("stk");
   const [manualCode, setManualCode] = useState("");
   const [manualError, setManualError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationWarning, setVerificationWarning] = useState("");
+  const [showForceConfirm, setShowForceConfirm] = useState(false);
 
-  const handleManualConfirm = () => {
+  const handleManualConfirm = async () => {
     const code = manualCode.trim().toUpperCase();
     if (code.length < 8) {
       setManualError("Enter the full M-Pesa confirmation code (e.g. QKL1A2B3C4)");
       return;
     }
-    onSuccess(code);
+    
+    setIsVerifying(true);
+    setManualError("");
+    setVerificationWarning("");
+    setShowForceConfirm(false);
+
+    try {
+      const response = await fetch(`/api/mpesa/verify-code?code=${code}&amount=${amount}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setStatus("success");
+        setTimeout(() => {
+          onSuccess(code);
+        }, 1800);
+      } else {
+        setVerificationWarning(data.message || "Transaction code was not found in the database.");
+        setShowForceConfirm(true);
+      }
+    } catch (err) {
+      console.error("Manual verification failed:", err);
+      setVerificationWarning("Failed to connect to verification server. You can force-confirm if needed.");
+      setShowForceConfirm(true);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleForceConfirm = () => {
+    const code = manualCode.trim().toUpperCase();
+    setStatus("success");
+    setTimeout(() => {
+      onSuccess(code);
+    }, 1800);
   };
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -155,7 +191,7 @@ export default function MpesaPayment({
       if (data.success && data.checkoutRequestId) {
         setCheckoutRequestId(data.checkoutRequestId);
         setStatus("pending");
-        setCountdown(45); // Set countdown window of 45 seconds
+        setCountdown(60); // Set countdown window of 60 seconds
       } else {
         throw new Error(data.message || "Failed to initiate payment");
       }
@@ -167,6 +203,7 @@ export default function MpesaPayment({
     }
   };
 
+  // Main polling effect while payment is pending
   useEffect(() => {
     if (status !== "pending" || !checkoutRequestId) return;
 
@@ -184,7 +221,10 @@ export default function MpesaPayment({
         if (!active) return; // component unmounted during fetch
         if (data.status === "success") {
           setStatus("success");
-          onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+          // Play confetti for 1.8s before triggering onSuccess
+          setTimeout(() => {
+            onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+          }, 1800);
           return; // Stop polling on success
         } else if (data.status === "failed") {
           setStatus("failed");
@@ -195,11 +235,11 @@ export default function MpesaPayment({
       } catch (err) {
         console.error("Status check error:", err);
       }
-      elapsed += 3;
+      elapsed += 1.5;
       
-      // Schedule next check if still active
+      // Schedule next check (fast polling: 1.5 seconds)
       if (active) {
-        timeoutId = setTimeout(checkStatus, 3000);
+        timeoutId = setTimeout(checkStatus, 1500);
       }
     };
 
@@ -213,7 +253,7 @@ export default function MpesaPayment({
           clearTimeout(timeoutId);
           clearInterval(timer);
           setStatus("failed");
-          setError("Payment timed out. Customer did not enter their PIN within 45 seconds.");
+          setError("Payment timed out. Customer did not enter their PIN within 60 seconds.");
           onFailure("Payment timeout");
           return 0;
         }
@@ -227,6 +267,39 @@ export default function MpesaPayment({
       clearInterval(timer);
     };
   }, [status, checkoutRequestId, onSuccess, onFailure]);
+
+  // Fallback background checker when status is failed or idle but we have a checkoutRequestId (in case callback is late)
+  useEffect(() => {
+    if (status === "success" || !checkoutRequestId) return;
+
+    let active = true;
+    const checkDbFallback = async () => {
+      try {
+        const response = await fetch(`/api/mpesa/query?checkoutRequestId=${checkoutRequestId}`);
+        const data = await response.json();
+        if (!active) return;
+        if (data.status === "success") {
+          setStatus("success");
+          // Play confetti for 1.8s before triggering onSuccess
+          setTimeout(() => {
+            onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+          }, 1800);
+        }
+      } catch (err) {
+        console.error("Fallback DB query failed:", err);
+      }
+    };
+
+    // Check DB status immediately when hook is triggered (e.g. switching tabs or timing out)
+    checkDbFallback();
+
+    // Query every 4 seconds to capture delayed callbacks
+    const interval = setInterval(checkDbFallback, 4000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [inputMode, checkoutRequestId, status, onSuccess]);
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -321,13 +394,33 @@ export default function MpesaPayment({
                 </div>
               ) : (
                 <div>
+                  {/* Automatic check indicator if STK Push was sent */}
+                  {checkoutRequestId && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-xl mb-4 text-left">
+                      <div className="flex gap-2.5 items-start text-xs font-semibold text-blue-600 dark:text-blue-400">
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-0.5" />
+                        <div>
+                          <p className="uppercase tracking-wider">Checking STK Push Status...</p>
+                          <p className="text-gray-500 dark:text-gray-400 font-medium normal-case mt-0.5 leading-relaxed">
+                            We are auto-detecting the payment in the database. If the customer has already paid, the POS will complete the checkout automatically.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     M-Pesa Confirmation Code
                   </label>
                   <input
                     type="text"
                     value={manualCode}
-                    onChange={(e) => { setManualCode(e.target.value.toUpperCase()); setManualError(""); }}
+                    onChange={(e) => {
+                      setManualCode(e.target.value.toUpperCase());
+                      setManualError("");
+                      setVerificationWarning("");
+                      setShowForceConfirm(false);
+                    }}
                     placeholder="e.g. QKL1A2B3C4"
                     maxLength={12}
                     className={cn(
@@ -336,21 +429,48 @@ export default function MpesaPayment({
                         ? "border-red-300 focus:ring-red-500"
                         : "border-gray-200 dark:border-pos-border focus:ring-green-500"
                     )}
+                    disabled={isVerifying}
                   />
                   {manualError && (
                     <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
                       <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
                     </p>
                   )}
-                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
+
+                  {verificationWarning && (
+                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-left">
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
+                        Verification Status:
+                      </p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
+                        {verificationWarning}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed text-left">
                     Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
                   </p>
-                  <button
-                    onClick={handleManualConfirm}
-                    className="w-full mt-4 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg"
-                  >
-                    Confirm M-Pesa Payment
-                  </button>
+
+                  <div className="flex flex-col gap-2.5 mt-4">
+                    <button
+                      onClick={handleManualConfirm}
+                      disabled={isVerifying}
+                      className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg flex items-center justify-center gap-2"
+                    >
+                      {isVerifying && <Loader2 className="w-5 h-5 animate-spin" />}
+                      {isVerifying ? "Verifying with Database..." : "Verify & Confirm Payment"}
+                    </button>
+
+                    {showForceConfirm && (
+                      <button
+                        onClick={handleForceConfirm}
+                        className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
+                      >
+                        Force Confirm Anyway (Skip Verification)
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
