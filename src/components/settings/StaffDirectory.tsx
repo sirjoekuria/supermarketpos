@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useStaffStore } from "@/store";
-import { UserCog, Plus, Edit2, Trash2, Shield, Mail, Phone, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, UserCog, Plus, Edit2, Trash2, Shield, Mail, Phone, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import type { User } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -10,17 +10,21 @@ export default function StaffDirectory() {
   const { staff, addStaff, updateStaff, deleteStaff } = useStaffStore();
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<User | null>(null);
-  const [form, setForm] = useState<Partial<User>>({
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<Partial<User> & { password?: string }>({
     full_name: "",
     email: "",
     role: "cashier",
     phone: "",
     is_active: true,
+    password: "",
   });
 
   const openAdd = () => {
     setEditingStaff(null);
-    setForm({ full_name: "", email: "", role: "cashier", phone: "", is_active: true });
+    setError("");
+    setForm({ full_name: "", email: "", role: "cashier", phone: "", is_active: true, password: "" });
     setShowModal(true);
   };
 
@@ -30,19 +34,44 @@ export default function StaffDirectory() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!form.full_name || !form.email) return;
+  const handleSave = async () => {
+    if (!form.full_name || !form.email) {
+      setError("Name and email are required.");
+      return;
+    }
 
     if (editingStaff) {
+      // For now, just update local store until PUT /api/users is implemented
       updateStaff(editingStaff.id, form);
+      setShowModal(false);
     } else {
-      addStaff({
-        ...form,
-        id: Math.random().toString(36).substring(7),
-        created_at: new Date().toISOString(),
-      } as User);
+      if (!form.password || form.password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      setIsLoading(true);
+      setError("");
+      try {
+        const response = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await response.json();
+        
+        if (!response.ok) {
+          setError(data.error || "Failed to create staff.");
+          return;
+        }
+        
+        addStaff(data.user);
+        setShowModal(false);
+      } catch (err: any) {
+        setError(err.message || "Connection error.");
+      } finally {
+        setIsLoading(false);
+      }
     }
-    setShowModal(false);
   };
 
   return (
@@ -111,12 +140,19 @@ export default function StaffDirectory() {
               </h2>
             </div>
             <div className="p-5 space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+              
               <label className="block">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name</span>
                 <input
                   type="text"
                   value={form.full_name}
-                  onChange={e => setForm({ ...form, full_name: e.target.value })}
+                  onChange={e => { setForm({ ...form, full_name: e.target.value }); setError(""); }}
                   className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
                 />
               </label>
@@ -125,7 +161,7 @@ export default function StaffDirectory() {
                 <input
                   type="email"
                   value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  onChange={e => { setForm({ ...form, email: e.target.value }); setError(""); }}
                   className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
                 />
               </label>
@@ -134,7 +170,7 @@ export default function StaffDirectory() {
                 <input
                   type="tel"
                   value={form.phone || ""}
-                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  onChange={e => { setForm({ ...form, phone: e.target.value }); setError(""); }}
                   className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
                 />
               </label>
@@ -142,7 +178,7 @@ export default function StaffDirectory() {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Role</span>
                 <select
                   value={form.role}
-                  onChange={e => setForm({ ...form, role: e.target.value as User["role"] })}
+                  onChange={e => { setForm({ ...form, role: e.target.value as User["role"] }); setError(""); }}
                   className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
                 >
                   <option value="cashier">Cashier</option>
@@ -150,19 +186,36 @@ export default function StaffDirectory() {
                   <option value="admin">Admin</option>
                 </select>
               </label>
+              
+              {!editingStaff && (
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Set Initial Password</span>
+                  <input
+                    type="password"
+                    value={form.password || ""}
+                    onChange={e => { setForm({ ...form, password: e.target.value }); setError(""); }}
+                    placeholder="Minimum 6 characters"
+                    className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
+                  />
+                </label>
+              )}
+
               <label className="flex items-center gap-2 mt-2">
                 <input
                   type="checkbox"
                   checked={form.is_active}
-                  onChange={e => setForm({ ...form, is_active: e.target.checked })}
+                  onChange={e => { setForm({ ...form, is_active: e.target.checked }); setError(""); }}
                   className="rounded border-gray-300"
                 />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Account</span>
               </label>
             </div>
             <div className="p-5 border-t border-gray-200 dark:border-pos-border flex justify-end gap-3">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-xl text-sm">Cancel</button>
-              <button onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm">Save</button>
+              <button disabled={isLoading} onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-xl text-sm disabled:opacity-50">Cancel</button>
+              <button disabled={isLoading} onClick={handleSave} className="px-4 py-2 bg-primary-600 text-white rounded-xl text-sm flex items-center gap-2 disabled:opacity-50">
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save
+              </button>
             </div>
           </div>
         </div>
