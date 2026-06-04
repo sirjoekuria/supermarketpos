@@ -106,9 +106,43 @@ export default function MpesaPayment({
     return cleaned;
   };
 
-  // Confetti Particle System
+  // ── Payment confirmed sound (Web Audio API — works on web & Android WebView) ──
+  const playSuccessChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      // Three-note rising chime: C5 → E5 → G5
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((freq, i) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.18);
+
+        // Soft attack, smooth decay
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+        gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + i * 0.18 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.18 + 0.55);
+
+        osc.start(ctx.currentTime + i * 0.18);
+        osc.stop(ctx.currentTime + i * 0.18 + 0.6);
+      });
+    } catch {
+      // Audio not available (silent fail)
+    }
+  };
+
+  // ── Confetti Particle System — double burst ──────────────────
   useEffect(() => {
     if (status !== "success") return;
+
+    // Play chime immediately on success
+    playSuccessChime();
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -117,60 +151,94 @@ export default function MpesaPayment({
     if (!ctx) return;
 
     const resizeCanvas = () => {
-      canvas.width = canvas.parentElement?.clientWidth || 400;
+      canvas.width  = canvas.parentElement?.clientWidth  || 400;
       canvas.height = canvas.parentElement?.clientHeight || 450;
     };
-    
     resizeCanvas();
 
-    const colors = ["#22c55e", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316"];
-    const particles: any[] = [];
+    const colors = ["#22c55e", "#3b82f6", "#eab308", "#a855f7", "#ec4899", "#f97316", "#ffffff", "#06b6d4"];
 
-    // Launch dual-stream confetti from bottom corners
-    const particleCount = 120;
-    for (let i = 0; i < particleCount; i++) {
-      const fromLeft = i % 2 === 0;
-      particles.push({
-        x: fromLeft ? 0 : canvas.width,
-        y: canvas.height - 10,
-        size: Math.random() * 6 + 5,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        speedX: fromLeft ? Math.random() * 7 + 4 : -Math.random() * 7 - 4,
-        speedY: -Math.random() * 12 - 10, // shoot up
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 8,
-        gravity: 0.28,
-        friction: 0.98,
-        opacity: 1,
-      });
-    }
+    // Helper: create a burst of particles from bottom corners + center top
+    const createBurst = (count: number, speedMult: number) => {
+      const burst: {
+        x: number; y: number; size: number; color: string;
+        speedX: number; speedY: number; rotation: number;
+        rotationSpeed: number; gravity: number; friction: number;
+        opacity: number; shape: "square" | "circle" | "strip";
+      }[] = [];
 
+      for (let i = 0; i < count; i++) {
+        const zone = i % 3; // 0=left corner, 1=right corner, 2=center
+        const fromLeft  = zone === 0;
+        const fromRight = zone === 1;
+        const fromCenter = zone === 2;
+
+        burst.push({
+          x: fromLeft ? 0 : fromRight ? canvas.width : canvas.width / 2 + (Math.random() - 0.5) * 60,
+          y: fromCenter ? -10 : canvas.height - 10,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          speedX: fromLeft
+            ? Math.random() * 9 * speedMult + 3
+            : fromRight
+            ? -(Math.random() * 9 * speedMult + 3)
+            : (Math.random() - 0.5) * 10 * speedMult,
+          speedY: fromCenter
+            ? Math.random() * 8 * speedMult + 4
+            : -(Math.random() * 14 * speedMult + 8),
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 12,
+          gravity: 0.3,
+          friction: 0.98,
+          opacity: 1,
+          shape: (["square", "circle", "strip"] as const)[Math.floor(Math.random() * 3)],
+        });
+      }
+      return burst;
+    };
+
+    let particles = createBurst(200, 1.0); // Burst 1: 200 particles
     let animationId: number;
+    let burst2Added = false;
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       let anyAlive = false;
 
+      // Add second burst at ~700ms (when first burst peaks)
+      if (!burst2Added && particles.every(p => p.speedY > -2)) {
+        burst2Added = true;
+        particles = [...particles, ...createBurst(200, 1.2)]; // Burst 2: stronger
+        playSuccessChime(); // Second chime
+      }
+
       particles.forEach((p) => {
         if (p.opacity <= 0) return;
-
         anyAlive = true;
+
         p.speedX *= p.friction;
         p.speedY *= p.friction;
         p.speedY += p.gravity;
         p.x += p.speedX;
         p.y += p.speedY;
         p.rotation += p.rotationSpeed;
-        p.opacity -= 0.008;
+        p.opacity -= 0.006; // slower fade for longer show
 
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate((p.rotation * Math.PI) / 180);
         ctx.globalAlpha = Math.max(0, p.opacity);
         ctx.fillStyle = p.color;
-        
-        // Draw square confetti
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+
+        if (p.shape === "circle") {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (p.shape === "strip") {
+          ctx.fillRect(-p.size / 4, -p.size * 1.5, p.size / 2, p.size * 3);
+        } else {
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        }
         ctx.restore();
       });
 
@@ -184,6 +252,7 @@ export default function MpesaPayment({
     return () => {
       cancelAnimationFrame(animationId);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const initiateSTKPush = async () => {
