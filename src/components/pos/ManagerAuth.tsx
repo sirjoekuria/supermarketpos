@@ -54,12 +54,12 @@ export default function ManagerAuth({
     const controller = new AbortController();
     abortRef.current = controller;
 
-    // Auto-abort after 10 seconds
+    // Auto-abort after 30 seconds
     const timeout = setTimeout(() => {
       controller.abort();
       setIsVerifying(false);
       setError("Request timed out. Check your connection and try again.");
-    }, 10000);
+    }, 30000);
 
     setIsVerifying(true);
     setError("");
@@ -112,7 +112,7 @@ export default function ManagerAuth({
       controller.abort();
       setIsVerifying(false);
       setError("Request timed out.");
-    }, 10000);
+    }, 30000);
 
     setIsVerifying(true);
     setError("");
