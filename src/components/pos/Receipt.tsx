@@ -45,24 +45,91 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
   };
 
   const handleDownload = () => {
-    const receiptData = {
-      receipt_number: sale.receipt_number,
-      date: sale.created_at,
-      items: sale.items,
-      subtotal: sale.subtotal,
-      tax: sale.tax_amount,
-      discount: sale.discount_amount,
-      total: sale.total,
-      payment_method: sale.payment_method,
-      cashier: sale.cashier?.full_name,
+    const width = 42; // standard characters width for thermal printer (80mm)
+    const line = (char = "-") => char.repeat(width);
+    const center = (text: string) => {
+      const pad = Math.max(0, Math.floor((width - text.length) / 2));
+      return " ".repeat(pad) + text;
     };
-    const blob = new Blob([JSON.stringify(receiptData, null, 2)], {
-      type: "application/json",
+    const row = (left: string, right: string) => {
+      const space = Math.max(1, width - left.length - right.length);
+      return left + " ".repeat(space) + right;
+    };
+
+    let text = "";
+    text += center(settings?.shop_name || "Supermarket POS") + "\n";
+    if (settings?.shop_address) text += center(settings.shop_address) + "\n";
+    if (settings?.shop_phone) text += center(settings.shop_phone) + "\n";
+    text += line() + "\n";
+    text += row("Receipt #:", sale.receipt_number) + "\n";
+    text += row("Date:", formatDate(sale.created_at)) + "\n";
+    text += row("Cashier:", sale.cashier?.full_name || "Unknown") + "\n";
+    if (sale.customer) {
+      text += row("Customer:", sale.customer.name) + "\n";
+    }
+    text += line() + "\n";
+    text += row("Item", "Total") + "\n";
+    text += line() + "\n";
+
+    sale.items.forEach((item) => {
+      const itemDesc = `${item.product.name} x${item.quantity}`;
+      const itemPrice = formatCurrency(item.total);
+      if (itemDesc.length + itemPrice.length + 1 > width) {
+        text += itemDesc + "\n";
+        text += row("", itemPrice) + "\n";
+      } else {
+        text += row(itemDesc, itemPrice) + "\n";
+      }
+    });
+
+    text += line() + "\n";
+    text += row("Subtotal:", formatCurrency(sale.subtotal)) + "\n";
+    if (sale.discount_amount > 0) {
+      text += row("Discount:", `-${formatCurrency(sale.discount_amount)}`) + "\n";
+    }
+    text += row("Tax:", formatCurrency(sale.tax_amount)) + "\n";
+    text += line() + "\n";
+    text += row("TOTAL:", formatCurrency(sale.total)) + "\n";
+    text += line() + "\n";
+
+    text += row("Payment Method:", sale.payment_method.toUpperCase()) + "\n";
+    if (sale.payment_method === "split" && sale.split_payments) {
+      sale.split_payments.forEach((payment) => {
+        text += row(`- ${payment.method}:`, formatCurrency(payment.amount)) + "\n";
+      });
+    }
+    if (sale.mpesa_transaction_id) {
+      text += row("M-Pesa Ref:", sale.mpesa_transaction_id) + "\n";
+    }
+
+    if (sale.customer) {
+      text += line() + "\n";
+      text += center(`⭐ Loyalty — ${sale.customer.name}`) + "\n";
+      if ((sale.points_earned ?? 0) > 0) {
+        text += row("  Points Earned:", `+${sale.points_earned} pts`) + "\n";
+      }
+      if ((sale.points_redeemed ?? 0) > 0) {
+        text += row("  Points Redeemed:", `-${sale.points_redeemed} pts`) + "\n";
+      }
+      if (sale.loyalty?.final_points_balance !== undefined) {
+        text += row("  New Balance:", `${sale.loyalty.final_points_balance} pts`) + "\n";
+      }
+    }
+
+    text += line() + "\n";
+    text += center("Thank you for shopping with us!") + "\n";
+    if (settings?.receipt_footer) {
+      text += center(settings.receipt_footer) + "\n";
+    }
+    text += line() + "\n";
+
+    const blob = new Blob([text], {
+      type: "text/plain;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `receipt-${sale.receipt_number}.json`;
+    a.download = `receipt-${sale.receipt_number}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };

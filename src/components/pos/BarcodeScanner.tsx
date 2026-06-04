@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-import { X, ScanLine, Camera, Smartphone, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, ScanLine, Camera, Smartphone, AlertCircle, CheckCircle2, Flashlight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCapacitor } from "@/hooks/useCapacitor";
 
@@ -25,6 +25,22 @@ export default function BarcodeScanner({
   const [scanCooldown, setScanCooldown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const qrCodeRef = useRef<Html5Qrcode | null>(null);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+  const [hasTorch, setHasTorch] = useState(false);
+
+  const toggleTorch = async () => {
+    if (!qrCodeRef.current || !qrCodeRef.current.isScanning) return;
+    try {
+      const nextTorchState = !isTorchOn;
+      await qrCodeRef.current.applyVideoConstraints({
+        advanced: [{ torch: nextTorchState } as any],
+      });
+      setIsTorchOn(nextTorchState);
+    } catch (err) {
+      console.error("Failed to toggle torch:", err);
+    }
+  };
 
   const handleScanSuccess = useCallback(
     async (decodedText: string) => {
@@ -102,6 +118,7 @@ export default function BarcodeScanner({
             Html5QrcodeSupportedFormats.QR_CODE,
           ],
         });
+        qrCodeRef.current = html5QrCode;
         
         const cameras = await Html5Qrcode.getCameras();
         if (!cameras || cameras.length === 0) {
@@ -130,6 +147,17 @@ export default function BarcodeScanner({
             // ignore scan errors (they happen every frame no barcode is found)
           }
         );
+
+        if (isComponentMounted) {
+          try {
+            const capabilities = html5QrCode.getRunningTrackCapabilities();
+            if (capabilities && (capabilities as any).torch) {
+              setHasTorch(true);
+            }
+          } catch (e) {
+            console.warn("Failed to check torch capability:", e);
+          }
+        }
       } catch (err) {
         console.error("Camera access error:", err);
         if (isComponentMounted) setCamError("Could not access camera. Please check permissions.");
@@ -144,8 +172,15 @@ export default function BarcodeScanner({
     return () => {
       isComponentMounted = false;
       clearTimeout(timer);
+      setHasTorch(false);
+      setIsTorchOn(false);
       if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => html5QrCode?.clear()).catch(console.error);
+        html5QrCode.stop().then(() => {
+          html5QrCode?.clear();
+          qrCodeRef.current = null;
+        }).catch(console.error);
+      } else {
+        qrCodeRef.current = null;
       }
     };
   }, [isOpen, scanMode, config.isNative, requestCamera]);
@@ -230,6 +265,21 @@ export default function BarcodeScanner({
                 "absolute inset-0 pointer-events-none border-2 rounded-xl transition-colors",
                 scanCooldown ? "border-yellow-500" : "border-primary-500/30"
               )} />
+              {hasTorch && (
+                <button
+                  type="button"
+                  onClick={toggleTorch}
+                  className={cn(
+                    "absolute top-4 right-4 z-10 p-3 rounded-full backdrop-blur-md transition-all duration-300 active:scale-95 shadow-lg",
+                    isTorchOn
+                      ? "bg-yellow-500 text-white hover:bg-yellow-600 shadow-yellow-500/30"
+                      : "bg-black/50 text-white hover:bg-black/75 border border-white/20"
+                  )}
+                  title={isTorchOn ? "Turn off torch" : "Turn on torch"}
+                >
+                  <Flashlight className={cn("w-5 h-5", isTorchOn && "animate-pulse")} />
+                </button>
+              )}
               {camError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/80 rounded-xl p-4 text-center">
                   <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
