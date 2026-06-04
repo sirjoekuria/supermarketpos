@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const items = body.items as SaleItemPayload[] | undefined;
-    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, payment_method, payment_status = "completed", actor } = body;
+    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, payment_method, payment_status = "completed", actor, mpesa_transaction_id } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Sale must include at least one item." }, { status: 400 });
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
         branch_id: body.branch_id || null,
+        mpesa_transaction_id: mpesa_transaction_id || null,
       })
       .select()
       .single();
@@ -160,6 +161,36 @@ export async function POST(request: Request) {
       // rollback sale record on items failure
       await supabase.from("sales").delete().eq("id", saleData.id);
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
+    }
+
+    // ── LINK M-PESA TRANSACTION RECORD ──
+    try {
+      if (payment_method === "mpesa" && mpesa_transaction_id) {
+        const code = mpesa_transaction_id.trim().toUpperCase();
+        await supabase
+          .from("mpesa_transactions")
+          .update({
+            sale_id: saleData.id,
+            status: "success",
+            updated_at: new Date().toISOString()
+          })
+          .eq("mpesa_receipt_number", code);
+      } else if (payment_method === "split" && body.split_payments) {
+        const mpesaPart = body.split_payments.find((p: any) => p.method === "mpesa");
+        if (mpesaPart && mpesaPart.reference) {
+          const code = mpesaPart.reference.trim().toUpperCase();
+          await supabase
+            .from("mpesa_transactions")
+            .update({
+              sale_id: saleData.id,
+              status: "success",
+              updated_at: new Date().toISOString()
+            })
+            .eq("mpesa_receipt_number", code);
+        }
+      }
+    } catch (linkErr: any) {
+      console.warn("M-Pesa transaction linking failed:", linkErr.message || linkErr);
     }
 
     // ── STOCK QUANTITY UPDATES (Parallel, Non-blocking for UI speed) ──

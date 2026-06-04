@@ -31,6 +31,12 @@ export default function MpesaPayment({
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationWarning, setVerificationWarning] = useState("");
   const [showForceConfirm, setShowForceConfirm] = useState(false);
+  const [verifiedTx, setVerifiedTx] = useState<{
+    mpesaReceiptNumber: string;
+    amount: number;
+    phoneNumber: string;
+    customerName: string;
+  } | null>(null);
 
   const handleManualConfirm = async () => {
     const code = manualCode.trim().toUpperCase();
@@ -43,16 +49,19 @@ export default function MpesaPayment({
     setManualError("");
     setVerificationWarning("");
     setShowForceConfirm(false);
+    setVerifiedTx(null);
 
     try {
       const response = await fetch(`/api/mpesa/verify-code?code=${code}&amount=${amount}`);
       const data = await response.json();
       
       if (data.success) {
-        setStatus("success");
-        setTimeout(() => {
-          onSuccess(code);
-        }, 1800);
+        setVerifiedTx({
+          mpesaReceiptNumber: data.mpesaReceiptNumber,
+          amount: Number(data.amount),
+          phoneNumber: data.phoneNumber,
+          customerName: data.customerName,
+        });
       } else {
         setVerificationWarning(data.message || "Transaction code was not found in the database.");
         setShowForceConfirm(true);
@@ -64,6 +73,14 @@ export default function MpesaPayment({
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const handleCompleteManualCheckout = () => {
+    if (!verifiedTx) return;
+    setStatus("success");
+    setTimeout(() => {
+      onSuccess(verifiedTx.mpesaReceiptNumber);
+    }, 1800);
   };
 
   const handleForceConfirm = () => {
@@ -409,68 +426,116 @@ export default function MpesaPayment({
                     </div>
                   )}
 
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    M-Pesa Confirmation Code
-                  </label>
-                  <input
-                    type="text"
-                    value={manualCode}
-                    onChange={(e) => {
-                      setManualCode(e.target.value.toUpperCase());
-                      setManualError("");
-                      setVerificationWarning("");
-                      setShowForceConfirm(false);
-                    }}
-                    placeholder="e.g. QKL1A2B3C4"
-                    maxLength={12}
-                    className={cn(
-                      "w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
-                      manualError
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-200 dark:border-pos-border focus:ring-green-500"
-                    )}
-                    disabled={isVerifying}
-                  />
-                  {manualError && (
-                    <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
-                      <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
-                    </p>
-                  )}
+                  {verifiedTx ? (
+                    <div className="space-y-4">
+                      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-xl p-5 text-left">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          <h4 className="text-sm font-bold text-green-800 dark:text-green-400 uppercase tracking-wider">
+                            Transaction Verified
+                          </h4>
+                        </div>
+                        <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
+                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
+                            <span className="text-gray-500 dark:text-gray-400">Code:</span>
+                            <span className="font-bold text-gray-900 dark:text-white font-mono">{verifiedTx.mpesaReceiptNumber}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
+                            <span className="text-gray-500 dark:text-gray-400">Paid Amount:</span>
+                            <span className="font-extrabold text-green-600 dark:text-green-400">{formatCurrency(verifiedTx.amount)}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
+                            <span className="text-gray-500 dark:text-gray-400">Customer Name:</span>
+                            <span className="text-gray-900 dark:text-white">{verifiedTx.customerName}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Phone Number:</span>
+                            <span className="text-gray-900 dark:text-white">{verifiedTx.phoneNumber}</span>
+                          </div>
+                        </div>
+                      </div>
 
-                  {verificationWarning && (
-                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-left">
-                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
-                        Verification Status:
-                      </p>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
-                        {verificationWarning}
-                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => { setVerifiedTx(null); setManualCode(""); }}
+                          className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-[0.98] text-sm"
+                        >
+                          Change Code
+                        </button>
+                        <button
+                          onClick={handleCompleteManualCheckout}
+                          className="flex-[2] py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-base"
+                        >
+                          Complete Checkout
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        M-Pesa Confirmation Code
+                      </label>
+                      <input
+                        type="text"
+                        value={manualCode}
+                        onChange={(e) => {
+                          setManualCode(e.target.value.toUpperCase());
+                          setManualError("");
+                          setVerificationWarning("");
+                          setShowForceConfirm(false);
+                        }}
+                        placeholder="e.g. QKL1A2B3C4"
+                        maxLength={12}
+                        className={cn(
+                          "w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
+                          manualError
+                            ? "border-red-300 focus:ring-red-500"
+                            : "border-gray-200 dark:border-pos-border focus:ring-green-500"
+                        )}
+                        disabled={isVerifying}
+                      />
+                      {manualError && (
+                        <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                          <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
+                        </p>
+                      )}
+
+                      {verificationWarning && (
+                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-left">
+                          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
+                            Verification Status:
+                          </p>
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
+                            {verificationWarning}
+                          </p>
+                        </div>
+                      )}
+
+                      <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed text-left">
+                        Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
+                      </p>
+
+                      <div className="flex flex-col gap-2.5 mt-4">
+                        <button
+                          onClick={handleManualConfirm}
+                          disabled={isVerifying}
+                          className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg flex items-center justify-center gap-2"
+                        >
+                          {isVerifying && <Loader2 className="w-5 h-5 animate-spin" />}
+                          {isVerifying ? "Verifying with Database..." : "Verify & Confirm Payment"}
+                        </button>
+
+                        {showForceConfirm && (
+                          <button
+                            onClick={handleForceConfirm}
+                            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
+                          >
+                            Force Confirm Anyway (Skip Verification)
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
-
-                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed text-left">
-                    Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
-                  </p>
-
-                  <div className="flex flex-col gap-2.5 mt-4">
-                    <button
-                      onClick={handleManualConfirm}
-                      disabled={isVerifying}
-                      className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg flex items-center justify-center gap-2"
-                    >
-                      {isVerifying && <Loader2 className="w-5 h-5 animate-spin" />}
-                      {isVerifying ? "Verifying with Database..." : "Verify & Confirm Payment"}
-                    </button>
-
-                    {showForceConfirm && (
-                      <button
-                        onClick={handleForceConfirm}
-                        className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
-                      >
-                        Force Confirm Anyway (Skip Verification)
-                      </button>
-                    )}
-                  </div>
                 </div>
               )}
             </div>

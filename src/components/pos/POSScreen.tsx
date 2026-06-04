@@ -380,7 +380,8 @@ export default function POSScreen() {
 
       const currentBranchId = useBranchStore.getState().currentBranchId;
       const payload = {
-        receipt_number: mpesaTransactionId || receiptNum,
+        receipt_number: receiptNum,
+        mpesa_transaction_id: mpesaTransactionId || null,
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,
         discount_amount: totals.discountAmount + (pointsRedeemed * 1),
@@ -493,7 +494,7 @@ export default function POSScreen() {
       // Prepare UI state for receipt
       const sale = {
         id: data.sale.id,
-        receipt_number: mpesaTransactionId || receiptNum,
+        receipt_number: receiptNum,
         items: [...items],
         subtotal: totals.subtotal,
         tax_amount: totals.taxAmount,

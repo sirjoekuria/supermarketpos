@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     // Query by mpesa_receipt_number (case insensitive)
     const { data: tx, error } = await supabase
       .from("mpesa_transactions")
-      .select("status, amount, mpesa_receipt_number, phone_number, result_desc")
+      .select("status, amount, mpesa_receipt_number, phone_number, result_desc, sale_id, customer_name")
       .eq("mpesa_receipt_number", code)
       .maybeSingle();
 
@@ -26,6 +26,13 @@ export async function GET(request: Request) {
 
     if (!tx) {
       return NextResponse.json({ success: false, message: "Transaction code not found in database." });
+    }
+
+    if (tx.sale_id) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "This transaction code has already been used for another sale." 
+      });
     }
 
     if (tx.status !== "success") {
@@ -53,6 +60,7 @@ export async function GET(request: Request) {
       mpesaReceiptNumber: tx.mpesa_receipt_number,
       amount: tx.amount,
       phoneNumber: tx.phone_number,
+      customerName: tx.customer_name || "M-Pesa Customer",
     });
 
   } catch (error) {

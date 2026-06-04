@@ -18,6 +18,7 @@ import {
   Users,
   Building2,
   ChevronDown,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore, useUIStore, useBranchStore } from "@/store";
@@ -35,6 +36,7 @@ const UserApprovals = dynamic(() => import("@/components/admin/UserApprovals"), 
 const AuditLog = dynamic(() => import("@/components/admin/AuditLog"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 const CustomersPage = dynamic(() => import("@/components/customers/CustomersPage"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 const BranchManagement = dynamic(() => import("@/components/branches/BranchManagement"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const MpesaManagement = dynamic(() => import("@/components/admin/MpesaManagement"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 
 
 const NAV_ITEMS = [
@@ -43,6 +45,7 @@ const NAV_ITEMS = [
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "manager"] },
   { id: "customers", label: "Customers", icon: Users, roles: ["admin", "cashier", "manager"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
+  { id: "mpesa", label: "M-Pesa Codes", icon: Smartphone, roles: ["admin", "manager"] },
   { id: "branches", label: "Branches", icon: Building2, roles: ["admin"] },
   { id: "approvals", label: "Approvals", icon: UserCheck, roles: ["admin", "manager"] },
   { id: "audit", label: "Audit Log", icon: ClipboardList, roles: ["admin"] },
@@ -283,6 +286,11 @@ export default function Home() {
           {isTabMounted("branches") && (
             <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("branches") && "hidden")}>
               <BranchManagement />
+            </div>
+          )}
+          {isTabMounted("mpesa") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("mpesa") && "hidden")}>
+              <MpesaManagement />
             </div>
           )}
         </div>

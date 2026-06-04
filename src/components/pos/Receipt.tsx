@@ -313,7 +313,7 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
                       ? sale.customer.phone.substring(0,4) + "***" + sale.customer.phone.slice(-3)
                       : "0700***950"
                   }</p>
-                  <p>TRANSACTION CODE: {mpesaRef || "UF1LS5Z55F"}</p>
+                  <p>TRANSACTION CODE: {mpesaRef || "N/A"}</p>
                   <div className="flex justify-between font-bold">
                     <span>MPESA AMOUNT</span><span>{mpesaAmount.toFixed(2)}</span>
                   </div>

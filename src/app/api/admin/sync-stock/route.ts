@@ -45,7 +45,7 @@ export async function POST() {
 
     // Build a set of existing (branch_id, product_id) pairs
     const existingSet = new Set(
-      (existingStock || []).map((s) => `${s.branch_id}:${s.product_id}`)
+      (existingStock || []).map((s: { branch_id: string; product_id: string }) => `${s.branch_id}:${s.product_id}`)
     );
 
     // Build upsert rows for missing combinations
