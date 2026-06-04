@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       // Silently fall back to in-memory store if DB doesn't have RLS or these columns yet
     }
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "password_reset_requested",
       entityType: "app_user",
       entityId: user.id,
@@ -150,7 +150,7 @@ export async function PUT(request: Request) {
       throw updateError;
     }
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "password_reset_success",
       entityType: "app_user",
       entityId: user.id,
@@ -165,3 +165,4 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message || "Failed to reset password." }, { status: 500 });
   }
 }
+

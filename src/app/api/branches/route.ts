@@ -1,17 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { writeAuditLog } from "@/lib/server-auth";
-
-function getAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing Supabase server credentials.");
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
 // GET all branches
 export async function GET() {
@@ -54,12 +42,13 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    await writeAuditLog({
+    // fire-and-forget — never block the response waiting for audit log
+    writeAuditLog({
       action: "branch_created",
       entityType: "branch",
       entityId: branch.id,
       details: { name: branch.name },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ branch });
   } catch (error) {
@@ -94,12 +83,12 @@ export async function PATCH(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "branch_updated",
       entityType: "branch",
       entityId: branch.id,
       details: { name: branch.name },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ branch });
   } catch (error) {
@@ -126,12 +115,12 @@ export async function DELETE(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "branch_deactivated",
       entityType: "branch",
       entityId: id,
       details: {},
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -141,3 +130,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

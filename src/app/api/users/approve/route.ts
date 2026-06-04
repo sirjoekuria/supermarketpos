@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-    await writeAuditLog({
+    writeAuditLog({
       actor,
       action: decision === "approve" ? "user_approved" : "user_rejected",
       entityType: "app_user",
@@ -58,3 +58,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Approval failed." }, { status: 500 });
   }
 }
+

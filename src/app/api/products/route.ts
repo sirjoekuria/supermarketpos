@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "product_created",
       entityType: "product",
       entityId: product.id,
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         barcode: product.barcode,
         price: product.price,
       },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ product });
   } catch (error) {
@@ -103,7 +103,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "product_updated",
       entityType: "product",
       entityId: product.id,
@@ -112,7 +112,7 @@ export async function PATCH(request: Request) {
         barcode: product.barcode,
         price: product.price,
       },
-    });
+    }).catch(() => {});
 
     return NextResponse.json({ product });
   } catch (error) {
@@ -151,7 +151,7 @@ export async function DELETE(request: Request) {
     }
 
     if (existingProduct) {
-      await writeAuditLog({
+      writeAuditLog({
         action: "product_deleted",
         entityType: "product",
         entityId: id,
@@ -159,7 +159,7 @@ export async function DELETE(request: Request) {
           name: existingProduct.name,
           barcode: existingProduct.barcode,
         },
-      });
+      }).catch(() => {});
     }
 
     return NextResponse.json({ success: true });
@@ -170,3 +170,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

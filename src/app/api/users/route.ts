@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    await writeAuditLog({
+    writeAuditLog({
       action: "user_created_by_admin",
       entityType: "app_user",
       entityId: data.id,
@@ -63,3 +63,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

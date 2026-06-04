@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const { data, error } = await supabase.from("app_users").select("*").eq("email", email).maybeSingle();
 
     if (error || !data || !verifyPassword(password, data.password_hash)) {
-      await writeAuditLog({
+      writeAuditLog({
         action: "login_failed",
         entityType: "app_user",
         details: { email },
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message, approval_status: user.approval_status }, { status: 403 });
     }
 
-    await writeAuditLog({
+    writeAuditLog({
       actor: user,
       action: "login_success",
       entityType: "app_user",
@@ -64,3 +64,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Login failed." }, { status: 500 });
   }
 }
+
