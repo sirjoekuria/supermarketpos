@@ -1,23 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { writeAuditLog } from "@/lib/server-auth";
+import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 import { sanitizeString } from "@/lib/sanitize";
-
-function getAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing Supabase server credentials. Add SUPABASE_SERVICE_ROLE_KEY to .env.local.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 // CREATE / ADD a product
 export async function POST(request: Request) {
@@ -46,6 +29,41 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // 2. Identify target branch_id
+    let targetBranchId = body.branch_id;
+    if (!targetBranchId) {
+      // Find the Main Branch id
+      const { data: mainBranch } = await supabase
+        .from("branches")
+        .select("id")
+        .eq("name", "Main Branch")
+        .limit(1)
+        .maybeSingle();
+      if (mainBranch) {
+        targetBranchId = mainBranch.id;
+      } else {
+        // Fallback to any branch
+        const { data: anyBranch } = await supabase
+          .from("branches")
+          .select("id")
+          .limit(1)
+          .maybeSingle();
+        if (anyBranch) targetBranchId = anyBranch.id;
+      }
+    }
+
+    // 3. Create entry in branch_stock
+    if (targetBranchId) {
+      await supabase
+        .from("branch_stock")
+        .insert({
+          branch_id: targetBranchId,
+          product_id: product.id,
+          stock_quantity: Number(body.stock_quantity) || 0,
+          min_stock_level: Number(body.min_stock_level) || 5,
+        });
     }
 
     writeAuditLog({
@@ -101,6 +119,43 @@ export async function PATCH(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // 2. Sync to branch_stock if stock_quantity or min_stock_level was updated
+    if (updateFields.stock_quantity !== undefined || updateFields.min_stock_level !== undefined) {
+      let targetBranchId = body.branch_id;
+      if (!targetBranchId) {
+        const { data: mainBranch } = await supabase
+          .from("branches")
+          .select("id")
+          .eq("name", "Main Branch")
+          .limit(1)
+          .maybeSingle();
+        if (mainBranch) targetBranchId = mainBranch.id;
+      }
+
+      if (targetBranchId) {
+        const stockQty = updateFields.stock_quantity !== undefined ? Number(updateFields.stock_quantity) : undefined;
+        const minLevel = updateFields.min_stock_level !== undefined ? Number(updateFields.min_stock_level) : undefined;
+        
+        // Find existing record to merge/fallback
+        const { data: existingStock } = await supabase
+          .from("branch_stock")
+          .select("*")
+          .eq("branch_id", targetBranchId)
+          .eq("product_id", id)
+          .maybeSingle();
+
+        await supabase
+          .from("branch_stock")
+          .upsert({
+            branch_id: targetBranchId,
+            product_id: id,
+            stock_quantity: stockQty !== undefined ? stockQty : (existingStock?.stock_quantity ?? 0),
+            min_stock_level: minLevel !== undefined ? minLevel : (existingStock?.min_stock_level ?? 5),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "branch_id,product_id" });
+      }
     }
 
     writeAuditLog({

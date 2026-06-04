@@ -190,6 +190,7 @@ export default function InventoryManagement() {
           image_url: form.image_url.trim() || null,
           is_active: form.is_active,
           expiry_date: form.expiry_date || null,
+          branch_id: currentBranchId || null,
         }),
       });
       if (!response.ok) {
@@ -229,6 +230,7 @@ export default function InventoryManagement() {
           image_url: form.image_url.trim() || null,
           is_active: form.is_active,
           expiry_date: form.expiry_date || null,
+          branch_id: currentBranchId || null,
         }),
       });
       if (!response.ok) {
