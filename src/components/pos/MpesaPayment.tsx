@@ -240,7 +240,8 @@ export default function MpesaPayment({
           setStatus("success");
           // Play confetti for 1.8s before triggering onSuccess
           setTimeout(() => {
-            onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+            // Only pass real receipt numbers (e.g. QDK1234567), not the CheckoutRequestID
+            onSuccess(data.mpesaReceiptNumber || "");
           }, 1800);
           return; // Stop polling on success
         } else if (data.status === "failed") {
@@ -299,7 +300,7 @@ export default function MpesaPayment({
           setStatus("success");
           // Play confetti for 1.8s before triggering onSuccess
           setTimeout(() => {
-            onSuccess(data.mpesaReceiptNumber || checkoutRequestId);
+            onSuccess(data.mpesaReceiptNumber || "");
           }, 1800);
         }
       } catch (err) {

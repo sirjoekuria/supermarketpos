@@ -56,6 +56,10 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
   /* ── payment split ────────────────────────────────────────── */
   let mpesaAmount = 0, cashAmount = 0;
   let mpesaRef = sale.mpesa_transaction_id || "";
+  // Filter out internal Safaricom CheckoutRequestIDs — only keep real receipt codes (e.g. QDK1A2B3C)
+  if (mpesaRef.startsWith("ws_CO_") || mpesaRef.startsWith("ws_co_")) {
+    mpesaRef = "";
+  }
   if (sale.payment_method === "mpesa") {
     mpesaAmount = sale.total;
   } else if (sale.payment_method === "cash") {
@@ -313,7 +317,7 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
                       ? sale.customer.phone.substring(0,4) + "***" + sale.customer.phone.slice(-3)
                       : "0700***950"
                   }</p>
-                  <p>TRANSACTION CODE: {mpesaRef || "N/A"}</p>
+                  <p>TRANSACTION CODE: {mpesaRef || "CHECK M-PESA SMS"}</p>
                   <div className="flex justify-between font-bold">
                     <span>MPESA AMOUNT</span><span>{mpesaAmount.toFixed(2)}</span>
                   </div>
