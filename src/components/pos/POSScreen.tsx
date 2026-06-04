@@ -584,7 +584,7 @@ export default function POSScreen() {
         <button
           onClick={() => setMobileTab("cart")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2 relative",
+            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all border-b-2",
             mobileTab === "cart"
               ? "border-primary-500 text-primary-600 dark:text-primary-400"
               : "border-transparent text-gray-500 dark:text-gray-400"
@@ -593,7 +593,7 @@ export default function POSScreen() {
           <ShoppingCart className="w-4 h-4" />
           Cart
           {items.length > 0 && (
-            <span className="absolute top-2 right-[calc(50%-20px)] w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-primary-500 text-white text-xs rounded-full font-bold">
               {items.length}
             </span>
           )}
