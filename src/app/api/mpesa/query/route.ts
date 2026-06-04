@@ -9,6 +9,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const checkoutRequestId = url.searchParams.get("checkoutRequestId");
+    // elapsed seconds since STK push — client sends this so we know when to start querying Safaricom directly
+    const elapsed = parseFloat(url.searchParams.get("elapsed") || "0");
 
     if (!checkoutRequestId) {
       return NextResponse.json({ status: "failed", message: "Missing CheckoutRequestID." }, { status: 400 });
@@ -48,26 +50,42 @@ export async function GET(request: Request) {
       // DB unavailable — fall through to Safaricom direct query
     }
 
-    // ── DIRECT SAFARICOM QUERY (always, every poll, token is cached so it's fast) ──
+    // ── DIRECT SAFARICOM QUERY ──
+    // Only hit Safaricom after 8s — before that, trust the DB (callback fires fast).
+    // This avoids slow Safaricom API calls blocking our 500ms DB polling loop.
+    if (elapsed < 8) {
+      return NextResponse.json({ status: "pending", message: "Waiting for M-Pesa callback..." });
+    }
+
     try {
       const config = getMpesaConfig();
       const timestamp = mpesaTimestamp();
       const token = await getMpesaAccessToken(); // cached — only fetches once per hour
 
-      const response = await fetch(`${config.baseUrl}/mpesa/stkpushquery/v1/query`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          BusinessShortCode: config.shortCode,
-          Password: stkPassword(config.shortCode, config.passkey, timestamp),
-          Timestamp: timestamp,
-          CheckoutRequestID: checkoutRequestId,
-        }),
-        cache: "no-store",
-      });
+      // 4-second timeout on Safaricom API — don't let slow responses block our polling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      let response: Response;
+      try {
+        response = await fetch(`${config.baseUrl}/mpesa/stkpushquery/v1/query`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            BusinessShortCode: config.shortCode,
+            Password: stkPassword(config.shortCode, config.passkey, timestamp),
+            Timestamp: timestamp,
+            CheckoutRequestID: checkoutRequestId,
+          }),
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         // Safaricom not ready yet — customer hasn't been prompted
@@ -97,7 +115,6 @@ export async function GET(request: Request) {
       // Any other ResultCode = still processing or explicit error
       if (data.ResultCode !== undefined && String(data.ResultCode) !== "0") {
         // ResultCode 1032 = request cancelled, 1037 = DS timeout, etc.
-        // These indicate the customer hasn't paid yet, not a terminal failure
         const pendingCodes = ["1032", "1037", "2001", "1001", "1"];
         if (pendingCodes.includes(String(data.ResultCode))) {
           return NextResponse.json({ status: "pending", message: data.ResultDesc || "Still waiting for payment..." });
@@ -118,8 +135,12 @@ export async function GET(request: Request) {
       // Safaricom returned 200 but no ResultCode — still processing
       return NextResponse.json({ status: "pending", message: "Payment is being processed..." });
 
-    } catch (err: any) {
-      console.error("Safaricom direct query error:", err.message || err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      if (msg.includes("abort") || msg.includes("AbortError")) {
+        return NextResponse.json({ status: "pending", message: "Safaricom API timeout, retrying..." });
+      }
+      console.error("Safaricom direct query error:", msg);
       return NextResponse.json({ status: "pending", message: "Checking payment status..." });
     }
   } catch (error) {

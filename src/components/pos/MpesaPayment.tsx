@@ -253,11 +253,12 @@ export default function MpesaPayment({
       } catch (err) {
         console.error("Status check error:", err);
       }
-      elapsed += 1.5;
+      elapsed += elapsed < 8 ? 0.5 : 1.5; // fast 500ms polls for first 8s, then 1.5s
       
-      // Schedule next check (fast polling: 1.5 seconds)
+      // Schedule next check: 500ms for first 8 seconds (DB-only fast path), then 1.5s (Safaricom fallback)
       if (active) {
-        timeoutId = setTimeout(checkStatus, 1500);
+        const nextInterval = elapsed <= 8 ? 500 : 1500;
+        timeoutId = setTimeout(checkStatus, nextInterval);
       }
     };
 
@@ -311,8 +312,8 @@ export default function MpesaPayment({
     // Check DB status immediately when hook is triggered (e.g. switching tabs or timing out)
     checkDbFallback();
 
-    // Query every 4 seconds to capture delayed callbacks
-    const interval = setInterval(checkDbFallback, 4000);
+    // Query every 1 second to capture delayed callbacks quickly
+    const interval = setInterval(checkDbFallback, 1000);
     return () => {
       active = false;
       clearInterval(interval);
