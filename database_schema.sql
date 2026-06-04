@@ -148,22 +148,47 @@ ALTER TABLE public.mpesa_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow read access for authenticated users
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.categories;
 CREATE POLICY "Enable read access for all authenticated users" ON public.categories FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.products;
 CREATE POLICY "Enable read access for all authenticated users" ON public.products FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.profiles;
 CREATE POLICY "Enable read access for all authenticated users" ON public.profiles FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.app_users;
 CREATE POLICY "Enable read access for all authenticated users" ON public.app_users FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.audit_logs;
 CREATE POLICY "Enable read access for all authenticated users" ON public.audit_logs FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.sales;
 CREATE POLICY "Enable read access for all authenticated users" ON public.sales FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.sale_items;
 CREATE POLICY "Enable read access for all authenticated users" ON public.sale_items FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.mpesa_transactions;
 CREATE POLICY "Enable read access for all authenticated users" ON public.mpesa_transactions FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.settings;
 CREATE POLICY "Enable read access for all authenticated users" ON public.settings FOR SELECT TO authenticated USING (true);
 
 -- Allow full access for now (you can restrict this later based on user role)
+DROP POLICY IF EXISTS "Enable insert access for all authenticated users" ON public.products;
 CREATE POLICY "Enable insert access for all authenticated users" ON public.products FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable update access for all authenticated users" ON public.products;
 CREATE POLICY "Enable update access for all authenticated users" ON public.products FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable delete access for all authenticated users" ON public.products;
 CREATE POLICY "Enable delete access for all authenticated users" ON public.products FOR DELETE TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Enable insert access for all authenticated users" ON public.sales;
 CREATE POLICY "Enable insert access for all authenticated users" ON public.sales FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable insert access for all authenticated users" ON public.sale_items;
 CREATE POLICY "Enable insert access for all authenticated users" ON public.sale_items FOR INSERT TO authenticated WITH CHECK (true);
 
 -- Optional: If you want to disable RLS entirely during development to avoid permission issues, 
