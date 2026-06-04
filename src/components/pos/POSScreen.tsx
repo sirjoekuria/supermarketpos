@@ -6,7 +6,7 @@ import {
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
   LogOut, Moon, Sun, Menu, Gift, Lock, WifiOff, Wifi, RefreshCw, User,
 } from "lucide-react";
-import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore } from "@/store";
+import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore, useBranchStore } from "@/store";
 import ManagerAuth from "./ManagerAuth";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ type SplitPaymentMethod = "cash" | "mpesa" | "card";
 
 export default function POSScreen() {
   const {
-    items, addItem, clearCart, getTotals,
+    items, addItem: addCartItem, clearCart, getTotals,
     selectedCustomer, pointsRedeemed, setSelectedCustomer, setPointsRedeemed
   } = useCartStore();
   const { user, logout } = useAuthStore();
@@ -55,6 +55,27 @@ export default function POSScreen() {
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const getExpiryStatus = (product: Product) => {
+    if (!product.expiry_date) return "none";
+    const today = new Date(); today.setHours(0,0,0,0);
+    const exp = new Date(product.expiry_date);
+    if (exp < today) return "expired";
+    const in30Days = new Date(today); in30Days.setDate(today.getDate() + 30);
+    if (exp <= in30Days) return "expiring_soon";
+    return "ok";
+  };
+
+  const tryAddItem = (product: Product) => {
+    const status = getExpiryStatus(product);
+    if (status === "expired") {
+      setError(`Cannot add ${product.name}. It expired on ${new Date(product.expiry_date!).toLocaleDateString("en-GB")}`);
+      setTimeout(() => setError(""), 5000);
+      return false;
+    }
+    addCartItem(product);
+    return true;
+  };
 
   // ── Checkout Loyalty Point Lookup State ─────────────────────────────────────
   const [checkoutPhone, setCheckoutPhone] = useState("");
@@ -214,9 +235,13 @@ export default function POSScreen() {
     };
 
     if (product) {
-      addItem(product);
-      setError("");
-      flash("success", `${product.name}`);
+      const added = tryAddItem(product);
+      if (added) {
+        setError("");
+        flash("success", `${product.name}`);
+      } else {
+        flash("error", `Expired: ${product.name}`);
+      }
     } else {
       setError(`Product not found: ${barcode}`);
       flash("error", `Not found: ${barcode}`);
@@ -343,6 +368,7 @@ export default function POSScreen() {
         total: item.total,
       }));
 
+      const currentBranchId = useBranchStore.getState().currentBranchId;
       const payload = {
         receipt_number: mpesaTransactionId || receiptNum,
         subtotal: totals.subtotal,
@@ -356,6 +382,7 @@ export default function POSScreen() {
         customer_id: selectedCustomer?.id || null,
         points_redeemed: pointsRedeemed,
         actor: user ? { id: user.id, email: user.email, full_name: user.full_name, role: user.role } : undefined,
+        branch_id: currentBranchId || null,
       };
 
       // ── Offline mode or Instant Payment (Cash/Card) optimistic execution ────
@@ -657,31 +684,50 @@ export default function POSScreen() {
 
             {searchResults.length > 0 && (
               <div className="mt-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl shadow-lg max-h-64 overflow-y-auto">
-                {searchResults.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => {
-                      addItem(product);
-                      setSearchQuery("");
-                      setSearchResults([]);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-gray-500">{product.unit}</span>
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.barcode}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
-                        {formatCurrency(product.price)}
-                      </p>
-                      <p className="text-xs text-gray-400">Stock: {product.stock_quantity}</p>
-                    </div>
-                  </button>
-                ))}
+                {searchResults.map((product) => {
+                  const expiry = getExpiryStatus(product);
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => {
+                        const added = tryAddItem(product);
+                        if (added) {
+                          setSearchQuery("");
+                          setSearchResults([]);
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 relative">
+                        <span className="text-xs font-medium text-gray-500">{product.unit}</span>
+                        {expiry === "expired" && (
+                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-600 rounded-full flex items-center justify-center text-[8px] font-bold text-white">!</span>
+                        )}
+                        {expiry === "expiring_soon" && (
+                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center text-[8px] font-bold text-white">!</span>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5">
+                          {product.name}
+                          {expiry === "expired" && (
+                            <span className="text-[10px] text-red-600 font-bold bg-red-50 dark:bg-red-950/20 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-900">Expired</span>
+                          )}
+                          {expiry === "expiring_soon" && (
+                            <span className="text-[10px] text-amber-600 font-bold bg-amber-50 dark:bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-900">Expiring Soon</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">{product.barcode}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                          {formatCurrency(product.price)}
+                        </p>
+                        <p className="text-xs text-gray-400">Stock: {product.stock_quantity}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -732,43 +778,61 @@ export default function POSScreen() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3">
-                {products.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => addItem(product)}
-                    className="group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left flex flex-col"
-                  >
-                    <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center relative overflow-hidden">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-2xl sm:text-3xl">📦</span>
+                {products.map((product) => {
+                  const expiry = getExpiryStatus(product);
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => tryAddItem(product)}
+                      className={cn(
+                        "group bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-xl p-3 sm:p-4 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg transition-all active:scale-[0.97] text-left flex flex-col relative",
+                        expiry === "expired" && "opacity-75"
                       )}
-                      {product.stock_quantity <= 0 && (
-                        <div className="absolute inset-0 bg-white/60 dark:bg-black/60 flex items-center justify-center backdrop-blur-[1px]">
-                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1 flex-1">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center justify-between w-full mt-auto">
-                      <span className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">
-                        {formatCurrency(product.price)}
-                      </span>
-                      {product.discount_percent > 0 && (
-                        <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] sm:text-xs font-medium rounded-full">
-                          -{product.discount_percent}%
+                    >
+                      <div className="w-full aspect-square rounded-lg bg-gray-100 dark:bg-gray-700 mb-2 sm:mb-3 flex items-center justify-center relative overflow-hidden">
+                        {product.image_url ? (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-2xl sm:text-3xl">📦</span>
+                        )}
+                        {product.stock_quantity <= 0 && (
+                          <div className="absolute inset-0 bg-white/60 dark:bg-black/60 flex items-center justify-center backdrop-blur-[1px] z-10">
+                            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">Out of Stock</span>
+                          </div>
+                        )}
+                        {expiry === "expired" && (
+                          <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md z-10">
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Expired</span>
+                          </div>
+                        )}
+                        {expiry === "expiring_soon" && (
+                          <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md z-10">
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Expiring Soon</span>
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1 flex-1">
+                        {product.name}
+                      </h3>
+                      <div className="flex items-center justify-between w-full mt-auto">
+                        <span className="text-sm sm:text-lg font-bold text-primary-600 dark:text-primary-400">
+                          {formatCurrency(product.price)}
                         </span>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                        {product.discount_percent > 0 && (
+                          <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] sm:text-xs font-medium rounded-full">
+                            -{product.discount_percent}%
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

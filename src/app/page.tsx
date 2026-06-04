@@ -16,9 +16,11 @@ import {
   Sun,
   Moon,
   Users,
+  Building2,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuthStore, useUIStore } from "@/store";
+import { useAuthStore, useUIStore, useBranchStore } from "@/store";
 
 import dynamic from "next/dynamic";
 import { AppLoadingSkeleton } from "@/components/ui/Skeleton";
@@ -32,6 +34,7 @@ const AuthPage = dynamic(() => import("@/components/auth/AuthPage"), { ssr: fals
 const UserApprovals = dynamic(() => import("@/components/admin/UserApprovals"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 const AuditLog = dynamic(() => import("@/components/admin/AuditLog"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 const CustomersPage = dynamic(() => import("@/components/customers/CustomersPage"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
+const BranchManagement = dynamic(() => import("@/components/branches/BranchManagement"), { ssr: false, loading: () => <AppLoadingSkeleton /> });
 
 
 const NAV_ITEMS = [
@@ -40,6 +43,7 @@ const NAV_ITEMS = [
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "manager"] },
   { id: "customers", label: "Customers", icon: Users, roles: ["admin", "cashier", "manager"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
+  { id: "branches", label: "Branches", icon: Building2, roles: ["admin"] },
   { id: "approvals", label: "Approvals", icon: UserCheck, roles: ["admin", "manager"] },
   { id: "audit", label: "Audit Log", icon: ClipboardList, roles: ["admin"] },
   { id: "settings", label: "Settings", icon: Settings, roles: ["admin"] },
@@ -58,6 +62,19 @@ export default function Home() {
     activeTab,
     setActiveTab,
   } = useUIStore();
+  const { branches, currentBranchId, setCurrentBranch, fetchBranches } = useBranchStore();
+  const [showBranchPicker, setShowBranchPicker] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) fetchBranches();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (user && user.role !== "admin" && user.branch_id) {
+      setCurrentBranch(user.branch_id);
+    }
+  }, [user, setCurrentBranch]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -146,7 +163,41 @@ export default function Home() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-200 dark:border-pos-border">
+        <div className="p-3 border-t border-gray-200 dark:border-pos-border space-y-1">
+          {/* Branch Switcher (admin only) */}
+          {user?.role === "admin" && branches.length > 0 && sidebarOpen && (
+            <div className="relative mb-1">
+              <button
+                onClick={() => setShowBranchPicker(!showBranchPicker)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+              >
+                <Building2 className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 truncate text-left">
+                  {currentBranchId ? (branches.find(b => b.id === currentBranchId)?.name ?? "Select Branch") : "All Branches"}
+                </span>
+                <ChevronDown className="w-3 h-3 flex-shrink-0" />
+              </button>
+              {showBranchPicker && (
+                <div className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                  <button
+                    onClick={() => { setCurrentBranch(null); setShowBranchPicker(false); }}
+                    className={cn("w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700", !currentBranchId && "text-primary-600 font-semibold")}
+                  >
+                    All Branches
+                  </button>
+                  {branches.map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => { setCurrentBranch(b.id); setShowBranchPicker(false); }}
+                      className={cn("w-full text-left px-3 py-2 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 truncate", currentBranchId === b.id && "text-primary-600 font-semibold")}
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={() => logout()}
             className={cn(
@@ -227,6 +278,11 @@ export default function Home() {
           {isTabMounted("settings") && (
             <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("settings") && "hidden")}>
               <SettingsPage />
+            </div>
+          )}
+          {isTabMounted("branches") && (
+            <div className={cn("absolute inset-0 overflow-hidden animate-fade-in", !isTabActive("branches") && "hidden")}>
+              <BranchManagement />
             </div>
           )}
         </div>

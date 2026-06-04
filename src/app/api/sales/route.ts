@@ -83,6 +83,7 @@ export async function POST(request: Request) {
         customer_id: customer_id || null,
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
+        branch_id: body.branch_id || null,
       })
       .select()
       .single();
@@ -163,20 +164,48 @@ export async function POST(request: Request) {
 
     // ── STOCK QUANTITY UPDATES (Parallel, Non-blocking for UI speed) ──
     try {
+      const branchId = body.branch_id;
       await Promise.all(
         items.map(async (item) => {
-          const { data: prod, error: fetchError } = await supabase
-            .from("products")
-            .select("stock_quantity")
-            .eq("id", item.product_id)
-            .single();
+          if (branchId) {
+            // Scope stock update to branch
+            const { data: bsData, error: fetchError } = await supabase
+              .from("branch_stock")
+              .select("stock_quantity")
+              .eq("branch_id", branchId)
+              .eq("product_id", item.product_id)
+              .maybeSingle();
 
-          if (!fetchError && prod) {
-            const newQty = Math.max(0, prod.stock_quantity - item.quantity);
-            await supabase
+            if (!fetchError) {
+              const currentStock = bsData?.stock_quantity ?? 0;
+              const newQty = Math.max(0, currentStock - item.quantity);
+              await supabase
+                .from("branch_stock")
+                .upsert(
+                  {
+                    branch_id: branchId,
+                    product_id: item.product_id,
+                    stock_quantity: newQty,
+                    updated_at: new Date().toISOString(),
+                  },
+                  { onConflict: "branch_id,product_id" }
+                );
+            }
+          } else {
+            // Fallback to global stock quantity
+            const { data: prod, error: fetchError } = await supabase
               .from("products")
-              .update({ stock_quantity: newQty })
-              .eq("id", item.product_id);
+              .select("stock_quantity")
+              .eq("id", item.product_id)
+              .single();
+
+            if (!fetchError && prod) {
+              const newQty = Math.max(0, prod.stock_quantity - item.quantity);
+              await supabase
+                .from("products")
+                .update({ stock_quantity: newQty })
+                .eq("id", item.product_id);
+            }
           }
         })
       );

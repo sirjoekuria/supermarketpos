@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         discount_percent: Number(body.discount_percent) || 0,
         image_url: body.image_url ? sanitizeString(body.image_url) : null,
         is_active: body.is_active !== false,
+        expiry_date: body.expiry_date ? body.expiry_date : null,
       })
       .select()
       .single();
@@ -92,6 +93,7 @@ export async function PATCH(request: Request) {
         discount_percent: updateFields.discount_percent !== undefined ? Number(updateFields.discount_percent) : undefined,
         image_url: updateFields.image_url !== undefined ? (sanitizeString(updateFields.image_url) || null) : undefined,
         is_active: updateFields.is_active !== undefined ? updateFields.is_active : undefined,
+        expiry_date: updateFields.expiry_date !== undefined ? (updateFields.expiry_date || null) : undefined,
       })
       .eq("id", id)
       .select()

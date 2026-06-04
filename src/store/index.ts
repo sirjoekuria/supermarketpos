@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product, CartItem, User, AppSettings, Customer } from "@/types";
+import type { Product, CartItem, User, AppSettings, Customer, Branch } from "@/types";
 import { calculateCartTotals } from "@/lib/utils";
 
 interface CartState {
@@ -220,13 +220,56 @@ export const useProductStore = create<ProductState>((set) => ({
   fetchProducts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const currentBranchId = useBranchStore.getState().currentBranchId;
+
+      // 1. Fetch products
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
         .order('name');
       
-      if (error) throw error;
-      set({ products: data as Product[], isLoading: false });
+      if (productsError) throw productsError;
+
+      let updatedProducts = productsData as Product[];
+
+      if (currentBranchId) {
+        // 2. Fetch stock for the selected branch
+        const { data: stockData, error: stockError } = await supabase
+          .from('branch_stock')
+          .select('*')
+          .eq('branch_id', currentBranchId);
+
+        if (stockError) throw stockError;
+
+        // Map product_id -> stock_quantity
+        const stockMap = new Map(stockData.map(s => [s.product_id, s.stock_quantity]));
+
+        // Override product stock_quantity with branch stock quantity
+        updatedProducts = updatedProducts.map(p => ({
+          ...p,
+          stock_quantity: stockMap.get(p.id) ?? 0,
+        }));
+      } else {
+        // Aggregate stock from branch_stock
+        const { data: stockData, error: stockError } = await supabase
+          .from('branch_stock')
+          .select('*');
+
+        if (!stockError && stockData) {
+          const stockMap = new Map<string, number>();
+          for (const s of stockData) {
+            const current = stockMap.get(s.product_id) ?? 0;
+            stockMap.set(s.product_id, current + s.stock_quantity);
+          }
+          
+          updatedProducts = updatedProducts.map(p => ({
+            ...p,
+            stock_quantity: stockMap.has(p.id) ? stockMap.get(p.id)! : p.stock_quantity,
+          }));
+        }
+      }
+      
+      set({ products: updatedProducts, isLoading: false });
     } catch (error: any) {
       console.error('Error fetching products:', error);
       set({ error: error.message, isLoading: false });
@@ -264,6 +307,41 @@ export const useStaffStore = create<StaffState>()(
     }),
     {
       name: "pos-staff",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+interface BranchState {
+  currentBranchId: string | null;
+  branches: Branch[];
+  isLoadingBranches: boolean;
+  setCurrentBranch: (branchId: string | null) => void;
+  fetchBranches: () => Promise<void>;
+}
+
+export const useBranchStore = create<BranchState>()(
+  persist(
+    (set) => ({
+      currentBranchId: null,
+      branches: [],
+      isLoadingBranches: false,
+      setCurrentBranch: (branchId) => set({ currentBranchId: branchId }),
+      fetchBranches: async () => {
+        set({ isLoadingBranches: true });
+        try {
+          const res = await fetch("/api/branches");
+          if (!res.ok) throw new Error("Failed to fetch branches");
+          const data = await res.json();
+          const activeBranches: Branch[] = (data.branches ?? []).filter((b: Branch) => b.is_active);
+          set({ branches: activeBranches, isLoadingBranches: false });
+        } catch {
+          set({ isLoadingBranches: false });
+        }
+      },
+    }),
+    {
+      name: "pos-branch",
       storage: createJSONStorage(() => localStorage),
     }
   )

@@ -15,6 +15,17 @@ export interface Product {
   image_url?: string;
   supplier_id?: string;
   is_active: boolean;
+  expiry_date?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  address?: string;
+  phone?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -57,6 +68,8 @@ export interface Sale {
   points_redeemed?: number;
   cashier_id: string;
   cashier?: User;
+  branch_id?: string | null;
+  branch?: Branch;
   notes?: string;
   loyalty?: {
     points_earned: number;
@@ -76,6 +89,8 @@ export interface User {
   phone?: string;
   avatar_url?: string;
   is_active: boolean;
+  branch_id?: string | null;
+  branch?: Branch;
   created_at: string;
 }
 

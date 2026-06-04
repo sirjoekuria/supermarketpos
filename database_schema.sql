@@ -176,3 +176,82 @@ ALTER TABLE public.sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sale_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings DISABLE ROW LEVEL SECURITY;
 */
+
+-- =========================================================================
+-- EXPIRY DATES + MULTI-BRANCH MIGRATIONS
+-- =========================================================================
+
+-- 1. Add expiry_date to products
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS expiry_date DATE;
+
+-- 2. Create branches table
+CREATE TABLE IF NOT EXISTS public.branches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  address TEXT,
+  phone VARCHAR(50),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL
+);
+
+-- 3. Per-branch stock table
+CREATE TABLE IF NOT EXISTS public.branch_stock (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  branch_id UUID REFERENCES public.branches(id) ON DELETE CASCADE NOT NULL,
+  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
+  stock_quantity INTEGER NOT NULL DEFAULT 0,
+  min_stock_level INTEGER NOT NULL DEFAULT 5,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()) NOT NULL,
+  UNIQUE(branch_id, product_id)
+);
+
+-- 4. Add branch_id to app_users
+ALTER TABLE public.app_users
+  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id);
+
+-- 5. Add branch_id to sales
+ALTER TABLE public.sales
+  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id);
+
+-- 6. Add branch_id to stock_adjustments (if exists)
+ALTER TABLE public.stock_adjustments
+  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id);
+
+-- 7. Add branch_id to stock_receipts (if exists)
+ALTER TABLE public.stock_receipts
+  ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES public.branches(id);
+
+-- 8. Insert a default "Main Branch" so existing data isn't orphaned
+INSERT INTO public.branches (name, address) VALUES ('Main Branch', 'Head Office')
+  ON CONFLICT DO NOTHING;
+
+-- 9. Populate branch_stock with current stock for Main Branch
+INSERT INTO public.branch_stock (branch_id, product_id, stock_quantity, min_stock_level)
+SELECT b.id, p.id, p.stock_quantity, p.min_stock_level
+FROM public.products p
+CROSS JOIN (SELECT id FROM public.branches WHERE name = 'Main Branch' LIMIT 1) b
+ON CONFLICT (branch_id, product_id) DO NOTHING;
+
+-- 10. RLS policies for branches and branch_stock
+ALTER TABLE public.branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.branch_stock ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.branches;
+CREATE POLICY "Enable read access for all authenticated users" ON public.branches FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.branch_stock;
+CREATE POLICY "Enable read access for all authenticated users" ON public.branch_stock FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.branches;
+CREATE POLICY "Enable insert for authenticated users" ON public.branches FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable update for authenticated users" ON public.branches;
+CREATE POLICY "Enable update for authenticated users" ON public.branches FOR UPDATE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "Enable insert for authenticated users" ON public.branch_stock;
+CREATE POLICY "Enable insert for authenticated users" ON public.branch_stock FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable update for authenticated users" ON public.branch_stock;
+CREATE POLICY "Enable update for authenticated users" ON public.branch_stock FOR UPDATE TO authenticated USING (true);

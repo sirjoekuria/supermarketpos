@@ -4,17 +4,17 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import {
   Package, Search, Plus, Edit2, Trash2, AlertTriangle,
   ArrowUpDown, Filter, Download, Loader2, ImageIcon, Upload, X,
-  TrendingUp, FileUp, Check,
+  TrendingUp, FileUp, Check, CalendarClock, ShieldAlert,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
-import { useProductStore } from "@/store";
+import { useProductStore, useBranchStore } from "@/store";
 
 export default function InventoryManagement() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "price" | "stock">("name");
-  const [filterBy, setFilterBy] = useState<"all" | "active" | "low_stock" | "out_of_stock">("all");
+  const [filterBy, setFilterBy] = useState<"all" | "active" | "low_stock" | "out_of_stock" | "expiring_soon" | "expired">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -42,14 +42,16 @@ export default function InventoryManagement() {
     discount_percent: "",
     image_url: "",
     is_active: true,
+    expiry_date: "",
   });
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const { products, isLoading, error, fetchProducts } = useProductStore();
+  const { currentBranchId } = useBranchStore();
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, currentBranchId]);
 
   let filtered = products.filter(
     (p) =>
@@ -57,9 +59,22 @@ export default function InventoryManagement() {
       p.barcode.includes(search)
   );
 
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in30Days = new Date(today); in30Days.setDate(today.getDate() + 30);
+
+  const expiryStatus = (product: Product) => {
+    if (!product.expiry_date) return "none";
+    const exp = new Date(product.expiry_date);
+    if (exp < today) return "expired";
+    if (exp <= in30Days) return "expiring_soon";
+    return "ok";
+  };
+
   if (filterBy === "active") filtered = filtered.filter(p => p.is_active);
   if (filterBy === "low_stock") filtered = filtered.filter(p => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level);
   if (filterBy === "out_of_stock") filtered = filtered.filter(p => p.stock_quantity <= 0);
+  if (filterBy === "expiring_soon") filtered = filtered.filter(p => expiryStatus(p) === "expiring_soon");
+  if (filterBy === "expired") filtered = filtered.filter(p => expiryStatus(p) === "expired");
 
   filtered = filtered.sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -91,6 +106,7 @@ export default function InventoryManagement() {
       discount_percent: "0",
       image_url: "",
       is_active: true,
+      expiry_date: "",
     });
     setShowAddModal(true);
   };
@@ -110,6 +126,7 @@ export default function InventoryManagement() {
       discount_percent: String(product.discount_percent),
       image_url: product.image_url || "",
       is_active: product.is_active,
+      expiry_date: product.expiry_date ?? "",
     });
   };
 
@@ -172,6 +189,7 @@ export default function InventoryManagement() {
           discount_percent: Number(form.discount_percent) || 0,
           image_url: form.image_url.trim() || null,
           is_active: form.is_active,
+          expiry_date: form.expiry_date || null,
         }),
       });
       if (!response.ok) {
@@ -210,6 +228,7 @@ export default function InventoryManagement() {
           discount_percent: Number(form.discount_percent) || 0,
           image_url: form.image_url.trim() || null,
           is_active: form.is_active,
+          expiry_date: form.expiry_date || null,
         }),
       });
       if (!response.ok) {
@@ -260,6 +279,7 @@ export default function InventoryManagement() {
           product_id: adjustingProduct.id,
           quantity_change: adjustmentForm.quantity,
           reason: adjustmentForm.reason,
+          branch_id: currentBranchId || null,
         }),
       });
       if (!response.ok) {
@@ -293,7 +313,7 @@ export default function InventoryManagement() {
       const response = await fetch("/api/stock/receipts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ supplier_name: receiptForm.supplier_name, items, notes: receiptForm.notes }),
+        body: JSON.stringify({ supplier_name: receiptForm.supplier_name, items, notes: receiptForm.notes, branch_id: currentBranchId || null }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -331,7 +351,7 @@ export default function InventoryManagement() {
       const response = await fetch("/api/stock/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, reason: "adjustment" }),
+        body: JSON.stringify({ items, reason: "adjustment", branch_id: currentBranchId || null }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -436,7 +456,7 @@ export default function InventoryManagement() {
           { label: "Total Products", value: products.length, icon: Package, color: "bg-primary-500" },
           { label: "Low Stock", value: products.filter((p) => p.stock_quantity > 0 && p.stock_quantity <= p.min_stock_level).length, icon: AlertTriangle, color: "bg-yellow-500" },
           { label: "Out of Stock", value: products.filter((p) => p.stock_quantity <= 0).length, icon: AlertTriangle, color: "bg-red-500" },
-          { label: "Active Items", value: products.filter((p) => p.is_active).length, icon: Package, color: "bg-green-500" },
+          { label: "Expiring Soon", value: products.filter((p) => expiryStatus(p) === "expiring_soon").length, icon: CalendarClock, color: "bg-orange-500" },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white dark:bg-pos-card rounded-2xl p-4 sm:p-5 border border-gray-200 dark:border-pos-border">
             <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3", color)}>
@@ -477,7 +497,9 @@ export default function InventoryManagement() {
               <span className="hidden sm:inline">
                 {filterBy === "all" ? "Filter" :
                  filterBy === "active" ? "Active" :
-                 filterBy === "low_stock" ? "Low Stock" : "Out of Stock"}
+                 filterBy === "low_stock" ? "Low Stock" :
+                 filterBy === "out_of_stock" ? "Out of Stock" :
+                 filterBy === "expiring_soon" ? "Expiring Soon" : "Expired"}
               </span>
             </button>
             {showFilterDropdown && (
@@ -487,6 +509,8 @@ export default function InventoryManagement() {
                   { id: "active", label: "Active Only" },
                   { id: "low_stock", label: "Low Stock" },
                   { id: "out_of_stock", label: "Out of Stock" },
+                  { id: "expiring_soon", label: "Expiring Soon (30d)" },
+                  { id: "expired", label: "Expired" },
                 ].map(opt => (
                   <button
                     key={opt.id}
@@ -574,8 +598,8 @@ export default function InventoryManagement() {
                     { label: "Product", cls: "" },
                     { label: "Barcode", cls: "hidden md:table-cell" },
                     { label: "Price", cls: "" },
-                    { label: "Cost", cls: "hidden sm:table-cell" },
                     { label: "Stock", cls: "" },
+                    { label: "Expiry", cls: "hidden sm:table-cell" },
                     { label: "Status", cls: "hidden sm:table-cell" },
                     { label: "Actions", cls: "" },
                   ].map(({ label, cls }) => (
@@ -617,9 +641,6 @@ export default function InventoryManagement() {
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm font-semibold text-gray-900 dark:text-white">
                         {formatCurrency(product.price)}
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                        {product.cost_price ? formatCurrency(product.cost_price) : "—"}
-                      </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-1 sm:gap-2">
                           <span
@@ -637,6 +658,25 @@ export default function InventoryManagement() {
                           <span className="text-xs text-gray-400 hidden sm:inline">/ min {product.min_stock_level}</span>
                         </div>
                       </td>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
+                         {(() => {
+                           const es = expiryStatus(product);
+                           if (es === "none") return <span className="text-xs text-gray-400">—</span>;
+                           const fmt = new Date(product.expiry_date!).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                           return (
+                             <span className={cn(
+                               "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                               es === "expired" && "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",
+                               es === "expiring_soon" && "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400",
+                               es === "ok" && "bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400",
+                             )}>
+                               {es === "expired" && <ShieldAlert className="w-3 h-3" />}
+                               {es === "expiring_soon" && <CalendarClock className="w-3 h-3" />}
+                               {fmt}
+                             </span>
+                           );
+                         })()}
+                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                         <span
                           className={cn(
@@ -786,6 +826,27 @@ export default function InventoryManagement() {
                   />
                 </label>
               ))}
+
+              {/* Expiry Date */}
+              <label className="space-y-1.5">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <CalendarClock className="w-4 h-4 text-orange-500" /> Expiry Date
+                  <span className="text-xs text-gray-400 font-normal">(leave blank for non-perishable)</span>
+                </span>
+                <input
+                  type="date"
+                  value={form.expiry_date}
+                  onChange={(e) => setForm((current) => ({ ...current, expiry_date: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                {form.expiry_date && (() => {
+                  const exp = new Date(form.expiry_date); const t = new Date(); t.setHours(0,0,0,0);
+                  if (exp < t) return <p className="text-xs text-red-500 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> This date is in the past — product will be marked as expired</p>;
+                  const diff = Math.ceil((exp.getTime() - t.getTime()) / 86400000);
+                  if (diff <= 30) return <p className="text-xs text-orange-500 flex items-center gap-1"><CalendarClock className="w-3 h-3" /> Expires in {diff} day{diff !== 1 ? "s" : ""}</p>;
+                  return null;
+                })()}
+              </label>
 
               <label className="sm:col-span-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <input

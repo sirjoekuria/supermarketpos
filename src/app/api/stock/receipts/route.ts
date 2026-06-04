@@ -27,7 +27,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { supplier_name, items, notes } = await request.json();
+    const { supplier_name, items, notes, branch_id } = await request.json();
 
     if (!supplier_name || !items || items.length === 0) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       totalCost += item.subtotal;
     });
 
-    // Create receipt (use anon key to bypass RLS during development)
+    // Create receipt
     const { data: receipt, error: receiptError } = await supabase
       .from('stock_receipts')
       .insert({
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         total_cost: totalCost,
         notes,
         created_by: null,
+        branch_id: branch_id || null,
       })
       .select()
       .single();
@@ -89,30 +90,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update product stock quantities
+    // Update stock quantities
     for (const item of items) {
-      const { data: product, error: fetchError } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', item.product_id)
-        .single();
+      if (branch_id) {
+        const { data: bsData, error: fetchError } = await supabase
+          .from('branch_stock')
+          .select('stock_quantity')
+          .eq('branch_id', branch_id)
+          .eq('product_id', item.product_id)
+          .maybeSingle();
 
-      if (!fetchError && product) {
-        const newQuantity = product.stock_quantity + item.quantity_ordered;
+        if (!fetchError) {
+          const currentStock = bsData?.stock_quantity ?? 0;
+          const newQty = currentStock + item.quantity_ordered;
+          await supabase
+            .from('branch_stock')
+            .upsert(
+              {
+                branch_id,
+                product_id: item.product_id,
+                stock_quantity: newQty,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'branch_id,product_id' }
+            );
 
-        await supabase
+          // Log adjustment
+          await supabase.from('stock_adjustments').insert({
+            product_id: item.product_id,
+            quantity_change: item.quantity_ordered,
+            reason: 'receipt',
+            reference_id: receipt.id,
+            notes: `Stock receipt ${receiptNumber}`,
+            branch_id,
+          });
+        }
+      } else {
+        const { data: product, error: fetchError } = await supabase
           .from('products')
-          .update({ stock_quantity: newQuantity })
-          .eq('id', item.product_id);
+          .select('stock_quantity')
+          .eq('id', item.product_id)
+          .single();
 
-        // Log adjustment
-        await supabase.from('stock_adjustments').insert({
-          product_id: item.product_id,
-          quantity_change: item.quantity_ordered,
-          reason: 'receipt',
-          reference_id: receipt.id,
-          notes: `Stock receipt ${receiptNumber}`,
-        });
+        if (!fetchError && product) {
+          const newQuantity = product.stock_quantity + item.quantity_ordered;
+
+          await supabase
+            .from('products')
+            .update({ stock_quantity: newQuantity })
+            .eq('id', item.product_id);
+
+          // Log adjustment
+          await supabase.from('stock_adjustments').insert({
+            product_id: item.product_id,
+            quantity_change: item.quantity_ordered,
+            reason: 'receipt',
+            reference_id: receipt.id,
+            notes: `Stock receipt ${receiptNumber}`,
+          });
+        }
       }
     }
 
