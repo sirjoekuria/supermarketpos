@@ -44,6 +44,10 @@ export default function BranchManagement() {
     if (!form.name.trim()) { setError("Branch name is required"); return; }
     setIsSaving(true);
     setError("");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     try {
       const method = editingBranch ? "PATCH" : "POST";
       const body = editingBranch ? { id: editingBranch.id, ...form } : form;
@@ -51,17 +55,29 @@ export default function BranchManagement() {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
       if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Failed to save branch");
-        setIsSaving(false);
+        let errMsg = `Server error (${res.status})`;
+        try {
+          const d = await res.json();
+          errMsg = d.error || errMsg;
+        } catch { /* response not JSON */ }
+        setError(errMsg);
         return;
       }
+
       setShowModal(false);
-      await fetchBranches();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save branch");
+      fetchBranches().catch(() => {});
+    } catch (e: unknown) {
+      clearTimeout(timeout);
+      if (e instanceof Error && e.name === "AbortError") {
+        setError("Request timed out. Check your connection and try again.");
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to save branch");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -70,9 +86,18 @@ export default function BranchManagement() {
   const handleDeactivate = async (branch: Branch) => {
     if (!confirm(`Deactivate "${branch.name}"?`)) return;
     setIsSaving(true);
+    setError("");
     try {
-      await fetch(`/api/branches?id=${branch.id}`, { method: "DELETE" });
-      await fetchBranches();
+      const res = await fetch(`/api/branches?id=${branch.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        let errMsg = `Failed to deactivate (${res.status})`;
+        try { const d = await res.json(); errMsg = d.error || errMsg; } catch { /* not JSON */ }
+        setError(errMsg);
+        return;
+      }
+      fetchBranches().catch(() => {});
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to deactivate branch");
     } finally {
       setIsSaving(false);
     }
