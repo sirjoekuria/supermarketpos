@@ -17,6 +17,16 @@ export default function CustomerDisplay() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "pos-cart") {
+        useCartStore.persist.rehydrate();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   if (!customerDisplay) return null;
 
   return (

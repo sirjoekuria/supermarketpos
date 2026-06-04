@@ -198,6 +198,16 @@ export default function POSScreen() {
   }, [fetchProducts]);
 
   useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "pos-cart") {
+        useCartStore.persist.rehydrate();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  useEffect(() => {
     let barcodeBuffer = "";
     let lastKeyTime = Date.now();
 
