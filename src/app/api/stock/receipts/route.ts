@@ -1,8 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import { getAdminClient } from '@/lib/server-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
   try {
+    const supabase = getAdminClient();
     const { data, error } = await supabase
       .from('stock_receipts')
       .select('*, stock_receipt_items(*)')
@@ -27,6 +28,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getAdminClient();
     const { supplier_name, items, notes, branch_id } = await request.json();
 
     if (!supplier_name || !items || items.length === 0) {

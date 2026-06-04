@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { getAdminClient } from '@/lib/server-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface StockImportRow {
@@ -9,6 +9,7 @@ interface StockImportRow {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getAdminClient();
     const { items, reason = 'adjustment', branch_id } = await request.json();
 
     if (!items || !Array.isArray(items) || items.length === 0) {

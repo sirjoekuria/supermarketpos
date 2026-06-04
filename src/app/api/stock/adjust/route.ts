@@ -1,8 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import { getAdminClient } from '@/lib/server-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getAdminClient();
     const { product_id, quantity_change, reason, notes, branch_id } = await request.json();
 
     if (!product_id || quantity_change === undefined || !reason) {
