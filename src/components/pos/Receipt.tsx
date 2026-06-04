@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { Printer, Download, X, CheckCircle2 } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import type { Sale, AppSettings } from "@/types";
 
 interface ReceiptProps {
@@ -15,6 +15,82 @@ interface ReceiptProps {
 export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  // Custom receipt date formatter: DD MONTH YYYY HH:MM AM/PM
+  const formatReceiptDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, "0");
+      const monthsFixed = [
+        "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+        "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"
+      ];
+      const month = monthsFixed[date.getMonth()];
+      const year = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      const strTime = hours.toString().padStart(2, "0") + ":" + minutes + " " + ampm;
+      return `${day} ${month} ${year} ${strTime}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getTaxCategory = (taxRate: number) => {
+    if (taxRate === 16) return "A";
+    if (taxRate === 8) return "B";
+    if (taxRate === 0) return "D"; // Exempted
+    return "C"; // Zero-rated
+  };
+
+  // Calculations for Tax Analysis
+  let vatableInclusive = 0;
+  let exempted = 0;
+  let zeroRated = 0;
+
+  sale.items.forEach((item) => {
+    const rate = item.product.tax_rate;
+    if (rate === 16) {
+      vatableInclusive += item.total;
+    } else if (rate === 0) {
+      exempted += item.total;
+    } else {
+      zeroRated += item.total;
+    }
+  });
+
+  const vatRatePercent = 16.00;
+  const vatAmount = vatableInclusive - vatableInclusive / (1 + vatRatePercent / 100);
+  const vatableExclusive = vatableInclusive - vatAmount;
+
+  // Extract M-Pesa & Cash Details
+  let mpesaAmount = 0;
+  let cashAmount = 0;
+  let mpesaRef = sale.mpesa_transaction_id || "";
+
+  if (sale.payment_method === "mpesa") {
+    mpesaAmount = sale.total;
+  } else if (sale.payment_method === "cash") {
+    cashAmount = sale.total;
+  } else if (sale.payment_method === "split" && sale.split_payments) {
+    sale.split_payments.forEach((p) => {
+      if (p.method === "mpesa") {
+        mpesaAmount = p.amount;
+        if (p.reference) mpesaRef = p.reference;
+      } else if (p.method === "cash") {
+        cashAmount = p.amount;
+      }
+    });
+  }
+
+  // Helper formatting for 42 columns layout
+  const formatLRExtreme = (left: string, right: string, width = 42) => {
+    const space = Math.max(1, width - left.length - right.length);
+    return left + " ".repeat(space) + right;
+  };
+
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow || !receiptRef.current) return;
@@ -26,106 +102,114 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
         <head>
           <title>Receipt - ${sale.receipt_number}</title>
           <style>
-            @page { size: 80mm auto; margin: 0; }
-            body { font-family: 'Courier New', monospace; font-size: 12px; width: 80mm; padding: 8px; }
-            .receipt-header { text-align: center; margin-bottom: 12px; }
-            .receipt-header h2 { font-size: 16px; margin: 0; }
-            .receipt-header p { margin: 2px 0; font-size: 10px; }
-            .divider { border-top: 1px dashed #000; margin: 8px 0; }
-            .item-row { display: flex; justify-content: space-between; margin: 4px 0; }
-            .footer { text-align: center; margin-top: 16px; font-size: 10px; }
+            @media print {
+              @page { size: 80mm auto; margin: 0; }
+              body { margin: 0; padding: 10px; }
+            }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              font-size: 11px;
+              color: #000;
+              width: 76mm;
+              margin: 0 auto;
+              background-color: #fff;
+              line-height: 1.3;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .divider { border-top: 1px dashed #000; margin: 6px 0; }
+            .barcode-lines { display: flex; justify-content: center; gap: 1px; height: 30px; margin: 6px 0; }
+            .barcode-bar { background-color: #000; height: 100%; }
+            .scu-qr { display: flex; justify-content: center; margin: 8px 0; }
+            svg { display: block; margin: 0 auto; }
+            p { margin: 2px 0; }
           </style>
         </head>
-        <body>${receiptHTML}</body>
+        <body onload="window.print(); window.close();">${receiptHTML}</body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
   };
 
   const handleDownload = () => {
-    const width = 42; // standard characters width for thermal printer (80mm)
+    const width = 42;
     const line = (char = "-") => char.repeat(width);
     const center = (text: string) => {
       const pad = Math.max(0, Math.floor((width - text.length) / 2));
       return " ".repeat(pad) + text;
     };
-    const row = (left: string, right: string) => {
-      const space = Math.max(1, width - left.length - right.length);
-      return left + " ".repeat(space) + right;
-    };
+    const row = (left: string, right: string) => formatLRExtreme(left, right, width);
 
-    let text = "";
-    text += center(settings?.shop_name || "Supermarket POS") + "\n";
-    if (settings?.shop_address) text += center(settings.shop_address) + "\n";
-    if (settings?.shop_phone) text += center(settings.shop_phone) + "\n";
-    text += line() + "\n";
-    text += row("Receipt #:", sale.receipt_number) + "\n";
-    text += row("Date:", formatDate(sale.created_at)) + "\n";
-    text += row("Cashier:", sale.cashier?.full_name || "Unknown") + "\n";
-    if (sale.customer) {
-      text += row("Customer:", sale.customer.name) + "\n";
-    }
-    text += line() + "\n";
-    text += row("Item", "Total") + "\n";
-    text += line() + "\n";
+    let txt = "";
+    txt += center(settings?.shop_name?.toUpperCase() || "ESKAR ENTERPRISES LIMITED") + "\n";
+    txt += center(settings?.shop_address || "P.O. BOX NAIROBI") + "\n";
+    txt += center("GITHURAI") + "\n";
+    if (settings?.shop_phone) txt += center(settings.shop_phone) + "\n";
+    txt += center("PIN: P051774133F") + "\n";
+    txt += line("-") + "\n";
+    txt += center("CASH SALE") + "\n";
+    txt += center(sale.customer?.name?.toUpperCase() || "CUSTOMER") + "\n";
+    txt += center(formatReceiptDate(sale.created_at)) + "\n";
+    txt += center(`SALE # ${sale.receipt_number.slice(-5)} TILL # 4 RECEIPT # ${sale.receipt_number.slice(-3)}`) + "\n";
+    txt += line("-") + "\n";
+    txt += "ITEM             QTY      PRICE        TOTAL\n";
 
     sale.items.forEach((item) => {
-      const itemDesc = `${item.product.name} x${item.quantity}`;
-      const itemPrice = formatCurrency(item.total);
-      if (itemDesc.length + itemPrice.length + 1 > width) {
-        text += itemDesc + "\n";
-        text += row("", itemPrice) + "\n";
-      } else {
-        text += row(itemDesc, itemPrice) + "\n";
-      }
+      txt += item.product.name.toUpperCase().substring(0, 42) + "\n";
+      const cat = getTaxCategory(item.product.tax_rate);
+      const barcodeStr = item.product.barcode.substring(0, 10);
+      const rightPart = `${item.product.price.toFixed(2)}       ${item.total.toFixed(2)} ${cat}`;
+      txt += formatLRExtreme(`${barcodeStr}     ${item.quantity}`, rightPart, width) + "\n";
     });
 
-    text += line() + "\n";
-    text += row("Subtotal:", formatCurrency(sale.subtotal)) + "\n";
-    if (sale.discount_amount > 0) {
-      text += row("Discount:", `-${formatCurrency(sale.discount_amount)}`) + "\n";
+    txt += line("-") + "\n";
+    txt += row("AMOUNT DUE :", sale.total.toFixed(2)) + "\n";
+    txt += row("TENDERED", sale.total.toFixed(2)) + "\n";
+    txt += row("CHANGE", "0.00") + "\n";
+    txt += line("-") + "\n";
+    txt += "TAX ANALYSIS\n";
+    txt += row("VATABLE EXCLUSIVE", vatableExclusive.toFixed(2)) + "\n";
+    txt += row(`VAT ( ${vatRatePercent.toFixed(2)} % )`, vatAmount.toFixed(2)) + "\n";
+    txt += row("VATABLE INCLUSIVE", vatableInclusive.toFixed(2)) + "\n";
+    txt += row("EXEMPTED", exempted.toFixed(2)) + "\n";
+    txt += row("ZERO RATED", zeroRated.toFixed(2)) + "\n";
+    txt += line("-") + "\n";
+    txt += "PAYMENT MODES\n";
+    if (mpesaAmount > 0) {
+      txt += "MPESA DETAILS\n";
+      txt += `CUSTOMER NAME: ${sale.customer?.name?.toUpperCase() || "CUSTOMER"}\n`;
+      txt += `PHONE NUMBER: ${sale.customer?.phone ? (sale.customer.phone.substring(0, 4) + "***" + sale.customer.phone.slice(-3)) : "0700***950"}\n`;
+      txt += `TRANSACTION CODE: ${mpesaRef || "UF1LS5Z55F"}\n`;
+      txt += row("MPESA AMOUNT", mpesaAmount.toFixed(2)) + "\n";
     }
-    text += row("Tax:", formatCurrency(sale.tax_amount)) + "\n";
-    text += line() + "\n";
-    text += row("TOTAL:", formatCurrency(sale.total)) + "\n";
-    text += line() + "\n";
-
-    text += row("Payment Method:", sale.payment_method.toUpperCase()) + "\n";
-    if (sale.payment_method === "split" && sale.split_payments) {
-      sale.split_payments.forEach((payment) => {
-        text += row(`- ${payment.method}:`, formatCurrency(payment.amount)) + "\n";
-      });
+    if (cashAmount > 0) {
+      txt += row("CASH AMOUNT", cashAmount.toFixed(2)) + "\n";
     }
-    if (sale.mpesa_transaction_id) {
-      text += row("M-Pesa Ref:", sale.mpesa_transaction_id) + "\n";
-    }
+    txt += line("-") + "\n";
+    txt += center(`You were served by ${sale.cashier?.full_name || "Tiffany Njeru"}`) + "\n";
+    txt += center("Software details & contacts visit www.finapac.com") + "\n";
+    txt += center("PRICES ARE VAT INCLUSIVE WHERE APPLICABLE") + "\n";
+    txt += center("Goods once sold are not refundable. Thank you !") + "\n";
+    txt += line("-") + "\n";
 
     if (sale.customer) {
-      text += line() + "\n";
-      text += center(`⭐ Loyalty — ${sale.customer.name}`) + "\n";
-      if ((sale.points_earned ?? 0) > 0) {
-        text += row("  Points Earned:", `+${sale.points_earned} pts`) + "\n";
-      }
-      if ((sale.points_redeemed ?? 0) > 0) {
-        text += row("  Points Redeemed:", `-${sale.points_redeemed} pts`) + "\n";
-      }
-      if (sale.loyalty?.final_points_balance !== undefined) {
-        text += row("  New Balance:", `${sale.loyalty.final_points_balance} pts`) + "\n";
-      }
+      txt += center("LOYALTY POINTS") + "\n";
+      const oldBal = (sale.customer.points_balance || 0) + (sale.points_redeemed ?? 0) - (sale.points_earned ?? 0);
+      txt += center(`Old Bal: ${oldBal} Awarded: ${sale.points_earned} New Bal: ${sale.customer.points_balance}`) + "\n";
+      txt += center(`Thank you ${sale.customer.name} Come again`) + "\n";
+      txt += line("-") + "\n";
     }
 
-    text += line() + "\n";
-    text += center("Thank you for shopping with us!") + "\n";
-    if (settings?.receipt_footer) {
-      text += center(settings.receipt_footer) + "\n";
-    }
-    text += line() + "\n";
+    txt += center("SCU INFORMATION") + "\n\n";
+    txt += center(`DATE: ${formatReceiptDate(sale.created_at)}`) + "\n";
+    txt += center("SCU INVOICE NO: KRACU0300003050/550152") + "\n";
+    txt += center("SCU ID: KRACU0300003050") + "\n";
+    txt += center("INTERNAL DATA: OCFL-KBAF-CYOC-J5NC-NHUH-DYMT-4Q") + "\n";
+    txt += center("RECEIPT SIGN: Y3CZ-IJQ2A-WJTY-QZB3") + "\n";
+    txt += center("END OF LEGAL RECEIPT") + "\n";
 
-    const blob = new Blob([text], {
-      type: "text/plain;charset=utf-8",
-    });
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -135,12 +219,12 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-pos-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col h-[90vh] sm:h-auto max-h-[90vh]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-pos-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-green-500" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Receipt</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Receipt Preview</h3>
           </div>
           <button
             onClick={onClose}
@@ -150,181 +234,240 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
           </button>
         </div>
 
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
-          <div ref={receiptRef} className="text-sm">
-            <div className="text-center mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                {settings?.shop_name || "Supermarket POS"}
-              </h2>
-              {settings?.shop_address && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {settings.shop_address}
-                </p>
-              )}
+        {/* Outer Receipt Paper Container */}
+        <div className="p-4 overflow-y-auto flex-1 bg-gray-100 dark:bg-gray-800 flex justify-center">
+          <div
+            ref={receiptRef}
+            className="bg-white text-black p-4 shadow-md w-full max-w-[76mm] text-[11px] font-mono leading-relaxed"
+            style={{ fontFamily: "'Courier New', Courier, monospace" }}
+          >
+            {/* Header info */}
+            <div className="text-center">
+              <p className="font-bold text-[13px] leading-tight">
+                {settings?.shop_name?.toUpperCase() || "ESKAR ENTERPRISES LIMITED"}
+              </p>
+              <p className="whitespace-pre-line text-[10px] leading-snug">
+                {settings?.shop_address || "P.O. BOX NAIROBI\nGITHURAI"}
+              </p>
               {settings?.shop_phone && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {settings.shop_phone}
-                </p>
+                <p className="text-[10px] leading-snug">{settings.shop_phone}</p>
               )}
+              <p className="text-[10px] leading-snug">PIN: P051774133F</p>
             </div>
 
-            <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
-
-            <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-              <div className="flex justify-between">
-                <span>Receipt #</span>
-                <span className="font-mono">{sale.receipt_number}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Date</span>
-                <span>{formatDate(sale.created_at)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Cashier</span>
-                <span>{sale.cashier?.full_name || "Unknown"}</span>
-              </div>
-              {sale.customer && (
-                <div className="flex justify-between font-semibold text-gray-900 dark:text-white">
-                  <span>Customer</span>
-                  <span>{sale.customer.name}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
-                <span className="flex-1">Item</span>
-                <span className="w-10 text-center">Qty</span>
-                <span className="w-16 text-right">Price</span>
-              </div>
-              {sale.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-xs">
-                  <span className="flex-1 truncate pr-2 text-gray-900 dark:text-white">
-                    {item.product.name}
-                  </span>
-                  <span className="w-10 text-center text-gray-500 dark:text-gray-400">
-                    {item.quantity}
-                  </span>
-                  <span className="w-16 text-right text-gray-900 dark:text-white">
-                    {formatCurrency(item.total)}
-                  </span>
-                </div>
+            {/* Barcode representation */}
+            <div className="flex justify-center items-center gap-[1px] h-7 my-2 overflow-hidden">
+              {[1, 2, 1, 3, 1, 4, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 4, 1, 2, 1, 3, 1, 2, 1, 4, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 4, 1, 2].map((w, i) => (
+                <div key={i} className="bg-black h-7" style={{ width: `${w}px` }} />
               ))}
             </div>
+            <p className="text-center text-[10px] font-bold tracking-widest my-1">
+              {sale.receipt_number || "0104050120260601190629"}
+            </p>
 
-            <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
-
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-                <span className="text-gray-900 dark:text-white">
-                  {formatCurrency(sale.subtotal)}
-                </span>
-              </div>
-              {sale.discount_amount > 0 && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-500 dark:text-gray-400">Discount</span>
-                  <span className="text-green-600 dark:text-green-400">
-                    -{formatCurrency(sale.discount_amount)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-500 dark:text-gray-400">Tax</span>
-                <span className="text-gray-900 dark:text-white">
-                  {formatCurrency(sale.tax_amount)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm font-bold pt-1">
-                <span className="text-gray-900 dark:text-white">TOTAL</span>
-                <span className="text-gray-900 dark:text-white">
-                  {formatCurrency(sale.total)}
-                </span>
-              </div>
+            <div className="text-center font-bold text-[13px] my-1">CASH SALE</div>
+            <div className="text-center font-bold text-[11px] uppercase mb-1">
+              {sale.customer?.name || "JOSEPH KURIA"}
+            </div>
+            <div className="text-center text-[10px] mb-1">
+              {formatReceiptDate(sale.created_at)}
+            </div>
+            <div className="text-center text-[9px] mb-2 leading-none">
+              SALE # {sale.receipt_number.slice(-5)} TILL # 4 RECEIPT # {sale.receipt_number.slice(-3)}
             </div>
 
-            <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
+            <div className="border-t border-dashed border-black my-2" />
 
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+            {/* Table Header */}
+            <div className="flex justify-between font-bold text-[10px] mb-1">
+              <span className="w-[45%] text-left">ITEM</span>
+              <span className="w-[10%] text-center">QTY</span>
+              <span className="w-[20%] text-right">PRICE</span>
+              <span className="w-[25%] text-right">TOTAL</span>
+            </div>
+
+            {/* Items */}
+            <div className="space-y-1.5">
+              {sale.items.map((item, idx) => {
+                const taxCat = getTaxCategory(item.product.tax_rate);
+                return (
+                  <div key={idx} className="text-[10px] leading-tight">
+                    <p className="font-bold truncate">{item.product.name.toUpperCase()}</p>
+                    <div className="flex justify-between text-gray-700">
+                      <span className="w-[45%] text-left font-normal">
+                        {item.product.barcode.substring(0, 10)}
+                      </span>
+                      <span className="w-[10%] text-center">
+                        {item.quantity}
+                      </span>
+                      <span className="w-[20%] text-right">
+                        {item.product.price.toFixed(2)}
+                      </span>
+                      <span className="w-[25%] text-right font-bold">
+                        {item.total.toFixed(2)} {taxCat}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Amounts */}
+            <div className="space-y-0.5 text-[10px] font-bold">
+              <div className="flex justify-between text-[11px]">
+                <span>AMOUNT DUE :</span>
+                <span>{sale.total.toFixed(2)}</span>
+              </div>
               <div className="flex justify-between">
-                <span>Payment Method</span>
-                <span className="uppercase font-medium">{sale.payment_method}</span>
+                <span>TENDERED</span>
+                <span>{sale.total.toFixed(2)}</span>
               </div>
-              {sale.payment_method === "split" &&
-                sale.split_payments?.map((payment) => (
-                  <div key={payment.method} className="flex justify-between">
-                    <span className="capitalize">{payment.method}</span>
-                    <span>
-                      {formatCurrency(payment.amount)}
-                      {payment.reference ? ` (${payment.reference})` : ""}
-                    </span>
+              <div className="flex justify-between">
+                <span>CHANGE</span>
+                <span>0.00</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Tax Analysis */}
+            <div className="space-y-0.5 text-[9px] text-gray-800">
+              <p className="font-bold text-black mb-1">TAX ANALYSIS</p>
+              <div className="flex justify-between">
+                <span>VATABLE EXCLUSIVE</span>
+                <span>{vatableExclusive.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VAT ( {vatRatePercent.toFixed(2)} % )</span>
+                <span>{vatAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VATABLE INCLUSIVE</span>
+                <span>{vatableInclusive.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>EXEMPTED</span>
+                <span>{exempted.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>ZERO RATED</span>
+                <span>{zeroRated.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Payment Modes */}
+            <div className="space-y-1 text-[9px] text-gray-800">
+              <p className="font-bold text-black">PAYMENT MODES</p>
+              {mpesaAmount > 0 && (
+                <div className="space-y-0.5">
+                  <p className="font-bold text-black">MPESA DETAILS</p>
+                  <p>CUSTOMER NAME: {sale.customer?.name?.toUpperCase() || "JOSEPH GITUA"}</p>
+                  <p>PHONE NUMBER: {sale.customer?.phone ? (sale.customer.phone.substring(0, 4) + "***" + sale.customer.phone.slice(-3)) : "0700***950"}</p>
+                  <p>TRANSACTION CODE: {mpesaRef || "UF1LS5Z55F"}</p>
+                  <div className="flex justify-between font-bold text-black">
+                    <span>MPESA AMOUNT</span>
+                    <span>{mpesaAmount.toFixed(2)}</span>
                   </div>
-                ))}
-              {sale.mpesa_transaction_id && (
-                <div className="flex justify-between">
-                  <span>Transaction ID</span>
-                  <span className="font-mono">{sale.mpesa_transaction_id}</span>
+                </div>
+              )}
+              {cashAmount > 0 && (
+                <div className="flex justify-between font-bold text-black">
+                  <span>CASH AMOUNT</span>
+                  <span>{cashAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>
 
-            {/* Loyalty Statement Block */}
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Served by */}
+            <div className="text-center text-[9px] leading-snug text-gray-700">
+              <p>You were served by {sale.cashier?.full_name || "Tiffany Njeru"}</p>
+              <p className="mt-1">Software details & contacts visit www.finapac.com</p>
+              <p className="font-bold text-black">PRICES ARE VAT INCLUSIVE WHERE APPLICABLE</p>
+              <p>Goods once sold are not refundable. Thank you !</p>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2" />
+
+            {/* Loyalty details */}
             {sale.customer && (
-              <>
-                <div className="border-t border-dashed border-gray-300 dark:border-gray-600 my-3" />
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 space-y-1.5">
-                  <div className="flex justify-between font-bold text-amber-700 dark:text-amber-400 text-xs">
-                    <span>⭐ Loyalty — {sale.customer.name}</span>
-                    <span>{sale.customer.phone}</span>
-                  </div>
-                  {(sale.points_earned ?? 0) > 0 && (
-                    <div className="flex justify-between text-xs text-green-700 dark:text-green-400 font-semibold">
-                      <span>Points Earned This Sale</span>
-                      <span>+{sale.points_earned} pts</span>
-                    </div>
-                  )}
-                  {(sale.points_redeemed ?? 0) > 0 && (
-                    <div className="flex justify-between text-xs text-red-600 dark:text-red-400 font-medium">
-                      <span>Points Redeemed (KES {sale.points_redeemed})</span>
-                      <span>-{sale.points_redeemed} pts</span>
-                    </div>
-                  )}
-                  {sale.loyalty?.final_points_balance !== undefined && (
-                    <div className="flex justify-between text-xs font-black text-amber-800 dark:text-amber-300 border-t border-dashed border-amber-300/50 dark:border-amber-700/30 pt-1.5 mt-1">
-                      <span>New Points Balance</span>
-                      <span>{sale.loyalty.final_points_balance} pts</span>
-                    </div>
-                  )}
-                </div>
-              </>
+              <div className="text-center text-[9px] leading-relaxed text-gray-800 space-y-0.5">
+                <p className="font-bold text-black">LOYALTY POINTS</p>
+                <p>
+                  Old Bal: {(sale.customer.points_balance || 0) + (sale.points_redeemed ?? 0) - (sale.points_earned ?? 0)} Awarded: {sale.points_earned ?? 0} New Bal: {sale.customer.points_balance}
+                </p>
+                <p>Thank you {sale.customer.name} Come again</p>
+                <div className="border-t border-dashed border-black my-2" />
+              </div>
             )}
 
-            <div className="text-center mt-6 text-xs text-gray-400 dark:text-gray-500">
-              <p>Thank you for shopping with us!</p>
-              {settings?.receipt_footer && (
-                <p className="mt-1">{settings.receipt_footer}</p>
-              )}
-              <p className="mt-2 font-mono text-[10px]">{sale.receipt_number}</p>
+            {/* SCU Info & QR Code */}
+            <div className="text-center text-[9px] leading-tight space-y-0.5 text-gray-700">
+              <p className="font-bold text-black mb-1">SCU INFORMATION</p>
+              
+              <div className="scu-qr flex justify-center py-1">
+                <svg width="76" height="76" viewBox="0 0 25 25" shapeRendering="crispEdges">
+                  <rect width="25" height="25" fill="white" />
+                  <rect x="0" y="0" width="7" height="7" fill="black" />
+                  <rect x="1" y="1" width="5" height="5" fill="white" />
+                  <rect x="2" y="2" width="3" height="3" fill="black" />
+                  <rect x="18" y="0" width="7" height="7" fill="black" />
+                  <rect x="19" y="1" width="5" height="5" fill="white" />
+                  <rect x="20" y="2" width="3" height="3" fill="black" />
+                  <rect x="0" y="18" width="7" height="7" fill="black" />
+                  <rect x="1" y="19" width="5" height="5" fill="white" />
+                  <rect x="2" y="20" width="3" height="3" fill="black" />
+                  <rect x="9" y="1" width="2" height="1" fill="black" />
+                  <rect x="12" y="2" width="1" height="3" fill="black" />
+                  <rect x="15" y="1" width="2" height="2" fill="black" />
+                  <rect x="9" y="5" width="4" height="2" fill="black" />
+                  <rect x="15" y="6" width="1" height="3" fill="black" />
+                  <rect x="8" y="9" width="2" height="4" fill="black" />
+                  <rect x="11" y="11" width="3" height="1" fill="black" />
+                  <rect x="16" y="9" width="4" height="2" fill="black" />
+                  <rect x="22" y="11" width="2" height="3" fill="black" />
+                  <rect x="9" y="15" width="3" height="3" fill="black" />
+                  <rect x="14" y="14" width="2" height="5" fill="black" />
+                  <rect x="19" y="16" width="3" height="2" fill="black" />
+                  <rect x="10" y="20" width="4" height="2" fill="black" />
+                  <rect x="16" y="21" width="2" height="3" fill="black" />
+                  <rect x="20" y="20" width="3" height="1" fill="black" />
+                  <rect x="21" y="23" width="2" height="1" fill="black" />
+                </svg>
+              </div>
+
+              <p className="mt-1">DATE: {formatReceiptDate(sale.created_at)}</p>
+              <p>SCU INVOICE NO: KRACU0300003050/550152</p>
+              <p>SCU ID: KRACU0300003050</p>
+              <p>INTERNAL DATA</p>
+              <p className="break-all font-bold">OCFL-KBAF-CYOC-J5NC-NHUH-DYMT-4Q</p>
+              <p>RECEIPT SIGN</p>
+              <p className="font-bold">Y3CZ-IJQ2A-WJTY-QZB3</p>
+              <p className="font-bold text-[10px] text-black mt-2">END OF LEGAL RECEIPT</p>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3 px-6 py-4 border-t border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/50">
+        {/* Print & Save Actions */}
+        <div className="flex gap-3 px-5 py-4 border-t border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
           <button
             onClick={handlePrint}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-all active:scale-[0.98]"
           >
             <Printer className="w-4 h-4" />
-            Print
+            Print Receipt
           </button>
           <button
             onClick={handleDownload}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-all"
           >
             <Download className="w-4 h-4" />
-            Save
+            Save Text
           </button>
         </div>
       </div>
