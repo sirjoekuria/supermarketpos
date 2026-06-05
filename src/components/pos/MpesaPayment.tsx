@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Phone, Loader2, CheckCircle2, XCircle, AlertCircle, Sparkles } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertCircle, Sparkles, Smartphone } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -390,325 +390,339 @@ export default function MpesaPayment({
   }, [inputMode, checkoutRequestId, status, onSuccess]);
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="bg-white dark:bg-pos-card rounded-2xl shadow-2xl border border-gray-200 dark:border-pos-border overflow-hidden relative transition-all duration-300">
-        {/* Canvas for Celebration Confetti */}
-        {status === "success" && (
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-50 rounded-2xl" />
-        )}
+    <section className="flex-grow bg-[#1c1e22] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300">
+      {/* Canvas for Celebration Confetti */}
+      {status === "success" && (
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-50 rounded-2xl" />
+      )}
 
-        <div className="bg-gradient-to-r from-green-600 to-green-500 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-white animate-pulse" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white">M-Pesa Payment</h3>
-              <p className="text-green-100 text-sm font-medium">Lipa na M-Pesa Online</p>
-            </div>
-          </div>
+      {/* Detail Header */}
+      <div 
+        className="p-3 flex items-center space-x-3" 
+        style={{ background: "linear-gradient(90deg, #4caf50 0%, #aed581 100%)" }}
+      >
+        <svg className="h-5 w-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+        </svg>
+        <h2 className="font-semibold text-sm text-black">M-Pesa Payment</h2>
+      </div>
+
+      <div className="p-5 flex flex-col space-y-6 relative">
+        {/* Amount Breakdown */}
+        <div>
+          <p className="text-gray-400 text-sm mb-1">Amount to Pay</p>
+          <p className="text-3xl font-bold text-white">{formatCurrency(amount)}</p>
+          <hr className="mt-4 border-gray-700" />
         </div>
 
-        <div className="p-6 relative">
-          <div className="text-center mb-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Amount to Pay</p>
-            <p className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              {formatCurrency(amount)}
-            </p>
-          </div>
-
-          {status === "idle" && (
-            <div className="space-y-4">
-              {/* Mode toggle */}
-              <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-                <button
-                  onClick={() => setInputMode("stk")}
-                  className={cn(
-                    "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
-                    inputMode === "stk"
-                      ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm"
-                      : "text-gray-500 dark:text-gray-400"
-                  )}
-                >
-                  STK Push
-                </button>
-                <button
-                  onClick={() => setInputMode("manual")}
-                  className={cn(
-                    "flex-1 py-2 text-sm font-semibold rounded-lg transition-all",
-                    inputMode === "manual"
-                      ? "bg-white dark:bg-gray-700 text-green-600 shadow-sm"
-                      : "text-gray-500 dark:text-gray-400"
-                  )}
-                >
-                  Enter Code
-                </button>
+        {status === "idle" && (
+          <div className="flex flex-col space-y-6">
+            {/* Toggles Section */}
+            <div className="flex justify-between items-center">
+              <div 
+                className="flex items-center space-x-3 cursor-pointer" 
+                onClick={() => setInputMode("stk")}
+              >
+                <span className={cn("text-sm", inputMode === "stk" ? "text-white" : "text-gray-400")}>STK Push</span>
+                <div className={cn("w-12 h-6 rounded-full relative p-1 transition-colors", inputMode === "stk" ? "bg-[#4caf50]" : "bg-gray-600")}>
+                  <div className={cn("bg-white w-4 h-4 rounded-full transition-transform", inputMode === "stk" ? "translate-x-6" : "translate-x-0")}></div>
+                </div>
               </div>
+              <div 
+                className="flex items-center space-x-3 cursor-pointer" 
+                onClick={() => setInputMode("manual")}
+              >
+                <span className={cn("text-sm", inputMode === "manual" ? "text-white" : "text-gray-400")}>Enter Code</span>
+                <div className={cn("w-12 h-6 rounded-full relative p-1 transition-colors", inputMode === "manual" ? "bg-[#4caf50]" : "bg-gray-600")}>
+                  <div className={cn("bg-white w-4 h-4 rounded-full transition-transform", inputMode === "manual" ? "translate-x-6" : "translate-x-0")}></div>
+                </div>
+              </div>
+            </div>
 
-              {inputMode === "stk" ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Customer M-Pesa Phone Number
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => { setPhone(e.target.value); setError(""); }}
-                      placeholder="e.g. 0712345678"
-                      className={cn(
-                        "w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-medium text-lg",
-                        error
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-200 dark:border-pos-border focus:ring-green-500"
-                      )}
-                    />
+            {inputMode === "stk" ? (
+              <div className="flex flex-col space-y-4">
+                {/* Phone Input */}
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                    </svg>
                   </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
-                      <AlertCircle className="w-4 h-4 shrink-0" />{error}
-                    </p>
-                  )}
-                  <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
-                    A payment prompt (STK Push) will be sent instantly to the phone number entered above.
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value); setError(""); }}
+                    placeholder="e.g. 0712345678"
+                    className={cn(
+                      "w-full bg-[#25282c] border rounded-xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none transition-colors",
+                      error ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-[#4caf50]"
+                    )}
+                  />
+                </div>
+                {error && (
+                  <p className="text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" />{error}
                   </p>
+                )}
+                {/* Disclaimer */}
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  A payment prompt (STK Push) will be sent instantly to the phone number entered above.
+                </p>
+                {/* Final Action Button */}
+                <div className="pt-4 mt-auto">
                   <button
                     onClick={initiateSTKPush}
-                    className="w-full mt-4 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg"
+                    className="w-full py-4 rounded-3xl font-bold text-white transition-transform active:scale-[0.98]"
+                    style={{
+                      background: "linear-gradient(180deg, #66bb6a 0%, #388e3c 100%)",
+                      boxShadow: "0 8px 15px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(76, 175, 80, 0.4)"
+                    }}
                   >
                     Request STK Push
                   </button>
                 </div>
-              ) : (
-                <div>
-                  {/* Automatic check indicator if STK Push was sent */}
-                  {checkoutRequestId && (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-xl mb-4 text-left">
-                      <div className="flex gap-2.5 items-start text-xs font-semibold text-blue-600 dark:text-blue-400">
-                        <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-0.5" />
-                        <div>
-                          <p className="uppercase tracking-wider">Checking STK Push Status...</p>
-                          <p className="text-gray-500 dark:text-gray-400 font-medium normal-case mt-0.5 leading-relaxed">
-                            We are auto-detecting the payment in the database. If the customer has already paid, the POS will complete the checkout automatically.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {verifiedTx ? (
-                    <div className="space-y-4">
-                      <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-xl p-5 text-left">
-                        <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          <h4 className="text-sm font-bold text-green-800 dark:text-green-400 uppercase tracking-wider">
-                            Transaction Verified
-                          </h4>
-                        </div>
-                        <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300 font-medium">
-                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
-                            <span className="text-gray-500 dark:text-gray-400">Code:</span>
-                            <span className="font-bold text-gray-900 dark:text-white font-mono">{verifiedTx.mpesaReceiptNumber}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
-                            <span className="text-gray-500 dark:text-gray-400">Paid Amount:</span>
-                            <span className="font-extrabold text-green-600 dark:text-green-400">{formatCurrency(verifiedTx.amount)}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-gray-100 dark:border-gray-800 pb-1.5">
-                            <span className="text-gray-500 dark:text-gray-400">Customer Name:</span>
-                            <span className="text-gray-900 dark:text-white">{verifiedTx.customerName}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">Phone Number:</span>
-                            <span className="text-gray-900 dark:text-white">{verifiedTx.phoneNumber}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => { setVerifiedTx(null); setManualCode(""); }}
-                          className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-[0.98] text-sm"
-                        >
-                          Change Code
-                        </button>
-                        <button
-                          onClick={handleCompleteManualCheckout}
-                          className="flex-[2] py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-base"
-                        >
-                          Complete Checkout
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        M-Pesa Confirmation Code
-                      </label>
-                      <input
-                        type="text"
-                        value={manualCode}
-                        onChange={(e) => {
-                          setManualCode(e.target.value.toUpperCase());
-                          setManualError("");
-                          setVerificationWarning("");
-                          setShowForceConfirm(false);
-                        }}
-                        placeholder="e.g. QKL1A2B3C4"
-                        maxLength={12}
-                        className={cn(
-                          "w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
-                          manualError
-                            ? "border-red-300 focus:ring-red-500"
-                            : "border-gray-200 dark:border-pos-border focus:ring-green-500"
-                        )}
-                        disabled={isVerifying}
-                      />
-                      {manualError && (
-                        <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
-                          <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-4">
+                {checkoutRequestId && (
+                  <div className="p-3 bg-[#25282c] border border-blue-900/50 rounded-xl mb-2 text-left">
+                    <div className="flex gap-2.5 items-start text-xs font-semibold text-[#4caf50]">
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-0.5" />
+                      <div>
+                        <p className="uppercase tracking-wider">Checking STK Push Status...</p>
+                        <p className="text-gray-400 font-medium normal-case mt-0.5 leading-relaxed">
+                          We are auto-detecting the payment in the database. If paid, it will complete automatically.
                         </p>
-                      )}
-
-                      {verificationWarning && (
-                        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-left">
-                          <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">
-                            Verification Status:
-                          </p>
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
-                            {verificationWarning}
-                          </p>
-                        </div>
-                      )}
-
-                      <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 leading-relaxed text-left">
-                        Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
-                      </p>
-
-                      <div className="flex flex-col gap-2.5 mt-4">
-                        <button
-                          onClick={handleManualConfirm}
-                          disabled={isVerifying}
-                          className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-600/30 text-lg flex items-center justify-center gap-2"
-                        >
-                          {isVerifying && <Loader2 className="w-5 h-5 animate-spin" />}
-                          {isVerifying ? "Verifying with Database..." : "Verify & Confirm Payment"}
-                        </button>
-
-                        {showForceConfirm && (
-                          <button
-                            onClick={handleForceConfirm}
-                            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
-                          >
-                            Force Confirm Anyway (Skip Verification)
-                          </button>
-                        )}
                       </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                  </div>
+                )}
 
-          {status === "initiating" && (
-            <div className="text-center py-10">
-              <Loader2 className="w-12 h-12 text-green-500 animate-spin mx-auto mb-4" />
-              <p className="text-gray-900 dark:text-white font-bold text-lg">Contacting Safaricom...</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">Initiating secure STK Push request</p>
-            </div>
-          )}
+                {verifiedTx ? (
+                  <div className="space-y-4">
+                    <div className="bg-[#25282c] border border-gray-700 rounded-xl p-5 text-left">
+                      <div className="flex items-center gap-2 mb-3">
+                        <CheckCircle2 className="w-5 h-5 text-[#4caf50]" />
+                        <h4 className="text-sm font-bold text-[#4caf50] uppercase tracking-wider">
+                          Transaction Verified
+                        </h4>
+                      </div>
+                      <div className="space-y-2 text-sm font-medium">
+                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
+                          <span className="text-gray-400">Code:</span>
+                          <span className="font-bold text-white font-mono">{verifiedTx.mpesaReceiptNumber}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
+                          <span className="text-gray-400">Paid Amount:</span>
+                          <span className="font-extrabold text-[#4caf50]">{formatCurrency(verifiedTx.amount)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
+                          <span className="text-gray-400">Customer Name:</span>
+                          <span className="text-white">{verifiedTx.customerName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Phone Number:</span>
+                          <span className="text-white">{verifiedTx.phoneNumber}</span>
+                        </div>
+                      </div>
+                    </div>
 
-          {status === "pending" && (
-            <div className="text-center py-8">
-              <div className="relative w-20 h-20 mx-auto mb-6">
-                <div className="absolute inset-0 rounded-full border-4 border-green-200 dark:border-green-900/50 animate-ping opacity-75" />
-                <div className="absolute inset-2 rounded-full bg-green-50 dark:bg-green-950/40 flex items-center justify-center border border-green-100 dark:border-green-900">
-                  <Phone className="w-8 h-8 text-green-600 dark:text-green-400 animate-pulse" />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => { setVerifiedTx(null); setManualCode(""); }}
+                        className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] text-sm"
+                      >
+                        Change Code
+                      </button>
+                      <button
+                        onClick={handleCompleteManualCheckout}
+                        className="flex-[2] py-4 bg-[#4caf50] hover:bg-[#388e3c] text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-900/30 text-base"
+                      >
+                        Complete Checkout
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={manualCode}
+                      onChange={(e) => {
+                        setManualCode(e.target.value.toUpperCase());
+                        setManualError("");
+                        setVerificationWarning("");
+                        setShowForceConfirm(false);
+                      }}
+                      placeholder="e.g. QKL1A2B3C4"
+                      maxLength={12}
+                      className={cn(
+                        "w-full px-4 py-4 bg-[#25282c] border rounded-xl text-white placeholder-gray-500 focus:outline-none transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
+                        manualError ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-[#4caf50]"
+                      )}
+                      disabled={isVerifying}
+                    />
+                    {manualError && (
+                      <p className="mt-2 text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                        <AlertCircle className="w-4 h-4 shrink-0" />{manualError}
+                      </p>
+                    )}
+
+                    {verificationWarning && (
+                      <div className="mt-3 p-3 bg-[#25282c] border border-orange-900/50 rounded-xl text-left">
+                        <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
+                          Verification Status:
+                        </p>
+                        <p className="text-sm font-medium text-gray-300 leading-relaxed">
+                          {verificationWarning}
+                        </p>
+                      </div>
+                    )}
+
+                    <p className="mt-2 text-xs text-gray-500 leading-relaxed text-left">
+                      Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
+                    </p>
+
+                    <div className="pt-4 mt-auto space-y-3">
+                      <button
+                        onClick={handleManualConfirm}
+                        disabled={isVerifying}
+                        className="w-full py-4 rounded-3xl font-bold text-white transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+                        style={{
+                          background: "linear-gradient(180deg, #66bb6a 0%, #388e3c 100%)",
+                          boxShadow: "0 8px 15px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(76, 175, 80, 0.4)"
+                        }}
+                      >
+                        {isVerifying && <Loader2 className="w-5 h-5 animate-spin" />}
+                        {isVerifying ? "Verifying..." : "Verify & Confirm"}
+                      </button>
+
+                      {showForceConfirm && (
+                        <button
+                          onClick={handleForceConfirm}
+                          className="w-full py-3 bg-[#25282c] border border-orange-500/50 hover:bg-[#2d3136] text-orange-400 font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
+                        >
+                          Force Confirm Anyway (Skip Verification)
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {status === "initiating" && (
+          <div className="text-center py-10 my-auto">
+            <Loader2 className="w-12 h-12 text-[#4caf50] animate-spin mx-auto mb-4" />
+            <p className="text-white font-bold text-lg">Contacting Safaricom...</p>
+            <p className="text-sm text-gray-400 mt-1.5">Initiating secure STK Push request</p>
+          </div>
+        )}
+
+        {status === "pending" && (
+          <div className="flex flex-col items-center justify-center w-full py-4 my-auto">
+            <header className="flex flex-col items-center mb-6" data-purpose="page-header">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-[#4ade80] blur-md opacity-40 rounded-full"></div>
+                <div className="relative bg-[#1a2234] border border-white/10 p-2 rounded-lg">
+                  <Smartphone className="w-6 h-6 text-[#4ade80]" />
                 </div>
               </div>
-              <p className="text-gray-900 dark:text-white font-bold text-xl mb-1">Check Phone Prompt!</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-[280px] mx-auto leading-relaxed">
+              <h1 className="text-2xl font-bold mb-2 tracking-tight text-white">Check Phone Prompt!</h1>
+              <p className="text-center text-[#9ca3af] text-sm leading-relaxed max-w-xs mx-auto">
                 The customer has been sent an STK prompt. Please ask them to enter their M-Pesa PIN.
               </p>
-              
-              {/* Premium 45s countdown timer badge */}
-              <div className="inline-flex items-center gap-2 px-6 py-2.5 bg-green-50 dark:bg-green-950/40 border border-green-100 dark:border-green-900 rounded-2xl shadow-sm">
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-lg font-black font-mono text-green-700 dark:text-green-400">
-                  Waiting: {countdown}s
-                </span>
-              </div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-5 font-mono select-all">
-                ID: {checkoutRequestId}
-              </p>
-            </div>
-          )}
+            </header>
 
-          {status === "success" && (
-            <div className="text-center py-10 relative z-10">
-              <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-green-100 dark:bg-green-950/40 border border-green-200 dark:border-green-800 flex items-center justify-center shadow-lg shadow-green-500/10">
-                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400 animate-bounce" />
-              </div>
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
-                <h3 className="text-gray-900 dark:text-white font-extrabold text-2xl tracking-tight">
-                  Payment Successful!
-                </h3>
-                <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[260px] mx-auto mt-2 leading-relaxed">
-                Transaction has been completed and verified successfully.
-              </p>
-            </div>
-          )}
+            <main className="w-full flex flex-col items-center justify-center" data-purpose="status-card">
+              <div className="w-full bg-[#252d41]/40 backdrop-blur-sm rounded-3xl p-6 flex flex-col items-center border border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="text-3xl font-bold mb-8 tracking-tight text-white">
+                  {formatCurrency(amount)}
+                </div>
 
-          {status === "failed" && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 flex items-center justify-center shadow-md">
-                <XCircle className="w-9 h-9 text-red-500" />
-              </div>
-              <h3 className="text-gray-900 dark:text-white font-bold text-xl">Payment Failed</h3>
-              
-              {/* Detailed custom failure card showing specific M-Pesa error reasons */}
-              <div className="mt-4 mx-auto max-w-[320px] p-4 bg-red-50 dark:bg-red-950/30 border border-red-100/80 dark:border-red-900/50 rounded-xl text-left">
-                <p className="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider mb-1">
-                  Reason for Failure:
-                </p>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {error || "An unknown error occurred while verifying the transaction."}
+                <div className="relative w-[150px] h-[150px] flex items-center justify-center mb-8">
+                  <svg className="absolute inset-0 transform -rotate-90 w-full h-full">
+                    <circle cx="75" cy="75" fill="transparent" r="60" stroke="rgba(255,255,255,0.05)" strokeWidth="8"></circle>
+                    <circle className="blur-[8px] opacity-60 transition-all duration-1000" cx="75" cy="75" fill="transparent" r="60" stroke="#4ade80" strokeDasharray="377" strokeDashoffset={377 - (377 * (60 - countdown)) / 60} strokeWidth="12"></circle>
+                    <circle className="transition-all duration-1000" strokeLinecap="round" cx="75" cy="75" fill="transparent" r="60" stroke="#4ade80" strokeDasharray="377" strokeDashoffset={377 - (377 * (60 - countdown)) / 60} strokeWidth="8"></circle>
+                  </svg>
+                  
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+                      <Smartphone className="w-8 h-8 text-white/80" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 bg-white/5 border border-white/10 rounded-full py-2 px-5 mb-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ade80] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#4ade80]"></span>
+                  </span>
+                  <span className="text-sm font-medium tracking-wide text-white">Waiting: {countdown}s</span>
+                </div>
+                
+                <p className="text-[10px] text-gray-500 font-mono select-all mt-2">
+                  ID: {checkoutRequestId}
                 </p>
               </div>
+            </main>
+          </div>
+        )}
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => { setStatus("idle"); setError(""); setCountdown(45); }}
-                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
-                >
-                  Try Again
-                </button>
-                <button
-                  onClick={onCancel}
-                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-95"
-                >
-                  Cancel
-                </button>
-              </div>
+        {status === "success" && (
+          <div className="text-center py-10 relative z-10 my-auto">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-[#25282c] border border-[#4caf50]/50 flex items-center justify-center shadow-[0_0_20px_rgba(76,175,80,0.2)]">
+              <CheckCircle2 className="w-10 h-10 text-[#4caf50] animate-bounce" />
             </div>
-          )}
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
+              <h3 className="text-white font-extrabold text-2xl tracking-tight">
+                Payment Successful!
+              </h3>
+              <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
+            </div>
+            <p className="text-sm text-gray-400 max-w-[260px] mx-auto mt-2 leading-relaxed">
+              Transaction has been completed and verified successfully.
+            </p>
+          </div>
+        )}
 
-          {status !== "success" && status !== "failed" && (
-            <button
-              onClick={onCancel}
-              className="w-full mt-5 py-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm font-bold transition-colors"
-            >
-              Cancel Payment Window
-            </button>
-          )}
-        </div>
+        {status === "failed" && (
+          <div className="text-center py-8 my-auto">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#25282c] border border-red-500/30 flex items-center justify-center shadow-md">
+              <XCircle className="w-9 h-9 text-red-500" />
+            </div>
+            <h3 className="text-white font-bold text-xl">Payment Failed</h3>
+            
+            <div className="mt-4 mx-auto max-w-[320px] p-4 bg-[#25282c] border border-red-900/30 rounded-xl text-left">
+              <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-1">
+                Reason for Failure:
+              </p>
+              <p className="text-sm font-medium text-gray-300 leading-relaxed">
+                {error || "An unknown error occurred while verifying the transaction."}
+              </p>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setStatus("idle"); setError(""); setCountdown(45); }}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={onCancel}
+                className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-95"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
 

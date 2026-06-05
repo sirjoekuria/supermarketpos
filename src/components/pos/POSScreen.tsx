@@ -916,11 +916,14 @@ export default function POSScreen() {
 
       {/* Payment Modal */}
       {showPayment && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4">
-          <div className="bg-white dark:bg-pos-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-pos-border flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Payment</h3>
-              <button
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
+          <div className="bg-[#121417] text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col font-sans">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center mb-6 px-6 pt-6 flex-shrink-0">
+              <div className="w-8"></div>
+              <h1 className="text-lg font-semibold tracking-wide">Payment</h1>
+              <button 
                 onClick={() => {
                   setShowPayment(false);
                   setCashReceived("");
@@ -931,167 +934,170 @@ export default function POSScreen() {
                   setShowLoyaltyPrompt(false);
                   setIsLookingUp(false);
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="text-white hover:opacity-70 transition-opacity p-2"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 space-y-6">
-              <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-pos-border rounded-2xl p-5 text-center shadow-inner">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Net Amount Due</p>
-                <p className="text-4xl font-extrabold text-primary-600 dark:text-primary-400 mt-1 font-mono">
-                  {formatCurrency(netTotal)}
-                </p>
-                {pointsRedeemed > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-1.5 flex items-center justify-center gap-1">
-                    <Gift className="w-3.5 h-3.5 fill-current" />
-                    Points applied: -{formatCurrency(pointsRedeemed * 1)} ({pointsRedeemed} pts)
-                  </p>
-                )}
-              </div>
 
-              {/* ── LOYALTY POINTS REDEMPTION AREA ── */}
-              {selectedCustomer ? (
-                <div className="bg-gradient-to-br from-amber-500/5 to-yellow-500/5 border border-amber-500/20 dark:border-amber-500/10 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <div className="overflow-y-auto flex-1 flex flex-col space-y-6 pb-6 custom-scrollbar">
+              
+              {/* Net Amount Card */}
+              <section className="px-6">
+                <div 
+                  className="rounded-3xl p-6 text-center text-gray-800 relative overflow-hidden" 
+                  style={{ 
+                    background: "linear-gradient(180deg, #ffffff 0%, #e8f5e9 100%)", 
+                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6), 0 0 40px rgba(76, 175, 80, 0.15)" 
+                  }}
+                >
+                  <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1 relative z-10">Net Amount Due</p>
+                  <p className="text-5xl font-extrabold text-[#1b4332] relative z-10 font-mono">
+                    {formatCurrency(netTotal)}
+                  </p>
+                  {pointsRedeemed > 0 && (
+                    <p className="text-sm text-green-700 font-bold mt-2 flex items-center justify-center gap-1.5 relative z-10">
                       <Gift className="w-4 h-4" />
-                      Loyalty Point Rewards
-                    </h4>
-                    <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-bold">
-                      {selectedCustomer.points_balance} pts available
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal">
-                    {selectedCustomer.name} has {selectedCustomer.points_balance} points available. <strong className="text-amber-600 dark:text-amber-400">Conversion: 1 Point = 1 KES.</strong> You can convert up to 50% of the subtotal into real money at checkout (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
-                  </p>
-
-                  {selectedCustomer.points_balance >= 100 ? (
-                    <div className="space-y-3 pt-1">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="number"
-                          min="0"
-                          max={Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))}
-                          placeholder="Points to redeem (min 100)..."
-                          value={pointsRedeemed || ""}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
-                            if (val > maxLimit) {
-                              setPointsRedeemed(maxLimit);
-                            } else {
-                              setPointsRedeemed(val);
-                            }
-                          }}
-                          className="flex-1 px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
-                            setPointsRedeemed(pointsRedeemed === maxLimit ? 0 : maxLimit);
-                          }}
-                          className={cn(
-                            "px-3.5 py-2.5 border rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95",
-                            pointsRedeemed > 0
-                              ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-600/10"
-                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300"
-                          )}
-                        >
-                          {pointsRedeemed > 0 ? "Reset" : "Redeem Max"}
-                        </button>
-                      </div>
-                      {pointsRedeemed > 0 && pointsRedeemed < 100 && (
-                        <p className="text-[10px] text-red-500 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          Minimum redemption is 100 points.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 p-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-400 text-xs leading-normal">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      Balance is too low (Need {100 - selectedCustomer.points_balance} more points to redeem).
-                    </div>
+                      Points applied: -{formatCurrency(pointsRedeemed * 1)} ({pointsRedeemed} pts)
+                    </p>
                   )}
+                  {/* Decorative background circle */}
+                  <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                  <div className="absolute -top-10 -left-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl pointer-events-none"></div>
                 </div>
-              ) : showLoyaltyPrompt ? (
-                /* Loyalty Lookup Card */
-                <div className="bg-gradient-to-br from-indigo-500/5 to-primary-500/5 border border-indigo-500/10 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-primary-600 dark:text-primary-400 flex items-center gap-1.5">
-                      <User className="w-4 h-4" />
-                      Add Loyalty Points
-                    </h4>
-                    <button onClick={() => setShowLoyaltyPrompt(false)} className="text-gray-400 hover:text-gray-600">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-normal">
-                    Enter the customer's registered phone number to assign loyalty points.
-                  </p>
-                  
-                  <div className="space-y-3 pt-1">
-                    <div className="flex items-center gap-3">
-                      <div className="relative flex-1">
-                        <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                          type="tel"
-                          placeholder="Phone number (e.g. 0712345678)..."
-                          value={checkoutPhone}
-                          onChange={(e) => {
-                            setCheckoutPhone(e.target.value);
-                            setLookupError("");
-                          }}
-                          className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleCheckoutPhoneLookup}
-                        disabled={isLookingUp}
-                        className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95 flex items-center gap-1.5"
-                      >
-                        {isLookingUp ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Search className="w-3.5 h-3.5" />
-                        )}
-                        Lookup
-                      </button>
+              </section>
+
+              {/* LOYALTY SECTION INTEGRATION */}
+              <section className="px-6">
+                {selectedCustomer ? (
+                  <div className="bg-[#1c1e22] border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-amber-500 flex items-center gap-1.5">
+                        <Gift className="w-4 h-4" />
+                        Loyalty Rewards
+                      </h4>
+                      <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-bold">
+                        {selectedCustomer.points_balance} pts available
+                      </span>
                     </div>
-                    {lookupError && (
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[10px] text-red-500 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          {lookupError}
-                        </p>
+
+                    <p className="text-xs text-gray-400 leading-normal">
+                      {selectedCustomer.name} has {selectedCustomer.points_balance} points. <strong className="text-amber-500">1 Point = 1 KES.</strong> (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
+                    </p>
+
+                    {selectedCustomer.points_balance >= 100 ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max={Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))}
+                            placeholder="Points to redeem..."
+                            value={pointsRedeemed || ""}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 0;
+                              const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
+                              if (val > maxLimit) {
+                                setPointsRedeemed(maxLimit);
+                              } else {
+                                setPointsRedeemed(val);
+                              }
+                            }}
+                            className="flex-1 px-3.5 py-2.5 text-sm bg-[#121417] border border-gray-700 rounded-xl text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
+                              setPointsRedeemed(pointsRedeemed === maxLimit ? 0 : maxLimit);
+                            }}
+                            className={cn(
+                              "px-3.5 py-2.5 border rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95",
+                              pointsRedeemed > 0
+                                ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-600/20"
+                                : "bg-[#121417] border-gray-700 text-gray-300 hover:bg-[#1c1e22]"
+                            )}
+                          >
+                            {pointsRedeemed > 0 ? "Reset" : "Redeem Max"}
+                          </button>
+                        </div>
+                        {pointsRedeemed > 0 && pointsRedeemed < 100 && (
+                          <p className="text-[10px] text-red-400 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Minimum redemption is 100 points.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-3 bg-amber-950/30 border border-amber-900/50 rounded-xl text-amber-400 text-xs">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        Balance is too low (Need {100 - selectedCustomer.points_balance} more).
                       </div>
                     )}
                   </div>
-                </div>
-              ) : (
-                <div className="flex justify-center py-2">
-                  <button
-                    onClick={() => setShowLoyaltyPrompt(true)}
-                    className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/30 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
-                  >
-                    <Gift className="w-4 h-4" />
-                    Add Loyalty Points
-                  </button>
-                </div>
-              )}
+                ) : showLoyaltyPrompt ? (
+                  <div className="bg-[#1c1e22] border border-indigo-500/20 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">
+                        <User className="w-4 h-4" />
+                        Add Loyalty Points
+                      </h4>
+                      <button onClick={() => setShowLoyaltyPrompt(false)} className="text-gray-500 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-3 pt-1">
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                          <input
+                            type="tel"
+                            placeholder="Phone number..."
+                            value={checkoutPhone}
+                            onChange={(e) => {
+                              setCheckoutPhone(e.target.value);
+                              setLookupError("");
+                            }}
+                            className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-[#121417] border border-gray-700 rounded-xl text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCheckoutPhoneLookup}
+                          disabled={isLookingUp}
+                          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 text-white rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95 flex items-center gap-1.5"
+                        >
+                          {isLookingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                          Lookup
+                        </button>
+                      </div>
+                      {lookupError && (
+                        <p className="text-[10px] text-red-400 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {lookupError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => setShowLoyaltyPrompt(true)}
+                      className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
+                    >
+                      <Gift className="w-4 h-4" /> Add Loyalty Points
+                    </button>
+                  </div>
+                )}
+              </section>
 
-              {/* Payment Method Selection */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              {/* Payment Methods Grid */}
+              <section className="grid grid-cols-2 gap-4 px-6">
                 {[
-                  { id: "cash", label: "Cash", icon: Banknote, color: "primary" },
-                  { id: "mpesa", label: "M-Pesa", icon: Smartphone, color: "green" },
-                  { id: "card", label: "Card", icon: CreditCard, color: "primary" },
-                  { id: "split", label: "Split", icon: Split, color: "primary" },
-                ].map(({ id, label, icon: Icon, color }) => (
+                  { id: "cash", label: "Cash", icon: Banknote },
+                  { id: "mpesa", label: "M-Pesa", icon: Smartphone },
+                  { id: "card", label: "Card", icon: CreditCard },
+                  { id: "split", label: "Split", icon: Split },
+                ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     onClick={() => {
@@ -1099,199 +1105,191 @@ export default function POSScreen() {
                       setError("");
                     }}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                      "rounded-xl p-4 flex flex-col items-center justify-center transition-all",
                       paymentMethod === id
-                        ? color === "green"
-                          ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                          : "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
-                        : "border-gray-200 dark:border-pos-border hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "bg-[#1c1e22] border-2 border-[#4caf50] text-[#4caf50]"
+                        : "bg-[#1c1e22] border border-gray-700 text-gray-400 hover:border-[#4caf50] hover:text-[#4caf50]"
                     )}
+                    style={paymentMethod === id ? { boxShadow: "0 0 25px rgba(76, 175, 80, 0.3)" } : {}}
                   >
-                    <Icon
-                      className={cn(
-                        "w-8 h-8",
-                        paymentMethod === id
-                          ? color === "green"
-                            ? "text-green-500"
-                            : "text-primary-500"
-                          : "text-gray-400"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "font-medium text-sm",
-                        paymentMethod === id
-                          ? color === "green"
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-primary-600 dark:text-primary-400"
-                          : "text-gray-600 dark:text-gray-400"
-                      )}
-                    >
+                    <Icon className="w-6 h-6 mb-2" />
+                    <span className={cn("text-sm", paymentMethod === id ? "font-semibold" : "font-medium")}>
                       {label}
                     </span>
                   </button>
                 ))}
-              </div>
+              </section>
 
-              {/* Cash Payment */}
+              {/* Dynamic Payment Method View */}
               {paymentMethod === "cash" && (
-                <div className="space-y-4">
-                  {error && (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      {error}
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Cash Received
-                    </label>
-                    <input
-                      type="number"
-                      value={cashReceived}
-                      onChange={(e) => setCashReceived(e.target.value)}
-                      placeholder="Enter amount..."
-                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      autoFocus
-                    />
-                  </div>
-                  {cashChange > 0 && (
-                    <div className="flex justify-between items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                      <span className="text-green-700 dark:text-green-400 font-medium">Change</span>
-                      <span className="text-2xl font-bold text-green-700 dark:text-green-400">
-                        {formatCurrency(cashChange)}
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handlePayment()}
-                    disabled={parseFloat(cashReceived) < netTotal || isProcessing}
-                    className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                  >
-                    {isProcessing ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" />Processing...</>
-                    ) : (
-                      <><CheckCircle2 className="w-5 h-5" />Complete Payment</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* M-Pesa Payment */}
-              {paymentMethod === "mpesa" && (
-                <MpesaPayment
-                  amount={totals.total}
-                  onSuccess={handleMpesaSuccess}
-                  onFailure={handleMpesaFailure}
-                  onCancel={() => setShowPayment(false)}
-                />
-              )}
-
-              {/* Card */}
-              {paymentMethod === "card" && (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                  <p className="text-gray-900 dark:text-white font-medium">Card Reader Required</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Please connect a card reader device.</p>
-                </div>
-              )}
-
-              {/* Split Payment */}
-              {paymentMethod === "split" && (
-                <div className="space-y-4">
-                  {error && (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      {error}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Paid</p>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitPaidTotal)}</p>
-                    </div>
-                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Balance</p>
-                      <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400")}>
-                        {formatCurrency(splitBalance)}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Change</p>
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitChange)}</p>
-                    </div>
-                  </div>
-
-                  {[
-                    { method: "cash" as const, label: "Cash", icon: Banknote },
-                    { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
-                    { method: "card" as const, label: "Card", icon: CreditCard },
-                  ].map(({ method, label, icon: Icon }) => {
-                    const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
-                    const remainingForMethod = Math.max(totals.total - otherPaid, 0);
-
-                    return (
-                      <div key={method} className="rounded-xl border border-gray-200 dark:border-pos-border p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <Icon className="w-4 h-4 text-gray-400" />
-                            {label}
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSplitPayments((current) => ({
-                                ...current,
-                                [method]: remainingForMethod > 0 ? String(remainingForMethod) : "",
-                              }))
-                            }
-                            className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
-                          >
-                            Fill balance
-                          </button>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={splitPayments[method]}
-                          onChange={(e) =>
-                            setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
-                          }
-                          placeholder="0"
-                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                        {(method === "mpesa" || method === "card") && (
-                          <input
-                            type="text"
-                            value={splitReferences[method]}
-                            onChange={(e) =>
-                              setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
-                            }
-                            placeholder={method === "mpesa" ? "M-Pesa code" : "Card reference"}
-                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          />
-                        )}
+                <section className="px-6 flex-grow flex flex-col">
+                  <div className="bg-[#1c1e22] rounded-2xl p-5 border border-gray-800 flex flex-col space-y-4">
+                    <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide">Cash Payment</h2>
+                    {error && (
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        {error}
                       </div>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => handlePayment()}
-                    disabled={splitPaidTotal < netTotal || isProcessing}
-                    className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl font-semibold transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                  >
-                    {isProcessing ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" />Processing...</>
-                    ) : (
-                      <><CheckCircle2 className="w-5 h-5" />Complete Split Payment</>
                     )}
-                  </button>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-2">
+                        Cash Received
+                      </label>
+                      <input
+                        type="number"
+                        value={cashReceived}
+                        onChange={(e) => setCashReceived(e.target.value)}
+                        placeholder="Enter amount..."
+                        className="w-full px-4 py-4 bg-[#121417] border border-gray-700 rounded-xl text-white text-xl font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
+                        autoFocus
+                      />
+                    </div>
+                    {cashChange > 0 && (
+                      <div className="flex justify-between items-center p-4 bg-[#4caf50]/10 border border-[#4caf50]/20 rounded-xl">
+                        <span className="text-[#4caf50] font-medium">Change Due</span>
+                        <span className="text-2xl font-bold text-[#4caf50] font-mono">
+                          {formatCurrency(cashChange)}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handlePayment()}
+                      disabled={parseFloat(cashReceived) < netTotal || isProcessing}
+                      className="w-full py-4 bg-gradient-to-b from-[#66bb6a] to-[#388e3c] hover:opacity-90 disabled:opacity-50 text-white rounded-3xl font-bold transition-transform active:scale-[0.98] shadow-[0_8px_15px_rgba(0,0,0,0.3)] mt-auto"
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Payment</span>
+                      )}
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {paymentMethod === "mpesa" && (
+                <div className="px-6 flex-grow flex flex-col">
+                  <MpesaPayment
+                    amount={totals.total}
+                    onSuccess={handleMpesaSuccess}
+                    onFailure={handleMpesaFailure}
+                    onCancel={() => setShowPayment(false)}
+                  />
                 </div>
               )}
+
+              {paymentMethod === "card" && (
+                <section className="px-6 flex-grow flex flex-col">
+                  <div className="bg-[#1c1e22] rounded-2xl p-8 border border-gray-800 text-center flex-grow flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 mb-4 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                      <CreditCard className="w-8 h-8 text-yellow-500" />
+                    </div>
+                    <p className="text-white font-medium text-lg">Card Reader Required</p>
+                    <p className="text-sm text-gray-500 mt-2">Please connect a physical card reader device to process card payments.</p>
+                  </div>
+                </section>
+              )}
+
+              {paymentMethod === "split" && (
+                <section className="px-6 flex-grow flex flex-col">
+                  <div className="bg-[#1c1e22] rounded-2xl p-5 border border-gray-800 space-y-4">
+                    <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide mb-2">Split Payment</h2>
+                    
+                    {error && (
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                        <p className="text-xs text-gray-500">Paid</p>
+                        <p className="text-sm font-bold text-white">{formatCurrency(splitPaidTotal)}</p>
+                      </div>
+                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                        <p className="text-xs text-gray-500">Balance</p>
+                        <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-orange-400" : "text-[#4caf50]")}>
+                          {formatCurrency(splitBalance)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                        <p className="text-xs text-gray-500">Change</p>
+                        <p className="text-sm font-bold text-white">{formatCurrency(splitChange)}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {[
+                        { method: "cash" as const, label: "Cash", icon: Banknote },
+                        { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
+                        { method: "card" as const, label: "Card", icon: CreditCard },
+                      ].map(({ method, label, icon: Icon }) => {
+                        const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
+                        const remainingForMethod = Math.max(totals.total - otherPaid, 0);
+
+                        return (
+                          <div key={method} className="rounded-xl border border-gray-700 bg-[#121417] p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                                <Icon className="w-4 h-4 text-gray-500" />
+                                {label}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSplitPayments((current) => ({
+                                    ...current,
+                                    [method]: remainingForMethod > 0 ? String(remainingForMethod) : "",
+                                  }))
+                                }
+                                className="text-xs font-bold text-[#4caf50] hover:text-[#388e3c] transition-colors"
+                              >
+                                Fill balance
+                              </button>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={splitPayments[method]}
+                              onChange={(e) =>
+                                setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
+                              }
+                              placeholder="0"
+                              className="w-full px-4 py-3 bg-[#1c1e22] border border-gray-700 rounded-xl text-white text-lg font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
+                            />
+                            {(method === "mpesa" || method === "card") && (
+                              <input
+                                type="text"
+                                value={splitReferences[method]}
+                                onChange={(e) =>
+                                  setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
+                                }
+                                placeholder={method === "mpesa" ? "M-Pesa code" : "Card reference"}
+                                className="w-full px-4 py-2.5 bg-[#1c1e22] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-[#4caf50] transition-colors"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => handlePayment()}
+                      disabled={splitPaidTotal < netTotal || isProcessing}
+                      className="w-full py-4 mt-4 bg-gradient-to-b from-[#66bb6a] to-[#388e3c] hover:opacity-90 disabled:opacity-50 text-white rounded-3xl font-bold transition-transform active:scale-[0.98] shadow-[0_8px_15px_rgba(0,0,0,0.3)]"
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Split Payment</span>
+                      )}
+                    </button>
+                  </div>
+                </section>
+              )}
+
             </div>
           </div>
         </div>
