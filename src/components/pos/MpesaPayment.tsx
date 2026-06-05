@@ -397,7 +397,7 @@ export default function MpesaPayment({
   }, [inputMode, checkoutRequestId, status, onSuccess]);
 
   return (
-    <section className="flex-grow bg-[#1c1e22] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300">
+    <section className="flex-grow bg-white dark:bg-[#1c1e22] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300">
       {/* Canvas for Celebration Confetti */}
       {status === "success" && (
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-50 rounded-2xl" />
@@ -417,9 +417,9 @@ export default function MpesaPayment({
       <div className="p-5 flex flex-col space-y-6 relative">
         {/* Amount Breakdown */}
         <div>
-          <p className="text-gray-400 text-sm mb-1">Amount to Pay</p>
-          <p className="text-3xl font-bold text-white">{formatCurrency(amount)}</p>
-          <hr className="mt-4 border-gray-700" />
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Amount to Pay</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(amount)}</p>
+          <hr className="mt-4 border-gray-200 dark:border-gray-700" />
         </div>
 
         {status === "idle" && (
@@ -430,7 +430,7 @@ export default function MpesaPayment({
                 className="flex items-center space-x-3 cursor-pointer" 
                 onClick={() => setInputMode("stk")}
               >
-                <span className={cn("text-sm", inputMode === "stk" ? "text-white" : "text-gray-400")}>STK Push</span>
+                <span className={cn("text-sm", inputMode === "stk" ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400")}>STK Push</span>
                 <div className={cn("w-12 h-6 rounded-full relative p-1 transition-colors", inputMode === "stk" ? "bg-[#4caf50]" : "bg-gray-600")}>
                   <div className={cn("bg-white w-4 h-4 rounded-full transition-transform", inputMode === "stk" ? "translate-x-6" : "translate-x-0")}></div>
                 </div>
@@ -439,7 +439,7 @@ export default function MpesaPayment({
                 className="flex items-center space-x-3 cursor-pointer" 
                 onClick={() => setInputMode("manual")}
               >
-                <span className={cn("text-sm", inputMode === "manual" ? "text-white" : "text-gray-400")}>Enter Code</span>
+                <span className={cn("text-sm", inputMode === "manual" ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400")}>Enter Code</span>
                 <div className={cn("w-12 h-6 rounded-full relative p-1 transition-colors", inputMode === "manual" ? "bg-[#4caf50]" : "bg-gray-600")}>
                   <div className={cn("bg-white w-4 h-4 rounded-full transition-transform", inputMode === "manual" ? "translate-x-6" : "translate-x-0")}></div>
                 </div>
@@ -461,8 +461,8 @@ export default function MpesaPayment({
                     onChange={(e) => { setPhone(e.target.value); setError(""); }}
                     placeholder="e.g. 0712345678"
                     className={cn(
-                      "w-full bg-[#25282c] border rounded-xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none transition-colors",
-                      error ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-[#4caf50]"
+                      "w-full bg-gray-50 dark:bg-[#25282c] border rounded-xl py-4 pl-12 pr-4 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none transition-colors",
+                      error ? "border-red-500 focus:border-red-500" : "border-gray-200 dark:border-gray-700 focus:border-[#4caf50]"
                     )}
                   />
                 </div>
@@ -479,7 +479,7 @@ export default function MpesaPayment({
                 <div className="pt-4 mt-auto">
                   <button
                     onClick={initiateSTKPush}
-                    className="w-full py-4 rounded-3xl font-bold text-white transition-transform active:scale-[0.98]"
+                    className="w-full py-4 rounded-3xl font-bold text-gray-900 dark:text-white transition-transform active:scale-[0.98]"
                     style={{
                       background: "linear-gradient(180deg, #66bb6a 0%, #388e3c 100%)",
                       boxShadow: "0 8px 15px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(76, 175, 80, 0.4)"
@@ -492,12 +492,12 @@ export default function MpesaPayment({
             ) : (
               <div className="flex flex-col space-y-4">
                 {checkoutRequestId && (
-                  <div className="p-3 bg-[#25282c] border border-blue-900/50 rounded-xl mb-2 text-left">
+                  <div className="p-3 bg-gray-50 dark:bg-[#25282c] border border-blue-900/50 rounded-xl mb-2 text-left">
                     <div className="flex gap-2.5 items-start text-xs font-semibold text-[#4caf50]">
                       <Loader2 className="w-4 h-4 animate-spin shrink-0 mt-0.5" />
                       <div>
                         <p className="uppercase tracking-wider">Checking STK Push Status...</p>
-                        <p className="text-gray-400 font-medium normal-case mt-0.5 leading-relaxed">
+                        <p className="text-gray-500 dark:text-gray-400 font-medium normal-case mt-0.5 leading-relaxed">
                           We are auto-detecting the payment in the database. If paid, it will complete automatically.
                         </p>
                       </div>
@@ -507,7 +507,7 @@ export default function MpesaPayment({
 
                 {verifiedTx ? (
                   <div className="space-y-4">
-                    <div className="bg-[#25282c] border border-gray-700 rounded-xl p-5 text-left">
+                    <div className="bg-gray-50 dark:bg-[#25282c] border border-gray-200 dark:border-gray-700 rounded-xl p-5 text-left">
                       <div className="flex items-center gap-2 mb-3">
                         <CheckCircle2 className="w-5 h-5 text-[#4caf50]" />
                         <h4 className="text-sm font-bold text-[#4caf50] uppercase tracking-wider">
@@ -515,21 +515,21 @@ export default function MpesaPayment({
                         </h4>
                       </div>
                       <div className="space-y-2 text-sm font-medium">
-                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
-                          <span className="text-gray-400">Code:</span>
-                          <span className="font-bold text-white font-mono">{verifiedTx.mpesaReceiptNumber}</span>
+                        <div className="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-1.5">
+                          <span className="text-gray-500 dark:text-gray-400">Code:</span>
+                          <span className="font-bold text-gray-900 dark:text-white font-mono">{verifiedTx.mpesaReceiptNumber}</span>
                         </div>
-                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
-                          <span className="text-gray-400">Paid Amount:</span>
+                        <div className="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-1.5">
+                          <span className="text-gray-500 dark:text-gray-400">Paid Amount:</span>
                           <span className="font-extrabold text-[#4caf50]">{formatCurrency(verifiedTx.amount)}</span>
                         </div>
-                        <div className="flex justify-between border-b border-gray-700 pb-1.5">
-                          <span className="text-gray-400">Customer Name:</span>
-                          <span className="text-white">{verifiedTx.customerName}</span>
+                        <div className="flex justify-between border-b border-gray-200 dark:border-gray-700 pb-1.5">
+                          <span className="text-gray-500 dark:text-gray-400">Customer Name:</span>
+                          <span className="text-gray-900 dark:text-white">{verifiedTx.customerName}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-400">Phone Number:</span>
-                          <span className="text-white">{verifiedTx.phoneNumber}</span>
+                          <span className="text-gray-500 dark:text-gray-400">Phone Number:</span>
+                          <span className="text-gray-900 dark:text-white">{verifiedTx.phoneNumber}</span>
                         </div>
                       </div>
                     </div>
@@ -537,13 +537,13 @@ export default function MpesaPayment({
                     <div className="flex gap-3">
                       <button
                         onClick={() => { setVerifiedTx(null); setManualCode(""); }}
-                        className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-[0.98] text-sm"
+                        className="flex-1 py-3 bg-gray-50 dark:bg-[#25282c] hover:bg-gray-100 dark:hover:bg-[#2d3136] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-xl transition-all active:scale-[0.98] text-sm"
                       >
                         Change Code
                       </button>
                       <button
                         onClick={handleCompleteManualCheckout}
-                        className="flex-[2] py-4 bg-[#4caf50] hover:bg-[#388e3c] text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-900/30 text-base"
+                        className="flex-[2] py-4 bg-[#4caf50] hover:bg-[#388e3c] text-gray-900 dark:text-white font-bold rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-green-900/30 text-base"
                       >
                         Complete Checkout
                       </button>
@@ -563,8 +563,8 @@ export default function MpesaPayment({
                       placeholder="e.g. QKL1A2B3C4"
                       maxLength={12}
                       className={cn(
-                        "w-full px-4 py-4 bg-[#25282c] border rounded-xl text-white placeholder-gray-500 focus:outline-none transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
-                        manualError ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-[#4caf50]"
+                        "w-full px-4 py-4 bg-gray-50 dark:bg-[#25282c] border rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none transition-all font-mono font-bold text-xl tracking-widest text-center uppercase",
+                        manualError ? "border-red-500 focus:border-red-500" : "border-gray-200 dark:border-gray-700 focus:border-[#4caf50]"
                       )}
                       disabled={isVerifying}
                     />
@@ -575,11 +575,11 @@ export default function MpesaPayment({
                     )}
 
                     {verificationWarning && (
-                      <div className="mt-3 p-3 bg-[#25282c] border border-orange-900/50 rounded-xl text-left">
+                      <div className="mt-3 p-3 bg-gray-50 dark:bg-[#25282c] border border-orange-900/50 rounded-xl text-left">
                         <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
                           Verification Status:
                         </p>
-                        <p className="text-sm font-medium text-gray-300 leading-relaxed">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300 leading-relaxed">
                           {verificationWarning}
                         </p>
                       </div>
@@ -593,7 +593,7 @@ export default function MpesaPayment({
                       <button
                         onClick={handleManualConfirm}
                         disabled={isVerifying}
-                        className="w-full py-4 rounded-3xl font-bold text-white transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-3xl font-bold text-gray-900 dark:text-white transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
                         style={{
                           background: "linear-gradient(180deg, #66bb6a 0%, #388e3c 100%)",
                           boxShadow: "0 8px 15px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(76, 175, 80, 0.4)"
@@ -606,7 +606,7 @@ export default function MpesaPayment({
                       {showForceConfirm && (
                         <button
                           onClick={handleForceConfirm}
-                          className="w-full py-3 bg-[#25282c] border border-orange-500/50 hover:bg-[#2d3136] text-orange-400 font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
+                          className="w-full py-3 bg-gray-50 dark:bg-[#25282c] border border-orange-500/50 hover:bg-gray-100 dark:hover:bg-[#2d3136] text-orange-400 font-bold rounded-xl transition-all active:scale-[0.98] shadow-md text-sm"
                         >
                           Force Confirm Anyway (Skip Verification)
                         </button>
@@ -622,8 +622,8 @@ export default function MpesaPayment({
         {status === "initiating" && (
           <div className="text-center py-10 my-auto">
             <Loader2 className="w-12 h-12 text-[#4caf50] animate-spin mx-auto mb-4" />
-            <p className="text-white font-bold text-lg">Contacting Safaricom...</p>
-            <p className="text-sm text-gray-400 mt-1.5">Initiating secure STK Push request</p>
+            <p className="text-gray-900 dark:text-white font-bold text-lg">Contacting Safaricom...</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">Initiating secure STK Push request</p>
           </div>
         )}
 
@@ -636,7 +636,7 @@ export default function MpesaPayment({
                   <Smartphone className="w-6 h-6 text-[#4ade80]" />
                 </div>
               </div>
-              <h1 className="text-2xl font-bold mb-2 tracking-tight text-white">Check Phone Prompt!</h1>
+              <h1 className="text-2xl font-bold mb-2 tracking-tight text-gray-900 dark:text-white">Check Phone Prompt!</h1>
               <p className="text-center text-[#9ca3af] text-sm leading-relaxed max-w-xs mx-auto">
                 The customer has been sent an STK prompt. Please ask them to enter their M-Pesa PIN.
               </p>
@@ -644,7 +644,7 @@ export default function MpesaPayment({
 
             <main className="w-full flex flex-col items-center justify-center" data-purpose="status-card">
               <div className="w-full bg-[#252d41]/40 backdrop-blur-sm rounded-3xl p-6 flex flex-col items-center border border-white/5 shadow-2xl relative overflow-hidden">
-                <div className="text-3xl font-bold mb-8 tracking-tight text-white">
+                <div className="text-3xl font-bold mb-8 tracking-tight text-gray-900 dark:text-white">
                   {formatCurrency(amount)}
                 </div>
 
@@ -657,7 +657,7 @@ export default function MpesaPayment({
                   
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                      <Smartphone className="w-8 h-8 text-white/80" />
+                      <Smartphone className="w-8 h-8 text-gray-900 dark:text-white/80" />
                     </div>
                   </div>
                 </div>
@@ -667,7 +667,7 @@ export default function MpesaPayment({
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ade80] opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-[#4ade80]"></span>
                   </span>
-                  <span className="text-sm font-medium tracking-wide text-white">Waiting: {countdown}s</span>
+                  <span className="text-sm font-medium tracking-wide text-gray-900 dark:text-white">Waiting: {countdown}s</span>
                 </div>
                 
                 <p className="text-[10px] text-gray-500 font-mono select-all mt-2">
@@ -680,17 +680,17 @@ export default function MpesaPayment({
 
         {status === "success" && (
           <div className="text-center py-10 relative z-10 my-auto">
-            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-[#25282c] border border-[#4caf50]/50 flex items-center justify-center shadow-[0_0_20px_rgba(76,175,80,0.2)]">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-gray-50 dark:bg-[#25282c] border border-[#4caf50]/50 flex items-center justify-center shadow-[0_0_20px_rgba(76,175,80,0.2)]">
               <CheckCircle2 className="w-10 h-10 text-[#4caf50] animate-bounce" />
             </div>
             <div className="flex items-center justify-center gap-1.5 mb-1">
               <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
-              <h3 className="text-white font-extrabold text-2xl tracking-tight">
+              <h3 className="text-gray-900 dark:text-white font-extrabold text-2xl tracking-tight">
                 Payment Successful!
               </h3>
               <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
             </div>
-            <p className="text-sm text-gray-400 max-w-[260px] mx-auto mt-2 leading-relaxed">
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[260px] mx-auto mt-2 leading-relaxed">
               Transaction has been completed and verified successfully.
             </p>
           </div>
@@ -708,16 +708,16 @@ export default function MpesaPayment({
           const labelColor    = isWrongPin || isInsufficientFunds ? "text-orange-400" : "text-red-500";
           return (
             <div className="text-center py-8 my-auto">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-[#25282c] border ${borderColor} flex items-center justify-center shadow-md`}>
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 dark:bg-[#25282c] border ${borderColor} flex items-center justify-center shadow-md`}>
                 <XCircle className={`w-9 h-9 ${isWrongPin || isInsufficientFunds ? "text-orange-400" : "text-red-500"}`} />
               </div>
-              <h3 className="text-white font-bold text-xl">{errorLabel}</h3>
+              <h3 className="text-gray-900 dark:text-white font-bold text-xl">{errorLabel}</h3>
 
-              <div className={`mt-4 mx-auto max-w-[320px] p-4 bg-[#25282c] border ${borderColor} rounded-xl text-left`}>
+              <div className={`mt-4 mx-auto max-w-[320px] p-4 bg-gray-50 dark:bg-[#25282c] border ${borderColor} rounded-xl text-left`}>
                 <p className={`text-xs font-semibold ${labelColor} uppercase tracking-wider mb-1`}>
                   Reason:
                 </p>
-                <p className="text-sm font-medium text-gray-300 leading-relaxed">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300 leading-relaxed">
                   {error || "An unknown error occurred while verifying the transaction."}
                 </p>
               </div>
@@ -731,7 +731,7 @@ export default function MpesaPayment({
                 </button>
                 <button
                   onClick={onCancel}
-                  className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                  className="flex-1 py-3 bg-gray-50 dark:bg-[#25282c] hover:bg-gray-100 dark:hover:bg-[#2d3136] border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-xl transition-all active:scale-95"
                 >
                   Cancel
                 </button>
@@ -743,4 +743,5 @@ export default function MpesaPayment({
     </section>
   );
 }
+
 

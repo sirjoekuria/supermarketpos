@@ -932,7 +932,7 @@ export default function POSScreen() {
       {/* Payment Modal */}
       {showPayment && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
-          <div className="bg-[#121417] text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col font-sans">
+          <div className="bg-white dark:bg-[#121417] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col font-sans">
             
             {/* Header */}
             <div className="flex justify-between items-center mb-6 px-6 pt-6 flex-shrink-0">
@@ -949,7 +949,7 @@ export default function POSScreen() {
                   setShowLoyaltyPrompt(false);
                   setIsLookingUp(false);
                 }}
-                className="text-white hover:opacity-70 transition-opacity p-2"
+                className="text-gray-500 hover:text-gray-900 dark:text-white dark:hover:opacity-70 transition-opacity p-2"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -985,7 +985,7 @@ export default function POSScreen() {
               {/* LOYALTY SECTION INTEGRATION */}
               <section className="px-6">
                 {selectedCustomer ? (
-                  <div className="bg-[#1c1e22] border border-amber-500/20 rounded-2xl p-4 space-y-3">
+                  <div className="bg-amber-50 dark:bg-[#1c1e22] border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-amber-500 flex items-center gap-1.5">
                         <Gift className="w-4 h-4" />
@@ -996,7 +996,7 @@ export default function POSScreen() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-gray-400 leading-normal">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-normal">
                       {selectedCustomer.name} has {selectedCustomer.points_balance} points. <strong className="text-amber-500">1 Point = 1 KES.</strong> (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
                     </p>
 
@@ -1018,7 +1018,7 @@ export default function POSScreen() {
                                 setPointsRedeemed(val);
                               }
                             }}
-                            className="flex-1 px-3.5 py-2.5 text-sm bg-[#121417] border border-gray-700 rounded-xl text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
+                            className="flex-1 px-3.5 py-2.5 text-sm bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
                           />
                           <button
                             type="button"
@@ -1030,7 +1030,7 @@ export default function POSScreen() {
                               "px-3.5 py-2.5 border rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95",
                               pointsRedeemed > 0
                                 ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-600/20"
-                                : "bg-[#121417] border-gray-700 text-gray-300 hover:bg-[#1c1e22]"
+                                : "bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-[#1c1e22]"
                             )}
                           >
                             {pointsRedeemed > 0 ? "Reset" : "Redeem Max"}
@@ -1051,7 +1051,7 @@ export default function POSScreen() {
                     )}
                   </div>
                 ) : showLoyaltyPrompt ? (
-                  <div className="bg-[#1c1e22] border border-indigo-500/20 rounded-2xl p-4 space-y-3">
+                  <div className="bg-indigo-50 dark:bg-[#1c1e22] border border-indigo-200 dark:border-indigo-500/20 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">
                         <User className="w-4 h-4" />
@@ -1073,7 +1073,7 @@ export default function POSScreen() {
                               setCheckoutPhone(e.target.value);
                               setLookupError("");
                             }}
-                            className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-[#121417] border border-gray-700 rounded-xl text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                            className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
                           />
                         </div>
                         <button
@@ -1122,8 +1122,8 @@ export default function POSScreen() {
                     className={cn(
                       "rounded-xl p-4 flex flex-col items-center justify-center transition-all",
                       paymentMethod === id
-                        ? "bg-[#1c1e22] border-2 border-[#4caf50] text-[#4caf50]"
-                        : "bg-[#1c1e22] border border-gray-700 text-gray-400 hover:border-[#4caf50] hover:text-[#4caf50]"
+                        ? "bg-green-50 dark:bg-[#1c1e22] border-2 border-[#4caf50] text-[#4caf50]"
+                        : "bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4caf50] hover:text-[#4caf50] dark:hover:border-[#4caf50] dark:hover:text-[#4caf50]"
                     )}
                     style={paymentMethod === id ? { boxShadow: "0 0 25px rgba(76, 175, 80, 0.3)" } : {}}
                   >
@@ -1138,7 +1138,7 @@ export default function POSScreen() {
               {/* Dynamic Payment Method View */}
               {paymentMethod === "cash" && (
                 <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-[#1c1e22] rounded-2xl p-5 border border-gray-800 flex flex-col space-y-4">
+                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-5 border border-gray-200 dark:border-gray-800 flex flex-col space-y-4">
                     <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide">Cash Payment</h2>
                     {error && (
                       <div className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
@@ -1155,7 +1155,7 @@ export default function POSScreen() {
                         value={cashReceived}
                         onChange={(e) => setCashReceived(e.target.value)}
                         placeholder="Enter amount..."
-                        className="w-full px-4 py-4 bg-[#121417] border border-gray-700 rounded-xl text-white text-xl font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
+                        className="w-full px-4 py-4 bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-xl font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
                         autoFocus
                       />
                     </div>
@@ -1195,11 +1195,11 @@ export default function POSScreen() {
 
               {paymentMethod === "card" && (
                 <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-[#1c1e22] rounded-2xl p-8 border border-gray-800 text-center flex-grow flex flex-col items-center justify-center">
+                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-8 border border-gray-200 dark:border-gray-800 text-center flex-grow flex flex-col items-center justify-center">
                     <div className="w-16 h-16 mb-4 rounded-full bg-yellow-500/10 flex items-center justify-center">
                       <CreditCard className="w-8 h-8 text-yellow-500" />
                     </div>
-                    <p className="text-white font-medium text-lg">Card Reader Required</p>
+                    <p className="text-gray-900 dark:text-white font-medium text-lg">Card Reader Required</p>
                     <p className="text-sm text-gray-500 mt-2">Please connect a physical card reader device to process card payments.</p>
                   </div>
                 </section>
@@ -1207,7 +1207,7 @@ export default function POSScreen() {
 
               {paymentMethod === "split" && (
                 <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-[#1c1e22] rounded-2xl p-5 border border-gray-800 space-y-4">
+                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
                     <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide mb-2">Split Payment</h2>
                     
                     {error && (
@@ -1218,19 +1218,19 @@ export default function POSScreen() {
                     )}
 
                     <div className="grid grid-cols-3 gap-3 text-center mb-4">
-                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
                         <p className="text-xs text-gray-500">Paid</p>
-                        <p className="text-sm font-bold text-white">{formatCurrency(splitPaidTotal)}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitPaidTotal)}</p>
                       </div>
-                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
                         <p className="text-xs text-gray-500">Balance</p>
                         <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-orange-400" : "text-[#4caf50]")}>
                           {formatCurrency(splitBalance)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-[#121417] p-3 border border-gray-800">
+                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
                         <p className="text-xs text-gray-500">Change</p>
-                        <p className="text-sm font-bold text-white">{formatCurrency(splitChange)}</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitChange)}</p>
                       </div>
                     </div>
 
@@ -1244,9 +1244,9 @@ export default function POSScreen() {
                         const remainingForMethod = Math.max(totals.total - otherPaid, 0);
 
                         return (
-                          <div key={method} className="rounded-xl border border-gray-700 bg-[#121417] p-4 space-y-3">
+                          <div key={method} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#121417] p-4 space-y-3">
                             <div className="flex items-center justify-between gap-3">
-                              <label className="flex items-center gap-2 text-sm font-medium text-gray-300">
+                              <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
                                 <Icon className="w-4 h-4 text-gray-500" />
                                 {label}
                               </label>
@@ -1272,7 +1272,7 @@ export default function POSScreen() {
                                 setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
                               }
                               placeholder="0"
-                              className="w-full px-4 py-3 bg-[#1c1e22] border border-gray-700 rounded-xl text-white text-lg font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
                             />
                             {(method === "mpesa" || method === "card") && (
                               <input
@@ -1282,7 +1282,7 @@ export default function POSScreen() {
                                   setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
                                 }
                                 placeholder={method === "mpesa" ? "M-Pesa code" : "Card reference"}
-                                className="w-full px-4 py-2.5 bg-[#1c1e22] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:border-[#4caf50] transition-colors"
+                                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#4caf50] transition-colors"
                               />
                             )}
                           </div>
@@ -1365,3 +1365,4 @@ export default function POSScreen() {
     </div>
   );
 }
+
