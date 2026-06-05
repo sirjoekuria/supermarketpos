@@ -355,51 +355,6 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
                 <div className="divider border-t border-dashed border-black my-1.5" />
               </div>
             )}
-
-            {/* ── SCU / QR ── */}
-            <div className="text-center text-[9px] space-y-0.5 text-gray-700">
-              <p className="font-bold text-black">SCU INFORMATION</p>
-
-              <div className="qr-wrap flex justify-center my-1">
-                <svg width="72" height="72" viewBox="0 0 25 25" shapeRendering="crispEdges">
-                  <rect width="25" height="25" fill="white"/>
-                  <rect x="0"  y="0"  width="7" height="7" fill="black"/>
-                  <rect x="1"  y="1"  width="5" height="5" fill="white"/>
-                  <rect x="2"  y="2"  width="3" height="3" fill="black"/>
-                  <rect x="18" y="0"  width="7" height="7" fill="black"/>
-                  <rect x="19" y="1"  width="5" height="5" fill="white"/>
-                  <rect x="20" y="2"  width="3" height="3" fill="black"/>
-                  <rect x="0"  y="18" width="7" height="7" fill="black"/>
-                  <rect x="1"  y="19" width="5" height="5" fill="white"/>
-                  <rect x="2"  y="20" width="3" height="3" fill="black"/>
-                  <rect x="9"  y="1"  width="2" height="1" fill="black"/>
-                  <rect x="12" y="2"  width="1" height="3" fill="black"/>
-                  <rect x="15" y="1"  width="2" height="2" fill="black"/>
-                  <rect x="9"  y="5"  width="4" height="2" fill="black"/>
-                  <rect x="15" y="6"  width="1" height="3" fill="black"/>
-                  <rect x="8"  y="9"  width="2" height="4" fill="black"/>
-                  <rect x="11" y="11" width="3" height="1" fill="black"/>
-                  <rect x="16" y="9"  width="4" height="2" fill="black"/>
-                  <rect x="22" y="11" width="2" height="3" fill="black"/>
-                  <rect x="9"  y="15" width="3" height="3" fill="black"/>
-                  <rect x="14" y="14" width="2" height="5" fill="black"/>
-                  <rect x="19" y="16" width="3" height="2" fill="black"/>
-                  <rect x="10" y="20" width="4" height="2" fill="black"/>
-                  <rect x="16" y="21" width="2" height="3" fill="black"/>
-                  <rect x="20" y="20" width="3" height="1" fill="black"/>
-                  <rect x="21" y="23" width="2" height="1" fill="black"/>
-                </svg>
-              </div>
-
-              <p>DATE: {formatReceiptDate(sale.created_at)}</p>
-              <p>SCU INVOICE NO: KRACU0300003050/550152</p>
-              <p>SCU ID: KRACU0300003050</p>
-              <p>INTERNAL DATA</p>
-              <p className="font-bold break-all">OCFL-KBAF-CYOC-J5NC-NHUH-DYMT-4Q</p>
-              <p>RECEIPT SIGN</p>
-              <p className="font-bold">Y3CZ-IJQ2A-WJTY-QZB3</p>
-              <p className="font-bold text-[10px] text-black mt-1">END OF LEGAL RECEIPT</p>
-            </div>
           </div>
         </div>
 
