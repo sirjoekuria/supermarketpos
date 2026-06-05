@@ -60,8 +60,7 @@ public class BiometricService {
                 .setDescription("Place your finger on the sensor or look at the camera")
                 .setNegativeButtonText("Cancel")
                 .setAllowedAuthenticators(
-    androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG |
-    androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 )
                 .build();
     }
