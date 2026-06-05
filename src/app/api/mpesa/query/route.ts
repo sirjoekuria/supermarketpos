@@ -112,14 +112,8 @@ export async function GET(request: Request) {
         return NextResponse.json(result);
       }
 
-      // Any other ResultCode = still processing or explicit error
+      // Any other ResultCode = explicit error
       if (data.ResultCode !== undefined && String(data.ResultCode) !== "0") {
-        // ResultCode 1032 = request cancelled, 1037 = DS timeout, etc.
-        const pendingCodes = ["1032", "1037", "2001", "1001", "1"];
-        if (pendingCodes.includes(String(data.ResultCode))) {
-          return NextResponse.json({ status: "pending", message: data.ResultDesc || "Still waiting for payment..." });
-        }
-
         // Terminal failure
         const result = { status: "failed", message: data.ResultDesc || "Payment failed." };
         statusCache.set(checkoutRequestId, { status: "failed", result, ts: Date.now() });
