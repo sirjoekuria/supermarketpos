@@ -296,6 +296,7 @@ export default function MpesaPayment({
     let active = true;
     let elapsed = 0;
     let timeoutId: NodeJS.Timeout;
+    let timer: NodeJS.Timeout; // hoisted so checkStatus can clear it on failure
 
     const checkStatus = async () => {
       if (!active) return;
@@ -306,18 +307,23 @@ export default function MpesaPayment({
         const data = await response.json();
         if (!active) return; // component unmounted during fetch
         if (data.status === "success") {
+          active = false;
+          clearTimeout(timeoutId);
+          clearInterval(timer); // stop countdown immediately on success
           setStatus("success");
           // Play confetti for 1.8s before triggering onSuccess
           setTimeout(() => {
-            // Only pass real receipt numbers (e.g. QDK1234567), not the CheckoutRequestID
             onSuccess(data.mpesaReceiptNumber || "");
           }, 1800);
-          return; // Stop polling on success
+          return;
         } else if (data.status === "failed") {
+          active = false;
+          clearTimeout(timeoutId);
+          clearInterval(timer); // stop countdown immediately — no timeout screen, show real error
           setStatus("failed");
           setError(data.message || "Payment failed");
           onFailure(data.message || "Payment failed");
-          return; // Stop polling on failure
+          return;
         }
       } catch (err) {
         console.error("Status check error:", err);
@@ -334,7 +340,7 @@ export default function MpesaPayment({
     // Run first check immediately (fast DB lookup)
     checkStatus();
 
-    const timer = setInterval(() => {
+    timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           active = false;
@@ -355,6 +361,7 @@ export default function MpesaPayment({
       clearInterval(timer);
     };
   }, [status, checkoutRequestId, onSuccess, onFailure]);
+
 
   // Fallback background checker when status is failed or idle but we have a checkoutRequestId (in case callback is late)
   useEffect(() => {
@@ -689,38 +696,49 @@ export default function MpesaPayment({
           </div>
         )}
 
-        {status === "failed" && (
-          <div className="text-center py-8 my-auto">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#25282c] border border-red-500/30 flex items-center justify-center shadow-md">
-              <XCircle className="w-9 h-9 text-red-500" />
-            </div>
-            <h3 className="text-white font-bold text-xl">Payment Failed</h3>
-            
-            <div className="mt-4 mx-auto max-w-[320px] p-4 bg-[#25282c] border border-red-900/30 rounded-xl text-left">
-              <p className="text-xs font-semibold text-red-500 uppercase tracking-wider mb-1">
-                Reason for Failure:
-              </p>
-              <p className="text-sm font-medium text-gray-300 leading-relaxed">
-                {error || "An unknown error occurred while verifying the transaction."}
-              </p>
-            </div>
+        {status === "failed" && (() => {
+          const isWrongPin    = /wrong.*pin|incorrect.*pin|invalid.*pin|initiator.*invalid|wrong.*credentials/i.test(error);
+          const isInsufficientFunds = /insufficient|balance/i.test(error);
+          const isTimeout     = /timed? ?out|did not enter/i.test(error);
+          const errorLabel    = isWrongPin ? "Wrong PIN Entered"
+                              : isInsufficientFunds ? "Insufficient M-Pesa Balance"
+                              : isTimeout ? "Payment Timed Out"
+                              : "Payment Failed";
+          const borderColor   = isWrongPin || isInsufficientFunds ? "border-orange-500/40" : "border-red-500/30";
+          const labelColor    = isWrongPin || isInsufficientFunds ? "text-orange-400" : "text-red-500";
+          return (
+            <div className="text-center py-8 my-auto">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-[#25282c] border ${borderColor} flex items-center justify-center shadow-md`}>
+                <XCircle className={`w-9 h-9 ${isWrongPin || isInsufficientFunds ? "text-orange-400" : "text-red-500"}`} />
+              </div>
+              <h3 className="text-white font-bold text-xl">{errorLabel}</h3>
 
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => { setStatus("idle"); setError(""); setCountdown(45); }}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={onCancel}
-                className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-95"
-              >
-                Cancel
-              </button>
+              <div className={`mt-4 mx-auto max-w-[320px] p-4 bg-[#25282c] border ${borderColor} rounded-xl text-left`}>
+                <p className={`text-xs font-semibold ${labelColor} uppercase tracking-wider mb-1`}>
+                  Reason:
+                </p>
+                <p className="text-sm font-medium text-gray-300 leading-relaxed">
+                  {error || "An unknown error occurred while verifying the transaction."}
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => { setStatus("idle"); setError(""); setCountdown(60); }}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={onCancel}
+                  className="flex-1 py-3 bg-[#25282c] hover:bg-[#2d3136] border border-gray-700 text-white font-bold rounded-xl transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </section>
   );
