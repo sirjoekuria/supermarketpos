@@ -32,6 +32,7 @@ export default function POSScreen() {
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
   const { products, isLoading, error: productsError, fetchProducts } = useProductStore();
+  const { currentBranchId } = useBranchStore();
 
   const [showScanner, setShowScanner] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,6 +68,20 @@ export default function POSScreen() {
   };
 
   const tryAddItem = (product: Product) => {
+    if (product.stock_quantity <= 0) {
+      setError(`Cannot add ${product.name}. It is out of stock.`);
+      setTimeout(() => setError(""), 5000);
+      return false;
+    }
+
+    const cartItem = items.find(i => i.product.id === product.id);
+    const currentQty = cartItem ? cartItem.quantity : 0;
+    if (currentQty >= product.stock_quantity) {
+      setError(`Cannot add more ${product.name}. Only ${product.stock_quantity} in stock.`);
+      setTimeout(() => setError(""), 5000);
+      return false;
+    }
+
     const status = getExpiryStatus(product);
     if (status === "expired") {
       setError(`Cannot add ${product.name}. It expired on ${new Date(product.expiry_date!).toLocaleDateString("en-GB")}`);
@@ -195,7 +210,7 @@ export default function POSScreen() {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, currentBranchId]);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {

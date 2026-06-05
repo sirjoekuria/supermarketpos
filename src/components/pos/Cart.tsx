@@ -235,9 +235,13 @@ export default function Cart() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() =>
-                        updateQuantity(item.product.id, item.quantity + 1)
-                      }
+                      onClick={() => {
+                        if (item.quantity < item.product.stock_quantity) {
+                          updateQuantity(item.product.id, item.quantity + 1);
+                        } else {
+                          alert(`Cannot add more ${item.product.name}. Only ${item.product.stock_quantity} in stock.`);
+                        }
+                      }}
                       className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
