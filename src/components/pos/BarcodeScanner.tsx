@@ -189,6 +189,14 @@ export default function BarcodeScanner({
     if (!isOpen || scanMode !== "usb") return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept keypresses when user is typing in an input/textarea/select
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
       if (e.key === "Enter" && usbInput.length > 3) {
         handleScanSuccess(usbInput.trim());
         setUsbInput("");

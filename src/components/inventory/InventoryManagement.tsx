@@ -46,12 +46,19 @@ export default function InventoryManagement() {
   });
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const { products, isLoading, error, fetchProducts } = useProductStore();
+  const { products, isLoading, error, fetchProducts, subscribeToRealtime } = useProductStore();
   const { currentBranchId } = useBranchStore();
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts, currentBranchId]);
+
+  // Real-time sync: refresh stock when any device changes branch_stock or products
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtime();
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   let filtered = products.filter(
     (p) =>

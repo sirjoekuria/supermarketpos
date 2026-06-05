@@ -31,7 +31,7 @@ export default function POSScreen() {
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
-  const { products, isLoading, error: productsError, fetchProducts } = useProductStore();
+  const { products, isLoading, error: productsError, fetchProducts, subscribeToRealtime } = useProductStore();
   const { currentBranchId } = useBranchStore();
 
   const [showScanner, setShowScanner] = useState(false);
@@ -212,6 +212,13 @@ export default function POSScreen() {
     fetchProducts();
   }, [fetchProducts, currentBranchId]);
 
+  // Real-time sync: refresh stock when any device changes branch_stock or products
+  useEffect(() => {
+    const unsubscribe = subscribeToRealtime();
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === "pos-cart") {
@@ -228,6 +235,14 @@ export default function POSScreen() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.key) return; // guard against undefined key (virtual keyboards, extensions)
+      // Don't capture keypresses when user is typing in a text field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
       const currentTime = Date.now();
       if (currentTime - lastKeyTime > 100) barcodeBuffer = "";
       lastKeyTime = currentTime;

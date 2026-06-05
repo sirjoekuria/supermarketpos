@@ -211,9 +211,10 @@ interface ProductState {
   isLoading: boolean;
   error: string | null;
   fetchProducts: () => Promise<void>;
+  subscribeToRealtime: () => () => void;
 }
 
-export const useProductStore = create<ProductState>((set) => ({
+export const useProductStore = create<ProductState>((set, get) => ({
   products: [],
   isLoading: false,
   error: null,
@@ -274,6 +275,37 @@ export const useProductStore = create<ProductState>((set) => ({
       console.error('Error fetching products:', error);
       set({ error: error.message, isLoading: false });
     }
+  },
+  subscribeToRealtime: () => {
+    // Subscribe to branch_stock changes (stock updates from any device)
+    const stockChannel = supabase
+      .channel('branch_stock_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'branch_stock' },
+        () => {
+          get().fetchProducts();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to products table changes (product edits, new products, deletes)
+    const productsChannel = supabase
+      .channel('products_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => {
+          get().fetchProducts();
+        }
+      )
+      .subscribe();
+
+    // Return cleanup function
+    return () => {
+      supabase.removeChannel(stockChannel);
+      supabase.removeChannel(productsChannel);
+    };
   },
 }));
 
