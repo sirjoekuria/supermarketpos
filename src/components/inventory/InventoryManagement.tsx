@@ -62,8 +62,8 @@ export default function InventoryManagement() {
 
   let filtered = products.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.barcode.includes(search)
+      (p.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.barcode || "").includes(search)
   );
 
   const today = new Date(); today.setHours(0,0,0,0);
@@ -84,7 +84,7 @@ export default function InventoryManagement() {
   if (filterBy === "expired") filtered = filtered.filter(p => expiryStatus(p) === "expired");
 
   filtered = filtered.sort((a, b) => {
-    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "name") return (a.name || "").localeCompare(b.name || "");
     if (sortBy === "price") return b.price - a.price;
     if (sortBy === "stock") return b.stock_quantity - a.stock_quantity;
     return 0;
@@ -122,19 +122,20 @@ export default function InventoryManagement() {
     setActionError("");
     setEditingProduct(product);
     setForm({
-      name: product.name,
-      barcode: product.barcode,
-      price: String(product.price),
+      name: product.name || "",
+      barcode: product.barcode || "",
+      price: String(product.price || 0),
       cost_price: product.cost_price ? String(product.cost_price) : "",
-      stock_quantity: String(product.stock_quantity),
-      min_stock_level: String(product.min_stock_level),
-      unit: product.unit,
-      tax_rate: String(product.tax_rate),
-      discount_percent: String(product.discount_percent),
+      stock_quantity: String(product.stock_quantity || 0),
+      min_stock_level: String(product.min_stock_level || 0),
+      unit: product.unit || "pcs",
+      tax_rate: String(product.tax_rate || 0),
+      discount_percent: String(product.discount_percent || 0),
       image_url: product.image_url || "",
-      is_active: product.is_active,
-      expiry_date: product.expiry_date ?? "",
+      is_active: product.is_active ?? true,
+      expiry_date: product.expiry_date || "",
     });
+    setShowAddModal(true);
   };
 
   const handleImageFile = (event: ChangeEvent<HTMLInputElement>) => {

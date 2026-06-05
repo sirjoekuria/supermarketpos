@@ -231,7 +231,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
       
       if (productsError) throw productsError;
 
-      let updatedProducts = productsData as Product[];
+      let updatedProducts = (productsData || []) as Product[];
 
       if (currentBranchId) {
         // 2. Fetch stock for the selected branch
@@ -243,7 +243,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         if (stockError) throw stockError;
 
         // Map product_id -> stock_quantity
-        const stockMap = new Map(stockData.map(s => [s.product_id, s.stock_quantity]));
+        const stockMap = new Map((stockData || []).map(s => [s.product_id, s.stock_quantity]));
 
         // Override product stock_quantity with branch stock quantity
         updatedProducts = updatedProducts.map(p => ({
@@ -258,7 +258,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
         if (!stockError && stockData) {
           const stockMap = new Map<string, number>();
-          for (const s of stockData) {
+          for (const s of (stockData || [])) {
             const current = stockMap.get(s.product_id) ?? 0;
             stockMap.set(s.product_id, current + s.stock_quantity);
           }
@@ -277,9 +277,12 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
   subscribeToRealtime: () => {
+    // Unique channel names for each subscription instance
+    const id = Math.random().toString(36).substring(7);
+    
     // Subscribe to branch_stock changes (stock updates from any device)
     const stockChannel = supabase
-      .channel('branch_stock_realtime')
+      .channel(`branch_stock_realtime_${id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'branch_stock' },
@@ -291,7 +294,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     // Subscribe to products table changes (product edits, new products, deletes)
     const productsChannel = supabase
-      .channel('products_realtime')
+      .channel(`products_realtime_${id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
