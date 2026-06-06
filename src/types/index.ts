@@ -43,6 +43,8 @@ export interface CartItem {
   quantity: number;
   discount: number;
   total: number;
+  cost_price?: number;
+  profit?: number;
 }
 
 export interface Sale {
@@ -53,6 +55,7 @@ export interface Sale {
   tax_amount: number;
   discount_amount: number;
   total: number;
+  total_profit?: number;
   payment_method: "mpesa" | "cash" | "card" | "split";
   payment_status: "pending" | "completed" | "failed" | "refunded";
   split_payments?: {

@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.sales (
     tax_amount DECIMAL(10, 2) NOT NULL,
     discount_amount DECIMAL(10, 2) NOT NULL,
     total DECIMAL(10, 2) NOT NULL,
+    total_profit DECIMAL(10, 2) DEFAULT 0,
     payment_method VARCHAR(50) NOT NULL,
     payment_status VARCHAR(50) NOT NULL,
     cashier_id UUID REFERENCES public.profiles(id),
@@ -90,10 +91,12 @@ CREATE TABLE IF NOT EXISTS public.sale_items (
     product_id UUID REFERENCES public.products(id),
     quantity INTEGER NOT NULL,
     unit_price DECIMAL(10, 2) NOT NULL,
+    cost_price DECIMAL(10, 2) DEFAULT 0,
     subtotal DECIMAL(10, 2) NOT NULL,
     tax_amount DECIMAL(10, 2) NOT NULL,
     discount_amount DECIMAL(10, 2) NOT NULL,
     total DECIMAL(10, 2) NOT NULL,
+    profit DECIMAL(10, 2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

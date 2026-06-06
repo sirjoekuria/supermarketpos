@@ -398,17 +398,23 @@ export default function POSScreen() {
     setError("");
     try {
       const receiptNum = generateReceiptNumber();
-      const saleItems = items.map((item) => ({
-        product_id: item.product.id,
-        quantity: item.quantity,
-        unit_price: item.product.price,
-        subtotal: item.product.price * item.quantity,
-        tax_amount: (item.product.price * item.quantity) * (item.product.tax_rate / 100),
-        discount_amount: item.discount || 0,
-        total: item.total,
-      }));
+      const saleItems = items.map((item) => {
+        const itemProfit = (item.product.price - (item.product.cost_price || 0)) * item.quantity - (item.discount || 0);
+        return {
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.product.price,
+          cost_price: item.product.cost_price || 0,
+          subtotal: item.product.price * item.quantity,
+          tax_amount: (item.product.price * item.quantity) * (item.product.tax_rate / 100),
+          discount_amount: item.discount || 0,
+          total: item.total,
+          profit: itemProfit,
+        };
+      });
 
       const currentBranchId = useBranchStore.getState().currentBranchId;
+      const totalProfit = saleItems.reduce((sum, item) => sum + item.profit, 0);
       const payload = {
         receipt_number: receiptNum,
         mpesa_transaction_id: mpesaTransactionId || null,
@@ -424,6 +430,7 @@ export default function POSScreen() {
         points_redeemed: pointsRedeemed,
         actor: user ? { id: user.id, email: user.email, full_name: user.full_name, role: user.role } : undefined,
         branch_id: currentBranchId || null,
+        total_profit: totalProfit,
       };
 
       // ── Offline mode or Instant Payment (Cash/Card) optimistic execution ────
@@ -451,6 +458,7 @@ export default function POSScreen() {
           tax_amount: totals.taxAmount,
           discount_amount: totals.discountAmount,
           total: netTotal,
+          total_profit: totalProfit,
           payment_method: paymentMethod,
           payment_status: isOnline ? "completed" : "pending_sync",
           mpesa_transaction_id: mpesaTransactionId,
@@ -530,6 +538,7 @@ export default function POSScreen() {
         tax_amount: totals.taxAmount,
         discount_amount: totals.discountAmount,
         total: netTotal,
+        total_profit: totalProfit,
         payment_method: paymentMethod,
         payment_status: "completed",
         mpesa_transaction_id: mpesaTransactionId,

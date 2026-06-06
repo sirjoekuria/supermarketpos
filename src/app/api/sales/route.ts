@@ -9,13 +9,15 @@ type SaleItemPayload = {
   tax_amount: number;
   discount_amount: number;
   total: number;
+  cost_price: number;
+  profit: number;
 };
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const items = body.items as SaleItemPayload[] | undefined;
-    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, payment_method, payment_status = "completed", actor, mpesa_transaction_id } = body;
+    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, total_profit, payment_method, payment_status = "completed", actor, mpesa_transaction_id } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Sale must include at least one item." }, { status: 400 });
@@ -78,6 +80,7 @@ export async function POST(request: Request) {
         tax_amount,
         discount_amount,
         total,
+        total_profit: total_profit || 0,
         payment_method,
         payment_status,
         customer_id: customer_id || null,
@@ -149,10 +152,12 @@ export async function POST(request: Request) {
       product_id: item.product_id,
       quantity: item.quantity,
       unit_price: item.unit_price,
+      cost_price: item.cost_price || 0,
       subtotal: item.subtotal,
       tax_amount: item.tax_amount,
       discount_amount: item.discount_amount,
       total: item.total,
+      profit: item.profit || 0,
     }));
 
     const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
