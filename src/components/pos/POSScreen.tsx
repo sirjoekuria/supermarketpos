@@ -21,7 +21,7 @@ import ScanFeedback from "./ScanFeedback";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;
 
-type SplitPaymentMethod = "cash" | "mpesa" | "card";
+type SplitPaymentMethod = "cash" | "mpesa";
 
 export default function POSScreen() {
   const {
@@ -46,11 +46,9 @@ export default function POSScreen() {
   const [splitPayments, setSplitPayments] = useState<Record<SplitPaymentMethod, string>>({
     cash: "",
     mpesa: "",
-    card: "",
   });
-  const [splitReferences, setSplitReferences] = useState<Record<"mpesa" | "card", string>>({
+  const [splitReferences, setSplitReferences] = useState<Record<"mpesa", string>>({
     mpesa: "",
-    card: "",
   });
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
@@ -192,8 +190,7 @@ export default function POSScreen() {
   };
   const splitPaidTotal = Math.round(
     parseAmount(splitPayments.cash) +
-      parseAmount(splitPayments.mpesa) +
-      parseAmount(splitPayments.card)
+      parseAmount(splitPayments.mpesa)
   );
   const splitBalance = Math.max(netTotal - splitPaidTotal, 0);
   const splitChange = Math.max(splitPaidTotal - netTotal, 0);
@@ -202,7 +199,7 @@ export default function POSScreen() {
       method,
       amount: parseAmount(value),
       reference:
-        method === "mpesa" || method === "card"
+        method === "mpesa"
           ? splitReferences[method].trim() || undefined
           : undefined,
     }))
@@ -433,8 +430,8 @@ export default function POSScreen() {
         total_profit: totalProfit,
       };
 
-      // ── Offline mode or Instant Payment (Cash/Card) optimistic execution ────
-      const isInstantPayment = paymentMethod === "cash" || paymentMethod === "card";
+      // ── Offline mode or Instant Payment (Cash) optimistic execution ────
+      const isInstantPayment = paymentMethod === "cash";
 
       if (!isOnline || isInstantPayment) {
         const raw = localStorage.getItem("pos_offline_queue") || "[]";
@@ -484,8 +481,8 @@ export default function POSScreen() {
         clearCart();
         setShowPayment(false);
         setCashReceived("");
-        setSplitPayments({ cash: "", mpesa: "", card: "" });
-        setSplitReferences({ mpesa: "", card: "" });
+        setSplitPayments({ cash: "", mpesa: "" });
+        setSplitReferences({ mpesa: "" });
         setMobileTab("products");
 
         // Fire API request in background if online
@@ -559,8 +556,8 @@ export default function POSScreen() {
       clearCart();
       setShowPayment(false);
       setCashReceived("");
-      setSplitPayments({ cash: "", mpesa: "", card: "" });
-      setSplitReferences({ mpesa: "", card: "" });
+      setSplitPayments({ cash: "", mpesa: "" });
+      setSplitReferences({ mpesa: "" });
       setMobileTab("products");
     } catch (err: any) {
       setError(err.message || "Payment processing failed");
@@ -1134,7 +1131,6 @@ export default function POSScreen() {
                 {[
                   { id: "cash", label: "Cash", icon: Banknote },
                   { id: "mpesa", label: "M-Pesa", icon: Smartphone },
-                  { id: "card", label: "Card", icon: CreditCard },
                   { id: "split", label: "Split", icon: Split },
                 ].map(({ id, label, icon: Icon }) => (
                   <button
@@ -1217,17 +1213,6 @@ export default function POSScreen() {
                 </div>
               )}
 
-              {paymentMethod === "card" && (
-                <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-8 border border-gray-200 dark:border-gray-800 text-center flex-grow flex flex-col items-center justify-center">
-                    <div className="w-16 h-16 mb-4 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                      <CreditCard className="w-8 h-8 text-yellow-500" />
-                    </div>
-                    <p className="text-gray-900 dark:text-white font-medium text-lg">Card Reader Required</p>
-                    <p className="text-sm text-gray-500 mt-2">Please connect a physical card reader device to process card payments.</p>
-                  </div>
-                </section>
-              )}
 
               {paymentMethod === "split" && (
                 <section className="px-6 flex-grow flex flex-col">
@@ -1262,7 +1247,6 @@ export default function POSScreen() {
                       {[
                         { method: "cash" as const, label: "Cash", icon: Banknote },
                         { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
-                        { method: "card" as const, label: "Card", icon: CreditCard },
                       ].map(({ method, label, icon: Icon }) => {
                         const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
                         const remainingForMethod = Math.max(totals.total - otherPaid, 0);
@@ -1298,14 +1282,14 @@ export default function POSScreen() {
                               placeholder="0"
                               className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
                             />
-                            {(method === "mpesa" || method === "card") && (
+                            {method === "mpesa" && (
                               <input
                                 type="text"
                                 value={splitReferences[method]}
                                 onChange={(e) =>
                                   setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
                                 }
-                                placeholder={method === "mpesa" ? "M-Pesa code" : "Card reference"}
+                                placeholder="M-Pesa code"
                                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#4caf50] transition-colors"
                               />
                             )}
