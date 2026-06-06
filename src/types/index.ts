@@ -150,6 +150,10 @@ export interface AppSettings {
   receipt_footer?: string;
   mpesa_enabled: boolean;
   dark_mode_default: boolean;
+  auto_print_receipt?: boolean;
+  sms_loyalty_enabled?: boolean;
+  sms_api_key?: string;
+  sms_username?: string;
   created_at: string;
   updated_at: string;
 }

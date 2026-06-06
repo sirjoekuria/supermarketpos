@@ -121,6 +121,7 @@ export default function Reports() {
   const [reportType, setReportType]   = useState("sales");
 
   const [data, setData]         = useState<ReportData | null>(null);
+  const [shifts, setShifts]     = useState<any[]>([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
 
@@ -137,6 +138,15 @@ export default function Reports() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load report");
       setData(json);
+
+      // Fetch shifts alongside reports
+      try {
+        const shiftsRes = await fetch(`/api/shifts?limit=50`);
+        const shiftsJson = await shiftsRes.json();
+        if (shiftsRes.ok && shiftsJson.shifts) setShifts(shiftsJson.shifts);
+      } catch (err) {
+        console.error("Failed to load shifts", err);
+      }
     } catch (e: any) {
       setError(e.message || "Unknown error");
     } finally {
@@ -274,6 +284,7 @@ export default function Reports() {
               { id: "sales",    label: "Sales Report",        icon: BarChart3  },
               { id: "products", label: "Product Performance", icon: ShoppingBag},
               { id: "cashiers", label: "Cashier Performance", icon: Users      },
+              { id: "shifts",   label: "Shifts",              icon: Calendar   },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -555,6 +566,62 @@ export default function Reports() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Shifts Report ──────────────────────────────────────── */}
+            {reportType === "shifts" && (
+              <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Recent Shifts</h3>
+                {shifts.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400 text-sm">No shift data available.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-pos-border text-left">
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Date/Time</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400">Cashier</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 text-right">Starting Cash</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 text-right">Expected Cash</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 text-right">Actual Cash</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 text-right">Variance</th>
+                          <th className="pb-3 text-xs font-semibold text-gray-500 dark:text-gray-400 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-pos-border">
+                        {shifts.map((s) => (
+                          <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors">
+                            <td className="py-3 text-sm text-gray-700 dark:text-gray-300">
+                              {new Date(s.opened_at).toLocaleString("en-KE")}
+                              {s.closed_at && <div className="text-xs text-gray-400">to {new Date(s.closed_at).toLocaleString("en-KE")}</div>}
+                            </td>
+                            <td className="py-3 text-sm font-medium text-gray-900 dark:text-white">{s.cashier_name || "Unknown"}</td>
+                            <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{formatCurrency(s.starting_cash)}</td>
+                            <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{formatCurrency(s.expected_cash)}</td>
+                            <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{s.actual_cash !== null ? formatCurrency(s.actual_cash) : "-"}</td>
+                            <td className={cn(
+                              "py-3 text-sm text-right font-bold",
+                              s.difference === null ? "text-gray-400" :
+                              s.difference === 0 ? "text-green-500" :
+                              s.difference > 0 ? "text-blue-500" : "text-red-500"
+                            )}>
+                              {s.difference !== null ? formatCurrency(s.difference) : "-"}
+                            </td>
+                            <td className="py-3 text-center">
+                              <span className={cn(
+                                "inline-block text-xs font-semibold px-2 py-0.5 rounded-full",
+                                s.status === "open" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                              )}>
+                                {s.status.toUpperCase()}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

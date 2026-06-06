@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { Printer, FileDown, X, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { Sale, AppSettings } from "@/types";
@@ -117,6 +117,15 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
       body  { padding: 6px 2px; }
     }
   `;
+
+  /* ── AUTO PRINT ───────────────────────────────────────────── */
+  useEffect(() => {
+    if (settings?.auto_print_receipt) {
+      const timer = setTimeout(() => handlePrint(), 500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── PRINT ────────────────────────────────────────────────── */
   const handlePrint = () => {

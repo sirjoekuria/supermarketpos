@@ -381,3 +381,56 @@ export const useBranchStore = create<BranchState>()(
     }
   )
 );
+
+export interface Shift {
+  id: string;
+  branch_id?: string;
+  cashier_id: string;
+  starting_cash: number;
+  expected_cash: number;
+  actual_cash?: number;
+  difference?: number;
+  status: 'open' | 'closed';
+  opened_at: string;
+  closed_at?: string;
+}
+
+interface ShiftState {
+  activeShift: Shift | null;
+  setActiveShift: (shift: Shift | null) => void;
+  openShift: (cashier_id: string, starting_cash: number, branch_id?: string) => Promise<void>;
+  closeShift: (shift_id: string, actual_cash: number) => Promise<void>;
+}
+
+export const useShiftStore = create<ShiftState>()(
+  persist(
+    (set) => ({
+      activeShift: null,
+      setActiveShift: (shift) => set({ activeShift: shift }),
+      openShift: async (cashier_id, starting_cash, branch_id) => {
+        const res = await fetch("/api/shifts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cashier_id, starting_cash, branch_id })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to open shift");
+        set({ activeShift: data.shift });
+      },
+      closeShift: async (shift_id, actual_cash) => {
+        const res = await fetch("/api/shifts", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shift_id, actual_cash })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to close shift");
+        set({ activeShift: null }); // Clear active shift once closed
+      }
+    }),
+    {
+      name: "pos-shift",
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);

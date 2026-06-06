@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Save, Building2, Receipt, Palette, Shield, Users, CheckCircle2, X } from "lucide-react";
+import { Save, Building2, Receipt, Palette, Shield, Users, CheckCircle2, X, MessageSquare, Printer } from "lucide-react";
 import { useSettingsStore, useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
 import StaffDirectory from "./StaffDirectory";
@@ -19,6 +19,10 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState(settings?.currency || "KES");
   const [receiptFooter, setReceiptFooter] = useState(settings?.receipt_footer || "Thank you for shopping with us!");
   const [mpesaEnabled, setMpesaEnabled] = useState(settings?.mpesa_enabled ?? true);
+  const [autoPrintReceipt, setAutoPrintReceipt] = useState(settings?.auto_print_receipt ?? false);
+  const [smsLoyaltyEnabled, setSmsLoyaltyEnabled] = useState(settings?.sms_loyalty_enabled ?? false);
+  const [smsApiKey, setSmsApiKey] = useState(settings?.sms_api_key || "");
+  const [smsUsername, setSmsUsername] = useState(settings?.sms_username || "");
   const [showPinChange, setShowPinChange] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -44,6 +48,10 @@ export default function SettingsPage() {
         receipt_footer: receiptFooter,
         mpesa_enabled: mpesaEnabled,
         dark_mode_default: settings?.dark_mode_default ?? false,
+        auto_print_receipt: autoPrintReceipt,
+        sms_loyalty_enabled: smsLoyaltyEnabled,
+        sms_api_key: smsApiKey,
+        sms_username: smsUsername,
         created_at: settings?.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -67,6 +75,7 @@ export default function SettingsPage() {
     { id: "general", label: "General Info", icon: Building2 },
     { id: "receipts", label: "Receipt Config", icon: Receipt },
     { id: "appearance", label: "Appearance", icon: Palette },
+    { id: "loyalty", label: "Loyalty SMS", icon: MessageSquare },
     { id: "security", label: "Security", icon: Shield },
     { id: "staff", label: "Staff Directory", icon: Users },
   ];
@@ -285,6 +294,27 @@ export default function SettingsPage() {
                 </button>
               </div>
 
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-pos-border mt-4">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white text-sm">Auto-Print Receipts</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Automatically trigger printing after successful payment</p>
+                </div>
+                <button
+                  onClick={() => setAutoPrintReceipt(!autoPrintReceipt)}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                    autoPrintReceipt ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm",
+                      autoPrintReceipt ? "translate-x-6" : "translate-x-1"
+                    )}
+                  />
+                </button>
+              </div>
+
               <div className="flex justify-end pt-2">
                 <button
                   onClick={handleSave}
@@ -349,6 +379,74 @@ export default function SettingsPage() {
                     />
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loyalty SMS */}
+          {activeTab === "loyalty" && (
+            <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6 space-y-5">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-gray-400" />
+                Loyalty SMS Settings
+              </h3>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-pos-border">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white text-sm">Enable Loyalty SMS</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Send automatic SMS to customers when points are earned or redeemed.</p>
+                </div>
+                <button
+                  onClick={() => setSmsLoyaltyEnabled(!smsLoyaltyEnabled)}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                    smsLoyaltyEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm",
+                      smsLoyaltyEnabled ? "translate-x-6" : "translate-x-1"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {smsLoyaltyEnabled && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-yellow-800 dark:text-yellow-400 text-sm">
+                    <strong>Note:</strong> We currently support <strong>Africa's Talking</strong> SMS API. You will need an active account and API Key.
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Africa's Talking Username</label>
+                    <input
+                      type="text"
+                      value={smsUsername}
+                      onChange={(e) => setSmsUsername(e.target.value)}
+                      placeholder="e.g. sandbox or your_app_name"
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">API Key</label>
+                    <input
+                      type="password"
+                      value={smsApiKey}
+                      onChange={(e) => setSmsApiKey(e.target.value)}
+                      placeholder="atsk_..."
+                      className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition-all active:scale-[0.98]"
+                >
+                  <Save className="w-4 h-4" /> Save Changes
+                </button>
               </div>
             </div>
           )}

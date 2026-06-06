@@ -6,7 +6,7 @@ import {
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
   LogOut, Moon, Sun, Menu, Gift, Lock, WifiOff, Wifi, RefreshCw, User,
 } from "lucide-react";
-import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore, useBranchStore } from "@/store";
+import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore, useBranchStore, useShiftStore } from "@/store";
 import ManagerAuth from "./ManagerAuth";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,11 @@ export default function POSScreen() {
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { activeShift, openShift, closeShift } = useShiftStore();
+  const [showCloseShift, setShowCloseShift] = useState(false);
+  const [shiftCashInput, setShiftCashInput] = useState("");
+  const [shiftError, setShiftError] = useState("");
 
   const getExpiryStatus = (product: Product) => {
     if (!product.expiry_date) return "none";
@@ -477,6 +482,21 @@ export default function POSScreen() {
         };
 
         setCompletedSale(offlineSale);
+
+        // Trigger Loyalty SMS (Offline/Optimistic)
+        if (settings?.sms_loyalty_enabled && selectedCustomer && (optimisticPoints > 0 || pointsRedeemed > 0)) {
+          fetch("/api/sms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: selectedCustomer.phone,
+              message: `Hi ${selectedCustomer.name.split(" ")[0]}, you earned ${optimisticPoints} pts and redeemed ${pointsRedeemed} pts. New Balance: ${newLoyaltyBalance} pts. Thank you for shopping with ${settings.shop_name || "us"}!`,
+              apiKey: settings.sms_api_key,
+              username: settings.sms_username,
+            }),
+          }).catch((err) => console.error("SMS Error:", err));
+        }
+
         setShowReceipt(true);
         clearCart();
         setShowPayment(false);
@@ -552,6 +572,21 @@ export default function POSScreen() {
       };
 
       setCompletedSale(sale);
+
+      // Trigger Loyalty SMS (Online)
+      if (settings?.sms_loyalty_enabled && selectedCustomer && (data.loyalty?.points_earned > 0 || pointsRedeemed > 0)) {
+        fetch("/api/sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: selectedCustomer.phone,
+            message: `Hi ${selectedCustomer.name.split(" ")[0]}, you earned ${data.loyalty.points_earned} pts and redeemed ${pointsRedeemed} pts. New Balance: ${data.loyalty.final_points_balance} pts. Thank you for shopping with ${settings.shop_name || "us"}!`,
+            apiKey: settings.sms_api_key,
+            username: settings.sms_username,
+          }),
+        }).catch((err) => console.error("SMS Error:", err));
+      }
+
       setShowReceipt(true);
       clearCart();
       setShowPayment(false);
@@ -617,6 +652,15 @@ export default function POSScreen() {
           >
             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
+          {activeShift && (
+            <button
+              onClick={() => setShowCloseShift(true)}
+              className="hidden sm:flex p-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-500 dark:text-gray-400 hover:text-amber-500 transition-colors items-center gap-2"
+              title="Close Shift"
+            >
+              <Lock className="w-5 h-5" />
+            </button>
+          )}
           <button
             onClick={() => logout()}
             className="p-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors"
@@ -676,6 +720,91 @@ export default function POSScreen() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
+        
+        {/* Shift Management Modals */}
+        {!activeShift && user?.role !== "admin" && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-pos-card rounded-3xl shadow-xl max-w-md w-full p-6 text-center space-y-4 relative">
+               <button onClick={logout} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><LogOut className="w-5 h-5"/></button>
+               <Lock className="w-12 h-12 text-primary-500 mx-auto" />
+               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Shift Closed</h2>
+               <p className="text-sm text-gray-500 dark:text-gray-400">Please open a new shift to start processing sales.</p>
+               {shiftError && <p className="text-xs text-red-500">{shiftError}</p>}
+               <div className="text-left mt-4">
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Starting Cash in Drawer</label>
+                 <input 
+                   type="number" 
+                   value={shiftCashInput} 
+                   onChange={(e) => setShiftCashInput(e.target.value)}
+                   placeholder="0.00"
+                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-primary-500" 
+                 />
+               </div>
+               <button 
+                 onClick={async () => {
+                   setIsProcessing(true);
+                   try {
+                     setShiftError("");
+                     await openShift(user!.id, parseFloat(shiftCashInput) || 0, currentBranchId || undefined);
+                     setShiftCashInput("");
+                   } catch (err: any) {
+                     setShiftError(err.message);
+                   } finally {
+                     setIsProcessing(false);
+                   }
+                 }}
+                 disabled={!user || isProcessing}
+                 className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+               >
+                 {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Open Shift"}
+               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Close Shift Modal */}
+        {showCloseShift && activeShift && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-pos-card rounded-3xl shadow-xl max-w-md w-full p-6 text-center space-y-4 relative">
+               <button onClick={() => setShowCloseShift(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"><X className="w-5 h-5"/></button>
+               <Lock className="w-12 h-12 text-amber-500 mx-auto" />
+               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Close Shift</h2>
+               <p className="text-sm text-gray-500 dark:text-gray-400">Count the physical cash in your drawer and enter it below.</p>
+               {shiftError && <p className="text-xs text-red-500">{shiftError}</p>}
+               <div className="text-left mt-4">
+                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Cash in Drawer</label>
+                 <input 
+                   type="number" 
+                   value={shiftCashInput} 
+                   onChange={(e) => setShiftCashInput(e.target.value)}
+                   placeholder="0.00"
+                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:ring-2 focus:ring-amber-500" 
+                 />
+               </div>
+               <button 
+                 onClick={async () => {
+                   setIsProcessing(true);
+                   try {
+                     setShiftError("");
+                     await closeShift(activeShift.id, parseFloat(shiftCashInput) || 0);
+                     setShiftCashInput("");
+                     setShowCloseShift(false);
+                     logout(); // Typically log out after shift closes
+                   } catch (err: any) {
+                     setShiftError(err.message);
+                   } finally {
+                     setIsProcessing(false);
+                   }
+                 }}
+                 disabled={!user || isProcessing || shiftCashInput === ""}
+                 className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+               >
+                 {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Close Shift"}
+               </button>
+            </div>
+          </div>
+        )}
+
         {/* Left Panel — Product Grid */}
         <div
           className={cn(
