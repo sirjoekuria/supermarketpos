@@ -1082,15 +1082,15 @@ export default function POSScreen() {
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal — Redesigned Two-Column Layout */}
       {showPayment && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
-          <div className="bg-white dark:bg-[#121417] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg overflow-hidden max-h-[90vh] flex flex-col font-sans">
+          <div className="bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-5xl overflow-hidden max-h-[95vh] flex flex-col font-sans">
             
             {/* Header */}
-            <div className="flex justify-between items-center mb-6 px-6 pt-6 flex-shrink-0">
+            <div className="flex justify-between items-center px-6 pt-5 pb-2 flex-shrink-0 border-b border-gray-100 dark:border-gray-800">
               <div className="w-8"></div>
-              <h1 className="text-lg font-semibold tracking-wide">Payment</h1>
+              <h1 className="text-lg font-semibold tracking-wide text-gray-900 dark:text-white">Payment</h1>
               <button 
                 onClick={() => {
                   setShowPayment(false);
@@ -1102,349 +1102,271 @@ export default function POSScreen() {
                   setShowLoyaltyPrompt(false);
                   setIsLookingUp(false);
                 }}
-                className="text-gray-500 hover:text-gray-900 dark:text-white dark:hover:opacity-70 transition-opacity p-2"
+                className="text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white transition-colors p-2"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 flex flex-col space-y-6 pb-6 custom-scrollbar">
-              
-              {/* Net Amount Card */}
-              <section className="px-6">
-                <div 
-                  className="rounded-3xl p-6 text-center text-gray-800 relative overflow-hidden" 
-                  style={{ 
-                    background: "linear-gradient(180deg, #ffffff 0%, #e8f5e9 100%)", 
-                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.6), 0 0 40px rgba(76, 175, 80, 0.15)" 
-                  }}
-                >
-                  <p className="text-xs font-bold tracking-widest uppercase text-gray-500 mb-1 relative z-10">Net Amount Due</p>
-                  <p className="text-5xl font-extrabold text-[#1b4332] relative z-10 font-mono">
-                    {formatCurrency(netTotal)}
-                  </p>
-                  {pointsRedeemed > 0 && (
-                    <p className="text-sm text-green-700 font-bold mt-2 flex items-center justify-center gap-1.5 relative z-10">
-                      <Gift className="w-4 h-4" />
-                      Points applied: -{formatCurrency(pointsRedeemed * 1)} ({pointsRedeemed} pts)
+            {/* Two-Column Layout: Left (Amount + Methods) | Right (Payment Details) */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="flex flex-col lg:flex-row min-h-0">
+                
+                {/* LEFT COLUMN — Amount + Payment Methods */}
+                <div className="lg:w-[380px] flex-shrink-0 p-5 lg:p-6 space-y-5 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800">
+                  
+                  {/* Net Amount Due Card */}
+                  <div className="rounded-2xl p-6 text-center relative overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700/50 shadow-lg">
+                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-2">Net Amount Due</p>
+                    <p className="text-4xl lg:text-5xl font-extrabold text-[#0d7a3e] dark:text-[#4ade80] font-mono">
+                      {formatCurrency(netTotal)}
                     </p>
-                  )}
-                  {/* Decorative background circle */}
-                  <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                  <div className="absolute -top-10 -left-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                </div>
-              </section>
+                    {pointsRedeemed > 0 && (
+                      <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-2 flex items-center justify-center gap-1.5">
+                        <Gift className="w-3.5 h-3.5" />
+                        Points: -{formatCurrency(pointsRedeemed)} ({pointsRedeemed} pts)
+                      </p>
+                    )}
+                  </div>
 
-              {/* LOYALTY SECTION INTEGRATION */}
-              <section className="px-6">
-                {selectedCustomer ? (
-                  <div className="bg-amber-50 dark:bg-[#1c1e22] border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-amber-500 flex items-center gap-1.5">
-                        <Gift className="w-4 h-4" />
-                        Loyalty Rewards
-                      </h4>
-                      <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-bold">
-                        {selectedCustomer.points_balance} pts available
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-normal">
-                      {selectedCustomer.name} has {selectedCustomer.points_balance} points. <strong className="text-amber-500">1 Point = 1 KES.</strong> (Max: {Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))} points).
-                    </p>
-
-                    {selectedCustomer.points_balance >= 100 ? (
-                      <div className="space-y-3 pt-1">
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="number"
-                            min="0"
-                            max={Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5))}
-                            placeholder="Points to redeem..."
-                            value={pointsRedeemed || ""}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 0;
-                              const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
-                              if (val > maxLimit) {
-                                setPointsRedeemed(maxLimit);
-                              } else {
-                                setPointsRedeemed(val);
-                              }
-                            }}
-                            className="flex-1 px-3.5 py-2.5 text-sm bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-amber-500 transition-colors"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const maxLimit = Math.min(selectedCustomer.points_balance, Math.floor(totals.total * 0.5));
-                              setPointsRedeemed(pointsRedeemed === maxLimit ? 0 : maxLimit);
-                            }}
-                            className={cn(
-                              "px-3.5 py-2.5 border rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95",
-                              pointsRedeemed > 0
-                                ? "bg-amber-600 border-amber-600 text-white shadow-md shadow-amber-600/20"
-                                : "bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-[#1c1e22]"
-                            )}
-                          >
-                            {pointsRedeemed > 0 ? "Reset" : "Redeem Max"}
-                          </button>
-                        </div>
-                        {pointsRedeemed > 0 && pointsRedeemed < 100 && (
-                          <p className="text-[10px] text-red-400 flex items-center gap-1">
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            Minimum redemption is 100 points.
+                  {/* Loyalty Points Button */}
+                  <div className="flex justify-center">
+                    {selectedCustomer ? (
+                      <div className="w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl p-3 text-center">
+                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1.5">
+                          <Gift className="w-3.5 h-3.5" />
+                          {selectedCustomer.points_balance} pts available
+                        </p>
+                        {pointsRedeemed > 0 && (
+                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                            Redeemed: {pointsRedeemed} pts (-{formatCurrency(pointsRedeemed)})
                           </p>
                         )}
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 p-3 bg-amber-950/30 border border-amber-900/50 rounded-xl text-amber-400 text-xs">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        Balance is too low (Need {100 - selectedCustomer.points_balance} more).
-                      </div>
+                      <button
+                        onClick={() => setShowLoyaltyPrompt(true)}
+                        className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700/30 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
+                      >
+                        <Gift className="w-4 h-4" /> Add Loyalty Points
+                      </button>
                     )}
                   </div>
-                ) : showLoyaltyPrompt ? (
-                  <div className="bg-indigo-50 dark:bg-[#1c1e22] border border-indigo-200 dark:border-indigo-500/20 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-bold text-indigo-400 flex items-center gap-1.5">
-                        <User className="w-4 h-4" />
-                        Add Loyalty Points
-                      </h4>
-                      <button onClick={() => setShowLoyaltyPrompt(false)} className="text-gray-500 hover:text-white">
-                        <X className="w-4 h-4" />
+
+                  {/* Payment Method Buttons — 2x2 Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: "cash", label: "Cash", icon: Banknote },
+                      { id: "mpesa", label: "M-Pesa", icon: Smartphone },
+                      { id: "card", label: "Card", icon: CreditCard },
+                      { id: "split", label: "Split", icon: Split },
+                    ].map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => { setPaymentMethod(id); setError(""); }}
+                        className={cn(
+                          "rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all border-2",
+                          paymentMethod === id
+                            ? "bg-green-50 dark:bg-green-900/20 border-[#0d7a3e] dark:border-[#4ade80] text-[#0d7a3e] dark:text-[#4ade80] shadow-[0_0_20px_rgba(76,175,80,0.15)] dark:shadow-[0_0_20px_rgba(74,222,128,0.2)]"
+                            : "bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-gray-700/50 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                        )}
+                      >
+                        <Icon className="w-7 h-7" />
+                        <span className="text-sm font-medium">{label}</span>
                       </button>
-                    </div>
-                    <div className="space-y-3 pt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    ))}
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN — Payment Details */}
+                <div className="flex-1 p-5 lg:p-6 min-h-0">
+                  
+                  {/* Cash Payment */}
+                  {paymentMethod === "cash" && (
+                    <div className="h-full flex flex-col">
+                      <div className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50 flex flex-col space-y-4 flex-1">
+                        <h2 className="text-[#0d7a3e] dark:text-[#4ade80] font-semibold text-sm uppercase tracking-wide">Cash Payment</h2>
+                        {error && (
+                          <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-red-500 dark:text-red-400 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {error}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Cash Received</label>
                           <input
-                            type="tel"
-                            placeholder="Phone number..."
-                            value={checkoutPhone}
-                            onChange={(e) => {
-                              setCheckoutPhone(e.target.value);
-                              setLookupError("");
-                            }}
-                            className="w-full pl-9 pr-3.5 py-2.5 text-sm bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                            type="number"
+                            value={cashReceived}
+                            onChange={(e) => setCashReceived(e.target.value)}
+                            placeholder="Enter amount..."
+                            className="w-full px-4 py-4 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-xl font-mono focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
+                            autoFocus
                           />
                         </div>
+                        {cashChange > 0 && (
+                          <div className="flex justify-between items-center p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl">
+                            <span className="text-[#0d7a3e] dark:text-[#4ade80] font-medium">Change Due</span>
+                            <span className="text-2xl font-bold text-[#0d7a3e] dark:text-[#4ade80] font-mono">
+                              {formatCurrency(cashChange)}
+                            </span>
+                          </div>
+                        )}
                         <button
-                          type="button"
-                          onClick={handleCheckoutPhoneLookup}
-                          disabled={isLookingUp}
-                          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 text-white rounded-xl text-xs font-bold transition-all flex-shrink-0 active:scale-95 flex items-center gap-1.5"
+                          onClick={() => handlePayment()}
+                          disabled={parseFloat(cashReceived) < netTotal || isProcessing}
+                          className="w-full py-4 bg-[#0d7a3e] dark:bg-[#4ade80] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] disabled:opacity-50 text-white dark:text-[#0f1117] rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg mt-auto"
                         >
-                          {isLookingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                          Lookup
+                          {isProcessing ? (
+                            <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
+                          ) : (
+                            <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Payment</span>
+                          )}
                         </button>
                       </div>
-                      {lookupError && (
-                        <p className="text-[10px] text-red-400 flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5" /> {lookupError}
-                        </p>
-                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-center">
-                    <button
-                      onClick={() => setShowLoyaltyPrompt(true)}
-                      className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
-                    >
-                      <Gift className="w-4 h-4" /> Add Loyalty Points
-                    </button>
-                  </div>
-                )}
-              </section>
+                  )}
 
-              {/* Payment Methods Grid */}
-              <section className="grid grid-cols-2 gap-4 px-6">
-                {[
-                  { id: "cash", label: "Cash", icon: Banknote },
-                  { id: "mpesa", label: "M-Pesa", icon: Smartphone },
-                  { id: "split", label: "Split", icon: Split },
-                ].map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => {
-                      setPaymentMethod(id);
-                      setError("");
-                    }}
-                    className={cn(
-                      "rounded-xl p-4 flex flex-col items-center justify-center transition-all",
-                      paymentMethod === id
-                        ? "bg-green-50 dark:bg-[#1c1e22] border-2 border-[#4caf50] text-[#4caf50]"
-                        : "bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-[#4caf50] hover:text-[#4caf50] dark:hover:border-[#4caf50] dark:hover:text-[#4caf50]"
-                    )}
-                    style={paymentMethod === id ? { boxShadow: "0 0 25px rgba(76, 175, 80, 0.3)" } : {}}
-                  >
-                    <Icon className="w-6 h-6 mb-2" />
-                    <span className={cn("text-sm", paymentMethod === id ? "font-semibold" : "font-medium")}>
-                      {label}
-                    </span>
-                  </button>
-                ))}
-              </section>
-
-              {/* Dynamic Payment Method View */}
-              {paymentMethod === "cash" && (
-                <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-5 border border-gray-200 dark:border-gray-800 flex flex-col space-y-4">
-                    <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide">Cash Payment</h2>
-                    {error && (
-                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        {error}
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-400 mb-2">
-                        Cash Received
-                      </label>
-                      <input
-                        type="number"
-                        value={cashReceived}
-                        onChange={(e) => setCashReceived(e.target.value)}
-                        placeholder="Enter amount..."
-                        className="w-full px-4 py-4 bg-white dark:bg-[#121417] border border-amber-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-xl font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
-                        autoFocus
+                  {/* M-Pesa Payment */}
+                  {paymentMethod === "mpesa" && (
+                    <div className="h-full">
+                      <MpesaPayment
+                        amount={totals.total}
+                        onSuccess={handleMpesaSuccess}
+                        onFailure={handleMpesaFailure}
+                        onCancel={() => setShowPayment(false)}
                       />
                     </div>
-                    {cashChange > 0 && (
-                      <div className="flex justify-between items-center p-4 bg-[#4caf50]/10 border border-[#4caf50]/20 rounded-xl">
-                        <span className="text-[#4caf50] font-medium">Change Due</span>
-                        <span className="text-2xl font-bold text-[#4caf50] font-mono">
-                          {formatCurrency(cashChange)}
-                        </span>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => handlePayment()}
-                      disabled={parseFloat(cashReceived) < netTotal || isProcessing}
-                      className="w-full py-4 bg-gradient-to-b from-[#66bb6a] to-[#388e3c] hover:opacity-90 disabled:opacity-50 text-white rounded-3xl font-bold transition-transform active:scale-[0.98] shadow-[0_8px_15px_rgba(0,0,0,0.3)] mt-auto"
-                    >
-                      {isProcessing ? (
-                        <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Payment</span>
-                      )}
-                    </button>
-                  </div>
-                </section>
-              )}
+                  )}
 
-              {paymentMethod === "mpesa" && (
-                <div className="px-6 flex-grow flex flex-col">
-                  <MpesaPayment
-                    amount={totals.total}
-                    onSuccess={handleMpesaSuccess}
-                    onFailure={handleMpesaFailure}
-                    onCancel={() => setShowPayment(false)}
-                  />
-                </div>
-              )}
-
-
-              {paymentMethod === "split" && (
-                <section className="px-6 flex-grow flex flex-col">
-                  <div className="bg-gray-50 dark:bg-[#1c1e22] rounded-2xl p-5 border border-gray-200 dark:border-gray-800 space-y-4">
-                    <h2 className="text-[#4caf50] font-semibold text-sm uppercase tracking-wide mb-2">Split Payment</h2>
-                    
-                    {error && (
-                      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-900/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        {error}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-3 gap-3 text-center mb-4">
-                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-gray-500">Paid</p>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitPaidTotal)}</p>
-                      </div>
-                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-gray-500">Balance</p>
-                        <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-orange-400" : "text-[#4caf50]")}>
-                          {formatCurrency(splitBalance)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-white dark:bg-[#121417] p-3 border border-gray-200 dark:border-gray-800">
-                        <p className="text-xs text-gray-500">Change</p>
-                        <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitChange)}</p>
+                  {/* Card Payment */}
+                  {paymentMethod === "card" && (
+                    <div className="h-full flex flex-col">
+                      <div className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50 flex flex-col space-y-4 flex-1">
+                        <h2 className="text-[#0d7a3e] dark:text-[#4ade80] font-semibold text-sm uppercase tracking-wide">Card Payment</h2>
+                        <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+                          <CreditCard className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
+                          <p className="text-gray-500 dark:text-gray-400 font-medium mb-2">Card Terminal</p>
+                          <p className="text-sm text-gray-400 dark:text-gray-500 max-w-xs">
+                            Please use the connected card terminal to process this payment of <strong>{formatCurrency(netTotal)}</strong>
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handlePayment()}
+                          disabled={isProcessing}
+                          className="w-full py-4 bg-[#0d7a3e] dark:bg-[#4ade80] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] disabled:opacity-50 text-white dark:text-[#0f1117] rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg mt-auto"
+                        >
+                          {isProcessing ? (
+                            <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
+                          ) : (
+                            <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Confirm Card Payment</span>
+                          )}
+                        </button>
                       </div>
                     </div>
+                  )}
 
-                    <div className="space-y-3">
-                      {[
-                        { method: "cash" as const, label: "Cash", icon: Banknote },
-                        { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
-                      ].map(({ method, label, icon: Icon }) => {
-                        const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
-                        const remainingForMethod = Math.max(totals.total - otherPaid, 0);
-
-                        return (
-                          <div key={method} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#121417] p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-                                <Icon className="w-4 h-4 text-gray-500" />
-                                {label}
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSplitPayments((current) => ({
-                                    ...current,
-                                    [method]: remainingForMethod > 0 ? String(remainingForMethod) : "",
-                                  }))
-                                }
-                                className="text-xs font-bold text-[#4caf50] hover:text-[#388e3c] transition-colors"
-                              >
-                                Fill balance
-                              </button>
-                            </div>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={splitPayments[method]}
-                              onChange={(e) =>
-                                setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
-                              }
-                              placeholder="0"
-                              className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#4caf50] transition-colors"
-                            />
-                            {method === "mpesa" && (
-                              <input
-                                type="text"
-                                value={splitReferences[method]}
-                                onChange={(e) =>
-                                  setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
-                                }
-                                placeholder="M-Pesa code"
-                                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1c1e22] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#4caf50] transition-colors"
-                              />
-                            )}
+                  {/* Split Payment */}
+                  {paymentMethod === "split" && (
+                    <div className="h-full flex flex-col">
+                      <div className="bg-gray-50 dark:bg-[#1a1f2e] rounded-2xl p-5 border border-gray-200 dark:border-gray-700/50 space-y-4 flex-1">
+                        <h2 className="text-[#0d7a3e] dark:text-[#4ade80] font-semibold text-sm uppercase tracking-wide">Split Payment</h2>
+                        
+                        {error && (
+                          <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl text-red-500 dark:text-red-400 text-sm">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {error}
                           </div>
-                        );
-                      })}
+                        )}
+
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div className="rounded-xl bg-white dark:bg-[#0f1117] p-3 border border-gray-200 dark:border-gray-700/50">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Paid</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitPaidTotal)}</p>
+                          </div>
+                          <div className="rounded-xl bg-white dark:bg-[#0f1117] p-3 border border-gray-200 dark:border-gray-700/50">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Balance</p>
+                            <p className={cn("text-sm font-bold", splitBalance > 0 ? "text-orange-500 dark:text-orange-400" : "text-[#0d7a3e] dark:text-[#4ade80]")}>
+                              {formatCurrency(splitBalance)}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-white dark:bg-[#0f1117] p-3 border border-gray-200 dark:border-gray-700/50">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Change</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(splitChange)}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {[
+                            { method: "cash" as const, label: "Cash", icon: Banknote },
+                            { method: "mpesa" as const, label: "M-Pesa", icon: Smartphone },
+                          ].map(({ method, label, icon: Icon }) => {
+                            const otherPaid = splitPaidTotal - parseAmount(splitPayments[method]);
+                            const remainingForMethod = Math.max(netTotal - otherPaid, 0);
+
+                            return (
+                              <div key={method} className="rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-[#0f1117] p-4 space-y-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <label className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+                                    <Icon className="w-4 h-4 text-gray-400" />
+                                    {label}
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSplitPayments((current) => ({
+                                        ...current,
+                                        [method]: remainingForMethod > 0 ? String(remainingForMethod) : "",
+                                      }))
+                                    }
+                                    className="text-xs font-bold text-[#0d7a3e] dark:text-[#4ade80] hover:opacity-80 transition-opacity"
+                                  >
+                                    Fill balance
+                                  </button>
+                                </div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={splitPayments[method]}
+                                  onChange={(e) =>
+                                    setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
+                                  }
+                                  placeholder="0"
+                                  className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
+                                />
+                                {method === "mpesa" && (
+                                  <input
+                                    type="text"
+                                    value={splitReferences[method]}
+                                    onChange={(e) =>
+                                      setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
+                                    }
+                                    placeholder="M-Pesa code"
+                                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          onClick={() => handlePayment()}
+                          disabled={splitPaidTotal < netTotal || isProcessing}
+                          className="w-full py-4 bg-[#0d7a3e] dark:bg-[#4ade80] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] disabled:opacity-50 text-white dark:text-[#0f1117] rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg mt-auto"
+                        >
+                          {isProcessing ? (
+                            <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
+                          ) : (
+                            <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Split Payment</span>
+                          )}
+                        </button>
+                      </div>
                     </div>
+                  )}
 
-                    <button
-                      onClick={() => handlePayment()}
-                      disabled={splitPaidTotal < netTotal || isProcessing}
-                      className="w-full py-4 mt-4 bg-gradient-to-b from-[#66bb6a] to-[#388e3c] hover:opacity-90 disabled:opacity-50 text-white rounded-3xl font-bold transition-transform active:scale-[0.98] shadow-[0_8px_15px_rgba(0,0,0,0.3)]"
-                    >
-                      {isProcessing ? (
-                        <span className="flex items-center justify-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2"><CheckCircle2 className="w-5 h-5" /> Complete Split Payment</span>
-                      )}
-                    </button>
-                  </div>
-                </section>
-              )}
-
+                </div>
+              </div>
             </div>
           </div>
         </div>
