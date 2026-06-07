@@ -328,11 +328,12 @@ export default function MpesaPayment({
       } catch (err) {
         console.error("Status check error:", err);
       }
-      elapsed += elapsed < 8 ? 0.5 : 1.5; // fast 500ms polls for first 8s, then 1.5s
+      // Aggressive polling for the first 15 seconds (critical STK push window), then fallback to 1s
+      elapsed += elapsed < 15 ? 0.3 : 1.0; 
       
-      // Schedule next check: 500ms for first 8 seconds (DB-only fast path), then 1.5s (Safaricom fallback)
+      // Schedule next check: 300ms for first 15 seconds (instant DB detection), then 1000ms
       if (active) {
-        const nextInterval = elapsed <= 8 ? 500 : 1500;
+        const nextInterval = elapsed <= 15 ? 300 : 1000;
         timeoutId = setTimeout(checkStatus, nextInterval);
       }
     };
@@ -743,5 +744,4 @@ export default function MpesaPayment({
     </section>
   );
 }
-
 

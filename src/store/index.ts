@@ -277,7 +277,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
     }
   },
   subscribeToRealtime: () => {
-    // Unique channel names for each subscription instance
     const id = Math.random().toString(36).substring(7);
     
     // Subscribe to branch_stock changes (stock updates from any device)
@@ -286,8 +285,39 @@ export const useProductStore = create<ProductState>((set, get) => ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'branch_stock' },
-        () => {
-          get().fetchProducts();
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          const currentBranchId = useBranchStore.getState().currentBranchId;
+          
+          set((state) => {
+            if (eventType === 'INSERT' || eventType === 'UPDATE') {
+              if (!newRecord) return state;
+              // Only update local state if it matches the currently viewed branch
+              if (currentBranchId && newRecord.branch_id !== currentBranchId) {
+                return state;
+              }
+              const productId = newRecord.product_id;
+              const newStock = newRecord.stock_quantity;
+              
+              return {
+                products: state.products.map(p => 
+                  p.id === productId ? { ...p, stock_quantity: newStock } : p
+                )
+              };
+            } else if (eventType === 'DELETE') {
+              if (!oldRecord) return state;
+              if (currentBranchId && oldRecord.branch_id !== currentBranchId) {
+                return state;
+              }
+              const productId = oldRecord.product_id;
+              return {
+                products: state.products.map(p => 
+                  p.id === productId ? { ...p, stock_quantity: 0 } : p
+                )
+              };
+            }
+            return state;
+          });
         }
       )
       .subscribe();
@@ -298,8 +328,25 @@ export const useProductStore = create<ProductState>((set, get) => ({
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
-        () => {
-          get().fetchProducts();
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          
+          set((state) => {
+            if (eventType === 'INSERT' && newRecord) {
+              return { 
+                products: [...state.products, newRecord as Product].sort((a, b) => a.name.localeCompare(b.name)) 
+              };
+            } else if (eventType === 'UPDATE' && newRecord) {
+              return {
+                products: state.products.map(p => p.id === newRecord.id ? { ...p, ...newRecord } : p).sort((a, b) => a.name.localeCompare(b.name))
+              };
+            } else if (eventType === 'DELETE' && oldRecord) {
+              return { 
+                products: state.products.filter(p => p.id !== oldRecord.id) 
+              };
+            }
+            return state;
+          });
         }
       )
       .subscribe();

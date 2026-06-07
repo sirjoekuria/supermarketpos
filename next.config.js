@@ -20,6 +20,13 @@ const nextConfig = {
   // Strict mode for development
   reactStrictMode: true,
 
+  // Performance optimizations
+  poweredByHeader: false,
+  compress: true,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'date-fns', '@supabase/supabase-js'],
+  },
+
   // Headers for security (only applies when NOT in static export mode)
   ...(!isCapacitorBuild ? {
     async headers() {

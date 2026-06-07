@@ -7,16 +7,19 @@ import {
   LogOut, Moon, Sun, Menu, Gift, Lock, WifiOff, Wifi, RefreshCw, User,
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore, useBranchStore, useShiftStore } from "@/store";
-import ManagerAuth from "./ManagerAuth";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
-import BarcodeScanner from "./BarcodeScanner";
+import dynamic from "next/dynamic";
 import Cart from "./Cart";
-import MpesaPayment from "./MpesaPayment";
-import ReceiptComponent from "./Receipt";
-import CustomerDisplay from "./CustomerDisplay";
 import ScanFeedback from "./ScanFeedback";
+
+// Lazy-load heavy, conditionally-rendered components to speed up initial page load
+const ManagerAuth = dynamic(() => import("./ManagerAuth"), { ssr: false });
+const BarcodeScanner = dynamic(() => import("./BarcodeScanner"), { ssr: false });
+const MpesaPayment = dynamic(() => import("./MpesaPayment"), { ssr: false });
+const ReceiptComponent = dynamic(() => import("./Receipt"), { ssr: false });
+const CustomerDisplay = dynamic(() => import("./CustomerDisplay"), { ssr: false });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;

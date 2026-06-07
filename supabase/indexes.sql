@@ -26,3 +26,9 @@ CREATE INDEX IF NOT EXISTS idx_sale_items_product_id ON public.sale_items (produ
 
 -- 5. Users Indexes
 CREATE INDEX IF NOT EXISTS idx_app_users_role ON public.app_users (role);
+
+-- 6. Branch Stock Indexes
+-- Critical for fast stock lookups by branch and product
+CREATE INDEX IF NOT EXISTS idx_branch_stock_branch_id ON public.branch_stock (branch_id);
+CREATE INDEX IF NOT EXISTS idx_branch_stock_product_id ON public.branch_stock (product_id);
+CREATE INDEX IF NOT EXISTS idx_branch_stock_branch_product ON public.branch_stock (branch_id, product_id);
