@@ -246,9 +246,10 @@ export const useProductStore = create<ProductState>((set, get) => ({
         const stockMap = new Map((stockData || []).map(s => [s.product_id, s.stock_quantity]));
 
         // Override product stock_quantity with branch stock quantity
+        // Fall back to product's default stock_quantity if no branch_stock entry exists
         updatedProducts = updatedProducts.map(p => ({
           ...p,
-          stock_quantity: stockMap.get(p.id) ?? 0,
+          stock_quantity: stockMap.has(p.id) ? stockMap.get(p.id)! : p.stock_quantity,
         }));
       } else {
         // Aggregate stock from branch_stock
