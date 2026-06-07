@@ -31,39 +31,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // 2. Identify target branch_id
-    let targetBranchId = body.branch_id;
-    if (!targetBranchId) {
-      // Find the Main Branch id
-      const { data: mainBranch } = await supabase
-        .from("branches")
-        .select("id")
-        .eq("name", "Main Branch")
-        .limit(1)
-        .maybeSingle();
-      if (mainBranch) {
-        targetBranchId = mainBranch.id;
-      } else {
-        // Fallback to any branch
-        const { data: anyBranch } = await supabase
-          .from("branches")
-          .select("id")
-          .limit(1)
-          .maybeSingle();
-        if (anyBranch) targetBranchId = anyBranch.id;
-      }
+    // 2. Fetch all active branches
+    const { data: activeBranches, error: branchesError } = await supabase
+      .from("branches")
+      .select("id")
+      .eq("is_active", true);
+
+    if (branchesError) {
+      console.error("Error fetching branches:", branchesError);
     }
 
-    // 3. Create entry in branch_stock
-    if (targetBranchId) {
-      await supabase
+    // 3. Create branch_stock entries for ALL active branches
+    const stockQuantity = Number(body.stock_quantity) || 0;
+    const minStockLevel = Number(body.min_stock_level) || 5;
+
+    if (activeBranches && activeBranches.length > 0) {
+      const branchStockEntries = activeBranches.map((branch: { id: string }) => ({
+        branch_id: branch.id,
+        product_id: product.id,
+        stock_quantity: stockQuantity,
+        min_stock_level: minStockLevel,
+      }));
+
+      const { error: insertError } = await supabase
         .from("branch_stock")
-        .insert({
-          branch_id: targetBranchId,
-          product_id: product.id,
-          stock_quantity: Number(body.stock_quantity) || 0,
-          min_stock_level: Number(body.min_stock_level) || 5,
-        });
+        .insert(branchStockEntries);
+
+      if (insertError) {
+        console.error("Error creating branch_stock entries:", insertError);
+      }
     }
 
     writeAuditLog({

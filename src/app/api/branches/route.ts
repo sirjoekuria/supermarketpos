@@ -42,6 +42,36 @@ export async function POST(request: Request) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+    // Create branch_stock entries for ALL existing products in this new branch.
+    // New branches start with 0 stock so each branch maintains its own independent stock.
+    const { data: products, error: productsError } = await supabase
+      .from("products")
+      .select("id, min_stock_level");
+
+    if (productsError) {
+      console.error("Error fetching products for new branch stock:", productsError);
+    }
+
+    if (products && products.length > 0) {
+      const branchStockEntries = products.map((p: { id: string; min_stock_level: number | null }) => ({
+        branch_id: branch.id,
+        product_id: p.id,
+        stock_quantity: 0,
+        min_stock_level: p.min_stock_level ?? 5,
+      }));
+
+      // Insert in batches of 100
+      for (let i = 0; i < branchStockEntries.length; i += 100) {
+        const batch = branchStockEntries.slice(i, i + 100);
+        const { error: insertError } = await supabase
+          .from("branch_stock")
+          .insert(batch);
+        if (insertError) {
+          console.error("Error creating branch_stock for new branch:", insertError);
+        }
+      }
+    }
+
     // fire-and-forget — never block the response waiting for audit log
     writeAuditLog({
       action: "branch_created",
