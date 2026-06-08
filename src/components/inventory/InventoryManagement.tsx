@@ -47,11 +47,13 @@ export default function InventoryManagement() {
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const { products, isLoading, error, fetchProducts, subscribeToRealtime } = useProductStore();
-  const { currentBranchId } = useBranchStore();
+  const { currentBranchId, branches, fetchBranches } = useBranchStore();
+  const currentBranch = branches.find((b) => b.id === currentBranchId);
 
   useEffect(() => {
+    fetchBranches();
     fetchProducts();
-  }, [fetchProducts, currentBranchId]);
+  }, [fetchProducts, fetchBranches, currentBranchId]);
 
   // Real-time sync: refresh stock when any device changes branch_stock or products
   useEffect(() => {
@@ -179,6 +181,10 @@ export default function InventoryManagement() {
   };
 
   const handleCreate = async () => {
+    if (!currentBranchId) {
+      setActionError("Select a branch before adding products. Stock is tracked per branch.");
+      return;
+    }
     setIsSaving(true);
     setActionError("");
     try {
@@ -218,6 +224,10 @@ export default function InventoryManagement() {
 
   const handleSave = async () => {
     if (!editingProduct) return;
+    if (!currentBranchId) {
+      setActionError("Select a branch before updating stock. Stock is tracked per branch.");
+      return;
+    }
     setIsSaving(true);
     setActionError("");
     try {
@@ -408,7 +418,16 @@ export default function InventoryManagement() {
       <div className="hidden lg:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Inventory</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your product stock levels</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Manage product stock levels
+            {currentBranch ? (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-semibold">
+                Branch: {currentBranch.name}
+              </span>
+            ) : (
+              <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">— select a branch to view stock</span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -608,7 +627,7 @@ export default function InventoryManagement() {
                     { label: "Product", cls: "" },
                     { label: "Barcode", cls: "hidden md:table-cell" },
                     { label: "Price", cls: "" },
-                    { label: "Stock", cls: "" },
+                    { label: currentBranch ? `Stock (${currentBranch.name})` : "Stock", cls: "" },
                     { label: "Expiry", cls: "hidden sm:table-cell" },
                     { label: "Status", cls: "hidden sm:table-cell" },
                     { label: "Actions", cls: "" },
@@ -815,13 +834,30 @@ export default function InventoryManagement() {
                 </div>
               </div>
 
+              <label className="sm:col-span-2 space-y-1.5">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Branch *</span>
+                <select
+                  value={currentBranchId || ""}
+                  disabled
+                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none"
+                >
+                  <option value="">{branches.length ? "Select a branch from the top menu" : "Loading branches..."}</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Stock quantity applies only to this branch. Other branches start at 0.
+                </p>
+              </label>
+
               {[
                 { key: "name", label: "Name *", type: "text" },
                 { key: "barcode", label: "Barcode *", type: "text" },
                 { key: "price", label: "Price *", type: "number" },
                 { key: "cost_price", label: "Cost Price", type: "number" },
-                { key: "stock_quantity", label: "Stock Quantity", type: "number" },
-                { key: "min_stock_level", label: "Minimum Stock", type: "number" },
+                { key: "stock_quantity", label: currentBranch ? `Stock at ${currentBranch.name}` : "Stock Quantity", type: "number" },
+                { key: "min_stock_level", label: currentBranch ? `Min Stock at ${currentBranch.name}` : "Minimum Stock", type: "number" },
                 { key: "unit", label: "Unit", type: "text" },
                 { key: "tax_rate", label: "Tax Rate (%)", type: "number" },
                 { key: "discount_percent", label: "Discount (%)", type: "number" },

@@ -286,12 +286,18 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
                 <span>AMOUNT DUE :</span>
                 <span>{sale.total.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>TENDERED</span><span>{sale.total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>CHANGE</span><span>0.00</span>
-              </div>
+              {(sale.payment_method === "cash" || sale.payment_method === "split") && (
+                <>
+                  <div className="flex justify-between">
+                    <span>TENDERED</span>
+                    <span>{(sale.cash_tendered ?? sale.total).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>CHANGE</span>
+                    <span>{(sale.change_due ?? 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="divider border-t border-dashed border-black my-1.5" />
@@ -356,9 +362,9 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
               <div className="text-center text-[9px] space-y-0.5 text-gray-800">
                 <p className="font-bold text-black">LOYALTY POINTS</p>
                 <p>
-                  Old Bal: {(sale.customer.points_balance||0)+(sale.points_redeemed??0)-(sale.points_earned??0)}{" "}
-                  Awarded: {sale.points_earned??0}{" "}
-                  New Bal: {sale.customer.points_balance}
+                  Old Bal: {(sale.loyalty?.final_points_balance ?? sale.customer.points_balance) + (sale.points_redeemed ?? 0) - (sale.points_earned ?? 0)}{" "}
+                  Awarded: {sale.points_earned ?? 0}{" "}
+                  New Bal: {sale.loyalty?.final_points_balance ?? sale.customer.points_balance}
                 </p>
                 <p>Thank you {sale.customer.name}, come again!</p>
                 <div className="divider border-t border-dashed border-black my-1.5" />

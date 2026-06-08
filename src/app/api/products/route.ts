@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         barcode: sanitizeString(body.barcode),
         price: Number(body.price),
         cost_price: body.cost_price ? Number(body.cost_price) : null,
-        stock_quantity: Number(body.stock_quantity) || 0,
+        stock_quantity: 0,
         min_stock_level: Number(body.min_stock_level) || 5,
         unit: sanitizeString(body.unit) || "pcs",
         tax_rate: Number(body.tax_rate) || 0,
@@ -41,16 +41,17 @@ export async function POST(request: Request) {
       console.error("Error fetching branches:", branchesError);
     }
 
-    // 3. Create branch_stock entries for ALL active branches
+    // 3. Create branch_stock entries — stock only for the selected branch, 0 for others
     const stockQuantity = Number(body.stock_quantity) || 0;
     const minStockLevel = Number(body.min_stock_level) || 5;
+    const targetBranchId = body.branch_id as string | undefined;
 
     if (activeBranches && activeBranches.length > 0) {
       const branchStockEntries = activeBranches.map((branch: { id: string }) => ({
         branch_id: branch.id,
         product_id: product.id,
-        stock_quantity: stockQuantity,
-        min_stock_level: minStockLevel,
+        stock_quantity: targetBranchId === branch.id ? stockQuantity : 0,
+        min_stock_level: targetBranchId === branch.id ? minStockLevel : 5,
       }));
 
       const { error: insertError } = await supabase

@@ -105,6 +105,8 @@ export default function POSScreen() {
   const [showCheckoutQuickReg, setShowCheckoutQuickReg] = useState(false);
   const [checkoutNewName, setCheckoutNewName] = useState("");
   const [showLoyaltyPrompt, setShowLoyaltyPrompt] = useState(false);
+  const [redeemPointsInput, setRedeemPointsInput] = useState("");
+  const [redeemError, setRedeemError] = useState("");
 
   // ── Online / Offline detection ─────────────────────────────────────────────
   const [isOnline, setIsOnline] = useState(true);
@@ -191,6 +193,34 @@ export default function POSScreen() {
 
   const totals = getTotals();
   const netTotal = totals.total - pointsRedeemed;
+  const maxRedeemPoints = selectedCustomer
+    ? Math.min(selectedCustomer.points_balance, Math.floor(totals.subtotal * 0.5))
+    : 0;
+
+  const handleApplyRedeemPoints = () => {
+    const points = parseInt(redeemPointsInput, 10);
+    if (!selectedCustomer) return;
+    if (!Number.isFinite(points) || points <= 0) {
+      setRedeemError("Enter a valid number of points.");
+      return;
+    }
+    if (points < 100) {
+      setRedeemError("Minimum redemption is 100 points.");
+      return;
+    }
+    if (points > selectedCustomer.points_balance) {
+      setRedeemError(`Insufficient balance. Available: ${selectedCustomer.points_balance} pts.`);
+      return;
+    }
+    if (points > maxRedeemPoints) {
+      setRedeemError(`Maximum redeemable: ${maxRedeemPoints} pts (50% of order).`);
+      return;
+    }
+    setPointsRedeemed(points);
+    setRedeemError("");
+    setRedeemPointsInput("");
+    setShowLoyaltyPrompt(false);
+  };
 
   const parseAmount = (value: string) => {
     const amount = Number(value);
@@ -341,9 +371,11 @@ export default function POSScreen() {
           setSelectedCustomer(matched);
           setCheckoutPhone("");
           setLookupError("");
+          setShowCheckoutQuickReg(false);
           setShowLoyaltyPrompt(false);
         } else {
-          setLookupError("Customer not registered. Proceeding without points.");
+          setLookupError("Customer not found.");
+          setShowCheckoutQuickReg(true);
         }
       } else {
         setLookupError(data.error || "Failed to search customer.");
@@ -382,6 +414,7 @@ export default function POSScreen() {
         setCheckoutNewName("");
         setShowCheckoutQuickReg(false);
         setLookupError("");
+        setShowLoyaltyPrompt(false);
       } else {
         setLookupError(data.error || "Failed to register customer.");
       }
@@ -392,6 +425,17 @@ export default function POSScreen() {
     }
   };
 
+  const getPaymentTenderDetails = () => {
+    if (paymentMethod === "cash" && cashReceived) {
+      const tendered = parseFloat(cashReceived) || 0;
+      return { cash_tendered: tendered, change_due: Math.max(tendered - netTotal, 0) };
+    }
+    if (paymentMethod === "split") {
+      return { cash_tendered: splitPaidTotal, change_due: splitChange };
+    }
+    return { cash_tendered: undefined, change_due: 0 };
+  };
+
   const handlePayment = async (mpesaTransactionId?: string) => {
     if (items.length === 0) return;
     if (paymentMethod === "split" && splitPaidTotal < netTotal) {
@@ -399,6 +443,7 @@ export default function POSScreen() {
       return;
     }
 
+    const tenderDetails = getPaymentTenderDetails();
     setIsProcessing(true);
     setError("");
     try {
@@ -469,7 +514,9 @@ export default function POSScreen() {
           mpesa_transaction_id: mpesaTransactionId,
           split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
           customer_id: selectedCustomer?.id || "",
-          customer: selectedCustomer || undefined,
+          customer: selectedCustomer
+            ? { ...selectedCustomer, points_balance: newLoyaltyBalance ?? selectedCustomer.points_balance }
+            : undefined,
           points_earned: optimisticPoints,
           points_redeemed: pointsRedeemed,
           loyalty: selectedCustomer ? {
@@ -477,6 +524,8 @@ export default function POSScreen() {
             points_redeemed: pointsRedeemed,
             final_points_balance: newLoyaltyBalance,
           } : undefined,
+          cash_tendered: tenderDetails.cash_tendered,
+          change_due: tenderDetails.change_due,
           cashier_id: user?.id || "",
           cashier: user,
           created_at: new Date().toISOString(),
@@ -564,10 +613,14 @@ export default function POSScreen() {
         mpesa_transaction_id: mpesaTransactionId,
         split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
         customer_id: selectedCustomer?.id || "",
-        customer: selectedCustomer || undefined,
+        customer: selectedCustomer && data.loyalty
+          ? { ...selectedCustomer, points_balance: data.loyalty.final_points_balance }
+          : selectedCustomer || undefined,
         points_earned: data.loyalty?.points_earned || 0,
         points_redeemed: pointsRedeemed,
         loyalty: data.loyalty || undefined,
+        cash_tendered: tenderDetails.cash_tendered,
+        change_due: tenderDetails.change_due,
         cashier_id: user?.id || "",
         cashier: user,
         created_at: new Date().toISOString(),
@@ -1021,13 +1074,11 @@ export default function POSScreen() {
             <div className="lg:hidden p-3 bg-white dark:bg-pos-card border-t border-gray-200 dark:border-pos-border flex-shrink-0">
               <button
                 onClick={() => {
-                  setSelectedCustomer(null);
-                  setPointsRedeemed(0);
                   setCheckoutPhone("");
                   setLookupError("");
                   setShowCheckoutQuickReg(false);
                   setCheckoutNewName("");
-                  setShowLoyaltyPrompt(false);
+                  setRedeemError("");
                   setShowPayment(true);
                 }}
                 className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
@@ -1055,13 +1106,11 @@ export default function POSScreen() {
             <div className="p-4 border-t border-gray-200 dark:border-pos-border space-y-3 flex-shrink-0">
               <button
                 onClick={() => {
-                  setSelectedCustomer(null);
-                  setPointsRedeemed(0);
                   setCheckoutPhone("");
                   setLookupError("");
                   setShowCheckoutQuickReg(false);
                   setCheckoutNewName("");
-                  setShowLoyaltyPrompt(false);
+                  setRedeemError("");
                   setShowPayment(true);
                 }}
                 className="w-full py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-primary-600/20 flex items-center justify-center gap-2"
@@ -1129,23 +1178,66 @@ export default function POSScreen() {
                     )}
                   </div>
 
-                  {/* Loyalty Points Button */}
+                  {/* Loyalty Points */}
                   <div className="flex justify-center">
                     {selectedCustomer ? (
-                      <div className="w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl p-3 text-center">
-                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1.5">
-                          <Gift className="w-3.5 h-3.5" />
-                          {selectedCustomer.points_balance} pts available
-                        </p>
-                        {pointsRedeemed > 0 && (
-                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                            Redeemed: {pointsRedeemed} pts (-{formatCurrency(pointsRedeemed)})
+                      <div className="w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl p-3 space-y-2">
+                        <div className="text-center">
+                          <p className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1.5">
+                            <User className="w-3.5 h-3.5" />
+                            {selectedCustomer.name}
                           </p>
+                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                            {selectedCustomer.points_balance} pts available
+                          </p>
+                          {pointsRedeemed > 0 && (
+                            <p className="text-xs text-green-600 dark:text-green-400 font-bold mt-1">
+                              Redeemed: {pointsRedeemed} pts (-{formatCurrency(pointsRedeemed)})
+                            </p>
+                          )}
+                        </div>
+                        {pointsRedeemed === 0 && maxRedeemPoints >= 100 && (
+                          <div className="space-y-1.5">
+                            <input
+                              type="number"
+                              min={100}
+                              max={maxRedeemPoints}
+                              value={redeemPointsInput}
+                              onChange={(e) => { setRedeemPointsInput(e.target.value); setRedeemError(""); }}
+                              placeholder={`Redeem pts (max ${maxRedeemPoints})`}
+                              className="w-full px-3 py-2 bg-white dark:bg-[#0f1117] border border-amber-200 dark:border-amber-700/50 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-amber-400"
+                            />
+                            <button
+                              onClick={handleApplyRedeemPoints}
+                              className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-colors"
+                            >
+                              Apply Points Discount
+                            </button>
+                          </div>
                         )}
+                        {redeemError && (
+                          <p className="text-xs text-red-500 text-center">{redeemError}</p>
+                        )}
+                        <div className="flex gap-2">
+                          {pointsRedeemed > 0 && (
+                            <button
+                              onClick={() => { setPointsRedeemed(0); setRedeemPointsInput(""); }}
+                              className="flex-1 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+                            >
+                              Clear redemption
+                            </button>
+                          )}
+                          <button
+                            onClick={() => { setSelectedCustomer(null); setPointsRedeemed(0); setRedeemPointsInput(""); setRedeemError(""); }}
+                            className="flex-1 py-1.5 text-xs font-semibold text-gray-500 hover:underline"
+                          >
+                            Remove customer
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <button
-                        onClick={() => setShowLoyaltyPrompt(true)}
+                        onClick={() => { setShowLoyaltyPrompt(true); setLookupError(""); setShowCheckoutQuickReg(false); }}
                         className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700/30 rounded-full text-sm font-semibold transition-colors flex items-center gap-2"
                       >
                         <Gift className="w-4 h-4" /> Add Loyalty Points
@@ -1230,7 +1322,7 @@ export default function POSScreen() {
                   {paymentMethod === "mpesa" && (
                     <div className="h-full">
                       <MpesaPayment
-                        amount={totals.total}
+                        amount={netTotal}
                         onSuccess={handleMpesaSuccess}
                         onFailure={handleMpesaFailure}
                         onCancel={() => setShowPayment(false)}
@@ -1367,6 +1459,79 @@ export default function POSScreen() {
 
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loyalty Lookup Modal */}
+      {showLoyaltyPrompt && !selectedCustomer && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
+          <div className="bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden">
+            <div className="flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Gift className="w-5 h-5 text-indigo-500" /> Loyalty Points
+              </h2>
+              <button
+                onClick={() => {
+                  setShowLoyaltyPrompt(false);
+                  setCheckoutPhone("");
+                  setLookupError("");
+                  setShowCheckoutQuickReg(false);
+                  setCheckoutNewName("");
+                }}
+                className="text-gray-400 hover:text-gray-900 dark:hover:text-white p-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Look up a customer by phone to earn or redeem loyalty points.
+              </p>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-300">Phone Number</label>
+                <input
+                  type="tel"
+                  value={checkoutPhone}
+                  onChange={(e) => { setCheckoutPhone(e.target.value); setLookupError(""); }}
+                  placeholder="e.g. 0712345678"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  autoFocus
+                />
+              </div>
+              {lookupError && (
+                <p className="text-sm text-red-500 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" /> {lookupError}
+                </p>
+              )}
+              <button
+                onClick={handleCheckoutPhoneLookup}
+                disabled={isLookingUp || !checkoutPhone.trim()}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                {isLookingUp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {isLookingUp ? "Searching..." : "Look Up Customer"}
+              </button>
+              {showCheckoutQuickReg && (
+                <form onSubmit={handleCheckoutQuickRegSubmit} className="space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Register New Customer</p>
+                  <input
+                    type="text"
+                    value={checkoutNewName}
+                    onChange={(e) => setCheckoutNewName(e.target.value)}
+                    placeholder="Customer name"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLookingUp}
+                    className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                  >
+                    {isLookingUp ? "Registering..." : "Register & Apply"}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>

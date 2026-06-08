@@ -16,6 +16,7 @@ export interface Product {
   supplier_id?: string;
   is_active: boolean;
   expiry_date?: string | null;
+  branch_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -79,6 +80,8 @@ export interface Sale {
     points_redeemed: number;
     final_points_balance: number;
   };
+  cash_tendered?: number;
+  change_due?: number;
   created_at: string;
   updated_at: string;
 }
