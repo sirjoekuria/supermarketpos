@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 import { getMpesaAccessToken, getMpesaConfig, mpesaTimestamp, stkPassword, updateMpesaTransaction } from "@/lib/mpesa";
-
-// Cache the last known status per checkout request to avoid redundant Safaricom calls
-const statusCache = new Map<string, { status: string; result: object; ts: number }>();
+import { getMpesaStatusCache, setMpesaStatusCache } from "@/lib/mpesa-status-cache";
 
 export async function GET(request: Request) {
   try {
@@ -16,10 +14,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: "failed", message: "Missing CheckoutRequestID." }, { status: 400 });
     }
 
-    // ── IN-MEMORY CACHE: if we already confirmed success/failed, return instantly ──
-    const cached = statusCache.get(checkoutRequestId);
-    if (cached && cached.status !== "pending" && Date.now() - cached.ts < 300_000) {
-      return NextResponse.json(cached.result);
+    // ── IN-MEMORY CACHE: callback or prior query already confirmed status ──
+    const cached = getMpesaStatusCache(checkoutRequestId);
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
     // ── FAST PATH: check the DB first (works in production where callback updates it) ──
@@ -37,13 +35,13 @@ export async function GET(request: Request) {
           message: existing.result_desc,
           mpesaReceiptNumber: existing.mpesa_receipt_number,
         };
-        statusCache.set(checkoutRequestId, { status: "success", result, ts: Date.now() });
+        setMpesaStatusCache(checkoutRequestId, "success", result);
         return NextResponse.json(result);
       }
 
       if (existing?.status === "failed") {
         const result = { status: "failed", message: existing.result_desc || "Payment failed." };
-        statusCache.set(checkoutRequestId, { status: "failed", result, ts: Date.now() });
+        setMpesaStatusCache(checkoutRequestId, "failed", result);
         return NextResponse.json(result);
       }
     } catch {
@@ -51,10 +49,9 @@ export async function GET(request: Request) {
     }
 
     // ── DIRECT SAFARICOM QUERY ──
-    // Only hit Safaricom after 8s — before that, trust the DB (callback fires fast).
-    // This avoids slow Safaricom API calls blocking our 500ms DB polling loop.
-    if (elapsed < 8) {
-      return NextResponse.json({ status: "pending", message: "Waiting for M-Pesa callback..." });
+    // Fallback when callback is delayed — start after 2s so confirmation feels immediate.
+    if (elapsed < 2) {
+      return NextResponse.json({ status: "pending", message: "Waiting for M-Pesa confirmation..." });
     }
 
     try {
@@ -64,7 +61,7 @@ export async function GET(request: Request) {
 
       // 4-second timeout on Safaricom API — don't let slow responses block our polling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
       let response: Response;
       try {
@@ -101,7 +98,7 @@ export async function GET(request: Request) {
           message: data.ResultDesc || "Payment successful.",
           mpesaReceiptNumber: data.MpesaReceiptNumber || undefined,
         };
-        statusCache.set(checkoutRequestId, { status: "success", result, ts: Date.now() });
+        setMpesaStatusCache(checkoutRequestId, "success", result);
         // Update DB in background (non-blocking)
         updateMpesaTransaction({
           checkoutRequestId,
@@ -116,7 +113,7 @@ export async function GET(request: Request) {
       if (data.ResultCode !== undefined && String(data.ResultCode) !== "0") {
         // Terminal failure
         const result = { status: "failed", message: data.ResultDesc || "Payment failed." };
-        statusCache.set(checkoutRequestId, { status: "failed", result, ts: Date.now() });
+        setMpesaStatusCache(checkoutRequestId, "failed", result);
         updateMpesaTransaction({
           checkoutRequestId,
           status: "failed",

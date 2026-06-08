@@ -483,8 +483,8 @@ export default function POSScreen() {
         total_profit: totalProfit,
       };
 
-      // ── Offline mode or Instant Payment (Cash) optimistic execution ────
-      const isInstantPayment = paymentMethod === "cash";
+      // ── Optimistic checkout: cash & confirmed M-Pesa show receipt immediately ────
+      const isInstantPayment = paymentMethod === "cash" || paymentMethod === "mpesa";
 
       if (!isOnline || isInstantPayment) {
         const raw = localStorage.getItem("pos_offline_queue") || "[]";

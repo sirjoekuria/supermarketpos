@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractCallbackMetadata, updateMpesaTransaction } from "@/lib/mpesa";
+import { setMpesaStatusCache } from "@/lib/mpesa-status-cache";
 import { writeAuditLog } from "@/lib/server-auth";
 
 type CallbackBody = {
@@ -27,6 +28,19 @@ export async function POST(request: Request) {
 
     const metadata = extractCallbackMetadata(callback.CallbackMetadata?.Item);
     const success = Number(callback.ResultCode) === 0;
+
+    const result = success
+      ? {
+          status: "success",
+          message: callback.ResultDesc || "Payment successful.",
+          mpesaReceiptNumber: metadata.MpesaReceiptNumber ? String(metadata.MpesaReceiptNumber) : undefined,
+        }
+      : {
+          status: "failed",
+          message: callback.ResultDesc || "Payment failed.",
+        };
+
+    setMpesaStatusCache(callback.CheckoutRequestID, result.status, result);
 
     await updateMpesaTransaction({
       checkoutRequestId: callback.CheckoutRequestID,

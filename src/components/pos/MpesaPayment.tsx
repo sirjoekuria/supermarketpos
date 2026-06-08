@@ -75,12 +75,14 @@ export default function MpesaPayment({
     }
   };
 
+  const SUCCESS_FLASH_MS = 400;
+
   const handleCompleteManualCheckout = () => {
     if (!verifiedTx) return;
     setStatus("success");
     setTimeout(() => {
       onSuccess(verifiedTx.mpesaReceiptNumber);
-    }, 1800);
+    }, SUCCESS_FLASH_MS);
   };
 
   const handleForceConfirm = () => {
@@ -88,7 +90,7 @@ export default function MpesaPayment({
     setStatus("success");
     setTimeout(() => {
       onSuccess(code);
-    }, 1800);
+    }, SUCCESS_FLASH_MS);
   };
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -254,79 +256,78 @@ export default function MpesaPayment({
 
   useEffect(() => {
     if (status !== "pending" || !checkoutRequestId) return;
+
     let active = true;
-    let elapsed = 0;
     let timeoutId: NodeJS.Timeout;
-    let timer: NodeJS.Timeout;
+    let countdownTimer: NodeJS.Timeout;
+    const pollStart = Date.now();
+
+    const finishSuccess = (receipt: string) => {
+      if (!active) return;
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
+      setStatus("success");
+      setTimeout(() => onSuccess(receipt), SUCCESS_FLASH_MS);
+    };
+
+    const finishFailure = (message: string) => {
+      if (!active) return;
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
+      setStatus("failed");
+      setError(message);
+      onFailure(message);
+    };
+
     const checkStatus = async () => {
       if (!active) return;
+      const elapsed = (Date.now() - pollStart) / 1000;
       try {
-        const response = await fetch(`/api/mpesa/query?checkoutRequestId=${checkoutRequestId}&elapsed=${elapsed}`);
+        const response = await fetch(
+          `/api/mpesa/query?checkoutRequestId=${encodeURIComponent(checkoutRequestId)}&elapsed=${elapsed.toFixed(1)}`,
+          { cache: "no-store" }
+        );
         const data = await response.json();
         if (!active) return;
+
         if (data.status === "success") {
-          active = false;
-          clearTimeout(timeoutId);
-          clearInterval(timer);
-          setStatus("success");
-          setTimeout(() => { onSuccess(data.mpesaReceiptNumber || ""); }, 1800);
+          finishSuccess(data.mpesaReceiptNumber || "");
           return;
-        } else if (data.status === "failed") {
-          active = false;
-          clearTimeout(timeoutId);
-          clearInterval(timer);
-          setStatus("failed");
-          setError(data.message || "Payment failed");
-          onFailure(data.message || "Payment failed");
+        }
+        if (data.status === "failed") {
+          finishFailure(data.message || "Payment failed");
           return;
         }
       } catch (err) {
         console.error("Status check error:", err);
       }
-      elapsed += elapsed < 15 ? 0.3 : 1.0; 
+
       if (active) {
-        const nextInterval = elapsed <= 15 ? 300 : 1000;
+        const nextInterval = elapsed < 15 ? 200 : 500;
         timeoutId = setTimeout(checkStatus, nextInterval);
       }
     };
+
     checkStatus();
-    timer = setInterval(() => {
+
+    countdownTimer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          active = false;
-          clearTimeout(timeoutId);
-          clearInterval(timer);
-          setStatus("failed");
-          setError("Payment timed out. Customer did not enter their PIN within 60 seconds.");
-          onFailure("Payment timeout");
+          finishFailure("Payment timed out. Customer did not enter their PIN within 60 seconds.");
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => { active = false; clearTimeout(timeoutId); clearInterval(timer); };
-  }, [status, checkoutRequestId, onSuccess, onFailure]);
 
-  useEffect(() => {
-    if (status === "success" || !checkoutRequestId) return;
-    let active = true;
-    const checkDbFallback = async () => {
-      try {
-        const response = await fetch(`/api/mpesa/query?checkoutRequestId=${checkoutRequestId}`);
-        const data = await response.json();
-        if (!active) return;
-        if (data.status === "success") {
-          setStatus("success");
-          setTimeout(() => { onSuccess(data.mpesaReceiptNumber || ""); }, 1800);
-        }
-      } catch (err) {
-        console.error("Fallback DB query failed:", err);
-      }
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
     };
-    checkDbFallback();
-    const interval = setInterval(checkDbFallback, 1000);
-    return () => { active = false; clearInterval(interval); };
-  }, [inputMode, checkoutRequestId, status, onSuccess]);
+  }, [status, checkoutRequestId, onSuccess, onFailure]);
 
   return (
     <section className="flex-grow bg-white dark:bg-[#1a1f2e] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 border border-gray-200 dark:border-gray-700/50 h-full">
