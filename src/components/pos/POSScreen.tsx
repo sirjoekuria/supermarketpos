@@ -5,6 +5,7 @@ import {
   ScanLine, ShoppingCart, CreditCard, Banknote, Monitor, Search, X,
   Receipt, Loader2, CheckCircle2, AlertCircle, Smartphone, Split,
   LogOut, Moon, Sun, Menu, Gift, Lock, WifiOff, Wifi, RefreshCw, User,
+  Phone, XCircle
 } from "lucide-react";
 import { useCartStore, useAuthStore, useUIStore, useSettingsStore, useProductStore, useBranchStore, useShiftStore } from "@/store";
 import { formatCurrency, generateReceiptNumber, debounce } from "@/lib/utils";
@@ -53,6 +54,11 @@ export default function POSScreen() {
   const [splitReferences, setSplitReferences] = useState<Record<"mpesa", string>>({
     mpesa: "",
   });
+  const [splitMpesaPhone, setSplitMpesaPhone] = useState("");
+  const [splitMpesaStatus, setSplitMpesaStatus] = useState<"idle" | "initiating" | "pending" | "success" | "failed">("idle");
+  const [splitMpesaCountdown, setSplitMpesaCountdown] = useState(60);
+  const [splitMpesaCheckoutRequestId, setSplitMpesaCheckoutRequestId] = useState("");
+  const [splitMpesaError, setSplitMpesaError] = useState("");
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
@@ -242,6 +248,145 @@ export default function POSScreen() {
           : undefined,
     }))
     .filter((payment) => payment.amount > 0);
+
+  useEffect(() => {
+    if (selectedCustomer) {
+      setSplitMpesaPhone(selectedCustomer.phone || "");
+    } else {
+      setSplitMpesaPhone("");
+    }
+  }, [selectedCustomer]);
+
+  const validateSplitPhone = (phoneStr: string): boolean => {
+    const cleaned = phoneStr.replace(/\D/g, "");
+    return cleaned.length >= 9 && cleaned.length <= 12;
+  };
+
+  const formatSplitPhoneForAPI = (phoneStr: string): string => {
+    const cleaned = phoneStr.replace(/\D/g, "");
+    if (cleaned.startsWith("254")) return cleaned;
+    if (cleaned.startsWith("0")) return "254" + cleaned.substring(1);
+    if (cleaned.startsWith("7")) return "254" + cleaned;
+    return cleaned;
+  };
+
+  const initiateSplitSTKPush = async () => {
+    const mpesaAmount = parseAmount(splitPayments.mpesa);
+    if (mpesaAmount < 1) {
+      setSplitMpesaError("M-Pesa amount must be at least KES 1");
+      return;
+    }
+    if (!validateSplitPhone(splitMpesaPhone)) {
+      setSplitMpesaError("Please enter a valid Safaricom phone number");
+      return;
+    }
+    setSplitMpesaStatus("initiating");
+    setSplitMpesaError("");
+    try {
+      const response = await fetch("/api/mpesa/stkpush", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: formatSplitPhoneForAPI(splitMpesaPhone),
+          amount: mpesaAmount,
+          accountReference: `SPLIT-${Date.now()}`,
+          transactionDesc: "Split Payment M-Pesa",
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.checkoutRequestId) {
+        setSplitMpesaCheckoutRequestId(data.checkoutRequestId);
+        setSplitMpesaStatus("pending");
+        setSplitMpesaCountdown(60);
+      } else {
+        throw new Error(data.message || "Failed to initiate payment");
+      }
+    } catch (err: any) {
+      const msg = err.message || "Failed to initiate M-Pesa payment";
+      setSplitMpesaStatus("failed");
+      setSplitMpesaError(msg);
+    }
+  };
+
+  // Polling for split payment STK status
+  useEffect(() => {
+    if (splitMpesaStatus !== "pending" || !splitMpesaCheckoutRequestId) return;
+
+    let active = true;
+    let timeoutId: NodeJS.Timeout;
+    let countdownTimer: NodeJS.Timeout;
+    const pollStart = Date.now();
+
+    const finishSuccess = (receipt: string) => {
+      if (!active) return;
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
+      setSplitMpesaStatus("success");
+      
+      // Auto-populate M-Pesa code reference in split references
+      setSplitReferences((current) => ({
+        ...current,
+        mpesa: receipt,
+      }));
+    };
+
+    const finishFailure = (message: string) => {
+      if (!active) return;
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
+      setSplitMpesaStatus("failed");
+      setSplitMpesaError(message);
+    };
+
+    const checkStatus = async () => {
+      if (!active) return;
+      const elapsed = (Date.now() - pollStart) / 1000;
+      try {
+        const response = await fetch(
+          `/api/mpesa/query?checkoutRequestId=${encodeURIComponent(splitMpesaCheckoutRequestId)}&elapsed=${elapsed.toFixed(1)}`,
+          { cache: "no-store" }
+        );
+        const data = await response.json();
+        if (!active) return;
+
+        if (data.status === "success") {
+          finishSuccess(data.mpesaReceiptNumber || "");
+          return;
+        }
+        if (data.status === "failed") {
+          finishFailure(data.message || "Payment failed");
+          return;
+        }
+      } catch (err) {
+        console.error("Split M-Pesa status check error:", err);
+      }
+
+      if (active) {
+        const nextInterval = elapsed < 15 ? 200 : 500;
+        timeoutId = setTimeout(checkStatus, nextInterval);
+      }
+    };
+
+    checkStatus();
+
+    countdownTimer = setInterval(() => {
+      setSplitMpesaCountdown((prev) => {
+        if (prev <= 1) {
+          finishFailure("Payment timed out. Customer did not enter their PIN within 60 seconds.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+      clearInterval(countdownTimer);
+    };
+  }, [splitMpesaStatus, splitMpesaCheckoutRequestId]);
 
   useEffect(() => {
     fetchProducts();
@@ -1427,15 +1572,122 @@ export default function POSScreen() {
                                   className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
                                 />
                                 {method === "mpesa" && (
-                                  <input
-                                    type="text"
-                                    value={splitReferences[method]}
-                                    onChange={(e) =>
-                                      setSplitReferences((current) => ({ ...current, [method]: e.target.value }))
-                                    }
-                                    placeholder="M-Pesa code"
-                                    className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
-                                  />
+                                  <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                    {parseAmount(splitPayments.mpesa) > 0 && (
+                                      <div className="space-y-2 bg-gray-50 dark:bg-[#1a1f2e]/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                                        <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                          STK Push Verification
+                                        </div>
+
+                                        {splitMpesaStatus === "idle" && (
+                                          <div className="space-y-2">
+                                            <div className="relative">
+                                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                              <input
+                                                type="tel"
+                                                value={splitMpesaPhone}
+                                                onChange={(e) => {
+                                                  setSplitMpesaPhone(e.target.value);
+                                                  setSplitMpesaError("");
+                                                }}
+                                                placeholder="Phone (e.g. 0712345678)"
+                                                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-[#0f1117] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80]"
+                                              />
+                                            </div>
+                                            {splitMpesaError && (
+                                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                                <AlertCircle className="w-3.5 h-3.5" />
+                                                {splitMpesaError}
+                                              </p>
+                                            )}
+                                            <button
+                                              type="button"
+                                              onClick={initiateSplitSTKPush}
+                                              className="w-full py-2 bg-[#0d7a3e] hover:bg-[#0a6332] dark:bg-[#4ade80] dark:text-[#0f1117] dark:hover:bg-[#22c55e] text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow"
+                                            >
+                                              Send STK Push (KES {parseAmount(splitPayments.mpesa)})
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {splitMpesaStatus === "initiating" && (
+                                          <div className="flex items-center justify-center gap-2 py-2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-[#0d7a3e] dark:text-[#4ade80]" />
+                                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                              Contacting Safaricom...
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {splitMpesaStatus === "pending" && (
+                                          <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-xs">
+                                              <div className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                <span>Waiting for PIN: {splitMpesaCountdown}s</span>
+                                              </div>
+                                              <button
+                                                type="button"
+                                                onClick={() => setSplitMpesaStatus("idle")}
+                                                className="text-red-500 hover:underline font-semibold"
+                                              >
+                                                Cancel
+                                              </button>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
+                                              Customer has been sent a payment prompt. Please ask them to enter their PIN.
+                                            </p>
+                                          </div>
+                                        )}
+
+                                        {splitMpesaStatus === "success" && (
+                                          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg text-green-700 dark:text-green-400">
+                                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                                            <div className="text-xs font-semibold">
+                                              STK Push Verified! Reference: {splitReferences[method]}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {splitMpesaStatus === "failed" && (
+                                          <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                              <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                              <span>Failed: {splitMpesaError}</span>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setSplitMpesaStatus("idle");
+                                                setSplitMpesaError("");
+                                              }}
+                                              className="text-xs font-bold text-primary-600 hover:underline"
+                                            >
+                                              Retry STK Push
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                                        M-Pesa Confirmation Code (Manual / Verified)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={splitReferences[method]}
+                                        onChange={(e) =>
+                                          setSplitReferences((current) => ({
+                                            ...current,
+                                            [method]: e.target.value.toUpperCase(),
+                                          }))
+                                        }
+                                        placeholder="e.g. QKL1A2B3C4"
+                                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-sm focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors uppercase font-mono font-bold"
+                                      />
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             );
