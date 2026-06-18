@@ -133,7 +133,7 @@ export default function CustomerDisplay() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Items List */}
-        <div className="flex-1 p-4 sm:p-8 overflow-y-auto">
+        <div className="flex-1 lg:w-1/2 lg:max-w-[50%] min-w-0 p-4 sm:p-8 overflow-y-auto">
           {items.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-500">
               <ShoppingCart className="w-16 h-16 sm:w-24 sm:h-24 mb-4 sm:mb-6 opacity-20" />
@@ -182,8 +182,8 @@ export default function CustomerDisplay() {
           )}
         </div>
 
-        {/* Totals Panel */}
-        <div className="w-full lg:w-80 xl:w-96 bg-white/5 border-t lg:border-t-0 lg:border-l border-white/10 p-4 sm:p-6 lg:p-8 flex flex-col">
+        {/* Totals Panel — at least half screen on desktop */}
+        <div className="w-full lg:w-1/2 lg:min-w-[50%] bg-white/5 border-t lg:border-t-0 lg:border-l border-white/10 p-4 sm:p-6 lg:p-8 flex flex-col">
           <div className="flex-1">
             <h2 className="text-sm sm:text-lg font-medium text-gray-400 mb-3 sm:mb-6">Order Summary</h2>
             <div className="space-y-2 sm:space-y-4">

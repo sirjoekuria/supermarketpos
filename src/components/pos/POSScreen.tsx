@@ -1011,7 +1011,7 @@ export default function POSScreen() {
         {/* Left Panel — Product Grid */}
         <div
           className={cn(
-            "flex-1 flex flex-col min-w-0",
+            "flex-1 flex flex-col min-w-0 lg:w-1/2 lg:max-w-[50%]",
             // On mobile: hide unless "products" tab is selected
             mobileTab !== "products" ? "hidden lg:flex" : "flex"
           )}
@@ -1243,7 +1243,7 @@ export default function POSScreen() {
         {/* Right Panel — Cart */}
         <div
           className={cn(
-            "w-full lg:w-auto lg:max-w-md bg-white dark:bg-pos-card border-l border-gray-200 dark:border-pos-border flex flex-col flex-shrink-0",
+            "w-full lg:w-1/2 lg:min-w-[50%] bg-white dark:bg-pos-card border-l border-gray-200 dark:border-pos-border flex flex-col flex-shrink-0",
             // On mobile: show only if "cart" tab is selected
             mobileTab !== "cart" ? "hidden lg:flex" : "flex"
           )}
