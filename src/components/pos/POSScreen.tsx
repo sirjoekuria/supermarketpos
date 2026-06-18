@@ -1278,15 +1278,15 @@ export default function POSScreen() {
         </div>
       </div>
 
-      {/* Payment Modal — Redesigned Two-Column Layout */}
+      {/* Payment — full screen on desktop, bottom sheet on mobile */}
       {showPayment && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
-          <div className="bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-5xl overflow-hidden max-h-[95vh] flex flex-col font-sans">
+        <div className="fixed inset-0 z-50 flex items-end lg:items-stretch justify-center lg:justify-stretch bg-black/60 lg:bg-[#0f1117] backdrop-blur-md lg:backdrop-blur-none p-0">
+          <div className="bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-none w-full lg:max-w-none h-[95vh] lg:h-full max-h-[95vh] lg:max-h-none overflow-hidden flex flex-col font-sans">
             
             {/* Header */}
-            <div className="flex justify-between items-center px-6 pt-5 pb-2 flex-shrink-0 border-b border-gray-100 dark:border-gray-800">
-              <div className="w-8"></div>
-              <h1 className="text-lg font-semibold tracking-wide text-gray-900 dark:text-white">Payment</h1>
+            <div className="flex justify-between items-center px-6 lg:px-10 pt-5 lg:pt-6 pb-3 lg:pb-4 flex-shrink-0 border-b border-gray-100 dark:border-gray-800">
+              <div className="w-8 lg:hidden"></div>
+              <h1 className="text-lg lg:text-2xl font-semibold tracking-wide text-gray-900 dark:text-white lg:flex-1 lg:text-left">Payment</h1>
               <button 
                 onClick={() => {
                   setShowPayment(false);
@@ -1305,16 +1305,16 @@ export default function POSScreen() {
             </div>
 
             {/* Two-Column Layout: Left (Amount + Methods) | Right (Payment Details) */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <div className="flex flex-col lg:flex-row min-h-0">
+            <div className="flex-1 overflow-hidden min-h-0">
+              <div className="flex flex-col lg:flex-row h-full min-h-0">
                 
                 {/* LEFT COLUMN — Amount + Payment Methods */}
-                <div className="lg:w-[380px] flex-shrink-0 p-5 lg:p-6 space-y-5 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800">
+                <div className="lg:w-[420px] xl:w-[480px] flex-shrink-0 p-5 lg:p-8 space-y-5 lg:space-y-6 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 overflow-y-auto">
                   
                   {/* Net Amount Due Card */}
-                  <div className="rounded-2xl p-6 text-center relative overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700/50 shadow-lg">
-                    <p className="text-xs font-bold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-2">Net Amount Due</p>
-                    <p className="text-4xl lg:text-5xl font-extrabold text-[#0d7a3e] dark:text-[#4ade80] font-mono">
+                  <div className="rounded-2xl p-6 lg:p-8 text-center relative overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700/50 shadow-lg">
+                    <p className="text-xs lg:text-sm font-bold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-2">Net Amount Due</p>
+                    <p className="text-4xl lg:text-6xl font-extrabold text-[#0d7a3e] dark:text-[#4ade80] font-mono">
                       {formatCurrency(netTotal)}
                     </p>
                     {pointsRedeemed > 0 && (
@@ -1418,7 +1418,7 @@ export default function POSScreen() {
                 </div>
 
                 {/* RIGHT COLUMN — Payment Details */}
-                <div className="flex-1 p-5 lg:p-6 min-h-0">
+                <div className="flex-1 p-5 lg:p-8 min-h-0 overflow-y-auto flex flex-col">
                   
                   {/* Cash Payment */}
                   {paymentMethod === "cash" && (
