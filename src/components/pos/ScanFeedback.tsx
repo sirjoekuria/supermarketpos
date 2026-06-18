@@ -25,6 +25,8 @@ interface ScanFeedbackProps {
   message?: string;
   /** Barcode value to display */
   barcode?: string;
+  /** Product image URL for successful scans */
+  imageUrl?: string;
   /** Visible duration in ms before fading out (default: 850) */
   duration?: number;
   /** Callback when the exit animation finishes */
@@ -40,6 +42,7 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
   type = "success",
   message,
   barcode,
+  imageUrl,
   duration = 850,
   onAnimationComplete,
   position = "top",
@@ -49,6 +52,7 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentType, setCurrentType] = useState<"success" | "error">(type);
   const [currentBarcode, setCurrentBarcode] = useState(barcode);
+  const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
   const [currentMessage, setCurrentMessage] = useState(message);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,6 +67,7 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
     // Snapshot current props into state so updates mid-display are clean
     setCurrentType(type);
     setCurrentBarcode(barcode);
+    setCurrentImageUrl(imageUrl);
     setCurrentMessage(message);
 
     // Cancel any pending hide
@@ -89,6 +94,7 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
   }, [
     type,
     barcode,
+    imageUrl,
     message,
     duration,
     enableSound,
@@ -127,9 +133,19 @@ export const ScanFeedback: React.FC<ScanFeedbackProps> = ({
           isAnimating ? "animate-in" : "animate-out"
         }`}
       >
-        {/* Icon */}
+        {/* Icon or product image */}
         <div className="scan-feedback-icon">
-          {currentType === "success" ? <SuccessIcon /> : <ErrorIcon />}
+          {currentType === "success" && currentImageUrl ? (
+            <img
+              src={currentImageUrl}
+              alt={displayMessage}
+              className="scan-feedback-product-image"
+            />
+          ) : currentType === "success" ? (
+            <SuccessIcon />
+          ) : (
+            <ErrorIcon />
+          )}
         </div>
 
         {/* Text */}

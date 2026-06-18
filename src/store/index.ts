@@ -5,10 +5,20 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Product, CartItem, User, AppSettings, Customer, Branch } from "@/types";
 import { calculateCartTotals } from "@/lib/utils";
 
+export interface LastScannedProduct {
+  id: string;
+  name: string;
+  barcode: string;
+  price: number;
+  image_url?: string;
+  scannedAt: string;
+}
+
 interface CartState {
   items: CartItem[];
   selectedCustomer: Customer | null;
   pointsRedeemed: number;
+  lastScannedProduct: LastScannedProduct | null;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -18,6 +28,7 @@ interface CartState {
   getItemCount: () => number;
   setSelectedCustomer: (customer: Customer | null) => void;
   setPointsRedeemed: (points: number) => void;
+  setLastScannedProduct: (product: LastScannedProduct | null) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -26,11 +37,21 @@ export const useCartStore = create<CartState>()(
       items: [],
       selectedCustomer: null,
       pointsRedeemed: 0,
+      lastScannedProduct: null,
       addItem: (product, quantity = 1) => {
         set((state) => {
           const existingItem = state.items.find((item) => item.product.id === product.id);
+          const scanned: LastScannedProduct = {
+            id: product.id,
+            name: product.name,
+            barcode: product.barcode,
+            price: product.price,
+            image_url: product.image_url,
+            scannedAt: new Date().toISOString(),
+          };
           if (existingItem) {
             return {
+              lastScannedProduct: scanned,
               items: state.items.map((item) =>
                 item.product.id === product.id
                   ? {
@@ -43,6 +64,7 @@ export const useCartStore = create<CartState>()(
             };
           }
           return {
+            lastScannedProduct: scanned,
             items: [
               ...state.items,
               { product, quantity, discount: 0, total: quantity * product.price },
@@ -75,7 +97,8 @@ export const useCartStore = create<CartState>()(
           ),
         }));
       },
-      clearCart: () => set({ items: [], selectedCustomer: null, pointsRedeemed: 0 }),
+      clearCart: () => set({ items: [], selectedCustomer: null, pointsRedeemed: 0, lastScannedProduct: null }),
+      setLastScannedProduct: (product) => set({ lastScannedProduct: product }),
       getTotals: () => calculateCartTotals(get().items),
       getItemCount: () => get().items.reduce((sum, item) => sum + item.quantity, 0),
       setSelectedCustomer: (customer) => set({ selectedCustomer: customer, pointsRedeemed: 0 }),

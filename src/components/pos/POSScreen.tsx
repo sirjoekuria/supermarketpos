@@ -189,11 +189,13 @@ export default function POSScreen() {
     type: "success" | "error";
     message: string;
     barcode: string;
+    imageUrl?: string;
   }>({
     show: false,
     type: "success",
     message: "",
     barcode: "",
+    imageUrl: undefined,
   });
   const scanFeedbackTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -441,16 +443,16 @@ export default function POSScreen() {
   }, []);
 
   const handleBarcodeScan = (barcode: string) => {
-    const product = products.find((p) => p.barcode === barcode);
+    const trimmed = barcode.trim();
+    const product = products.find(
+      (p) => p.barcode === trimmed || p.barcode.endsWith(trimmed) || trimmed.endsWith(p.barcode)
+    );
 
-    // Helper: flash the ScanFeedback overlay
-    const flash = (type: "success" | "error", msg: string) => {
-      // Reset to false first so the component re-triggers even for duplicate barcodes
+    const flash = (type: "success" | "error", msg: string, imageUrl?: string) => {
       if (scanFeedbackTimerRef.current) clearTimeout(scanFeedbackTimerRef.current);
-      setScanFeedback({ show: false, type, message: msg, barcode });
-      // Let one render pass before turning show on
+      setScanFeedback({ show: false, type, message: msg, barcode: trimmed, imageUrl });
       scanFeedbackTimerRef.current = setTimeout(() => {
-        setScanFeedback({ show: true, type, message: msg, barcode });
+        setScanFeedback({ show: true, type, message: msg, barcode: trimmed, imageUrl });
       }, 10);
     };
 
@@ -458,13 +460,13 @@ export default function POSScreen() {
       const added = tryAddItem(product);
       if (added) {
         setError("");
-        flash("success", `${product.name}`);
+        flash("success", product.name, product.image_url);
       } else {
-        flash("error", `Expired: ${product.name}`);
+        flash("error", `Expired: ${product.name}`, product.image_url);
       }
     } else {
-      setError(`Product not found: ${barcode}`);
-      flash("error", `Not found: ${barcode}`);
+      setError(`Product not found: ${trimmed}`);
+      flash("error", `Not found: ${trimmed}`);
       setTimeout(() => setError(""), 3000);
     }
   };
@@ -1834,7 +1836,8 @@ export default function POSScreen() {
         type={scanFeedback.type}
         message={scanFeedback.message}
         barcode={scanFeedback.barcode}
-        duration={850}
+        imageUrl={scanFeedback.imageUrl}
+        duration={1200}
         position="top"
         enableSound={true}
         onAnimationComplete={() =>

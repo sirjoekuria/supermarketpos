@@ -17,7 +17,7 @@ import AuditLog from "./AuditLog";
 export default function Cart() {
   const {
     items, removeItem, updateQuantity, updateDiscount, getTotals,
-    selectedCustomer, setSelectedCustomer
+    selectedCustomer, setSelectedCustomer, lastScannedProduct
   } = useCartStore();
   const { user } = useAuthStore();
 
@@ -193,10 +193,17 @@ export default function Cart() {
 
       {/* Cart Items */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2">
-        {items.map((item) => (
+        {items.map((item) => {
+          const isLatest = lastScannedProduct?.id === item.product.id;
+          return (
           <div
             key={item.product.id}
-            className="group bg-white dark:bg-gray-800/30 rounded-xl p-3 border border-gray-100 dark:border-pos-border hover:border-primary-200 dark:hover:border-primary-700 transition-all"
+            className={cn(
+              "group rounded-xl p-3 border transition-all",
+              isLatest
+                ? "bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-600 ring-1 ring-primary-200 dark:ring-primary-700"
+                : "bg-white dark:bg-gray-800/30 border-gray-100 dark:border-pos-border hover:border-primary-200 dark:hover:border-primary-700"
+            )}
           >
             <div className="flex items-start gap-3">
               <div className="w-14 h-14 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
@@ -284,7 +291,8 @@ export default function Cart() {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Cart Totals */}

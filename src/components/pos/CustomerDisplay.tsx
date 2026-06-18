@@ -1,13 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingCart, Clock, X } from "lucide-react";
+import { ShoppingCart, Clock, X, Tag } from "lucide-react";
 import { useCartStore, useUIStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
+function ProductImage({
+  imageUrl,
+  name,
+  size = "md",
+}: {
+  imageUrl?: string;
+  name: string;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizeClass =
+    size === "lg"
+      ? "w-28 h-28 sm:w-36 sm:h-36 rounded-2xl"
+      : size === "sm"
+      ? "w-12 h-12 sm:w-14 sm:h-14 rounded-xl"
+      : "w-16 h-16 sm:w-20 sm:h-20 rounded-xl";
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt={name}
+        className={cn(sizeClass, "object-cover border border-white/10 flex-shrink-0")}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        sizeClass,
+        "bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10"
+      )}
+    >
+      <Tag className={cn(size === "lg" ? "w-10 h-10" : "w-6 h-6", "text-white/40")} />
+    </div>
+  );
+}
+
 export default function CustomerDisplay() {
-  const { items, getTotals } = useCartStore();
+  const { items, getTotals, lastScannedProduct } = useCartStore();
   const { customerDisplay, toggleCustomerDisplay } = useUIStore();
   const [currentTime, setCurrentTime] = useState(new Date());
   const totals = getTotals();
@@ -59,7 +97,7 @@ export default function CustomerDisplay() {
               })}
             </p>
           </div>
-          <button 
+          <button
             onClick={toggleCustomerDisplay}
             className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors border border-white/10"
           >
@@ -67,6 +105,30 @@ export default function CustomerDisplay() {
           </button>
         </div>
       </div>
+
+      {/* Last scanned item — prominent for customer */}
+      {lastScannedProduct && (
+        <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-primary-500/20 bg-primary-500/10">
+          <p className="text-xs sm:text-sm font-semibold text-primary-300 uppercase tracking-wider mb-3">
+            Just Scanned
+          </p>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <ProductImage
+              imageUrl={lastScannedProduct.image_url}
+              name={lastScannedProduct.name}
+              size="lg"
+            />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-3xl font-bold text-white truncate">
+                {lastScannedProduct.name}
+              </h2>
+              <p className="text-sm sm:text-lg text-primary-300 font-semibold mt-1">
+                {formatCurrency(lastScannedProduct.price)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
@@ -80,43 +142,47 @@ export default function CustomerDisplay() {
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {items.map((item, idx) => (
-                <div
-                  key={item.product.id}
-                  className={cn(
-                    "flex items-center gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl border transition-all animate-in slide-in-from-right",
-                    idx === items.length - 1
-                      ? "bg-primary-500/10 border-primary-500/30"
-                      : "bg-white/5 border-white/10"
-                  )}
-                  style={{ animationDelay: `${idx * 50}ms` }}
-                >
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-lg sm:text-2xl font-bold text-white/60">
-                      {item.quantity}x
-                    </span>
+              {items.map((item, idx) => {
+                const isLatest = lastScannedProduct?.id === item.product.id;
+                return (
+                  <div
+                    key={item.product.id}
+                    className={cn(
+                      "flex items-center gap-3 sm:gap-6 p-3 sm:p-6 rounded-2xl border transition-all animate-in slide-in-from-right",
+                      isLatest
+                        ? "bg-primary-500/15 border-primary-500/40 ring-1 ring-primary-500/30"
+                        : idx === items.length - 1
+                        ? "bg-primary-500/10 border-primary-500/30"
+                        : "bg-white/5 border-white/10"
+                    )}
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <ProductImage
+                      imageUrl={item.product.image_url}
+                      name={item.product.name}
+                      size="md"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-xl font-semibold text-white truncate">
+                        {item.product.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">
+                        {item.quantity}x @ {formatCurrency(item.product.price)}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-lg sm:text-2xl font-bold text-white">
+                        {formatCurrency(item.total)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base sm:text-xl font-semibold text-white truncate">
-                      {item.product.name}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 hidden sm:block">{item.product.barcode}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-lg sm:text-2xl font-bold text-white">
-                      {formatCurrency(item.total)}
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-400 hidden sm:block">
-                      {formatCurrency(item.product.price)} each
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Totals Panel — row on mobile (bottom bar), sidebar on desktop */}
+        {/* Totals Panel */}
         <div className="w-full lg:w-80 xl:w-96 bg-white/5 border-t lg:border-t-0 lg:border-l border-white/10 p-4 sm:p-6 lg:p-8 flex flex-col">
           <div className="flex-1">
             <h2 className="text-sm sm:text-lg font-medium text-gray-400 mb-3 sm:mb-6">Order Summary</h2>
