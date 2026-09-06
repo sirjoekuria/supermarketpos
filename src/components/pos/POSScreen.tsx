@@ -63,6 +63,15 @@ export default function POSScreen() {
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const paymentDetailsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showPayment && paymentMethod && paymentDetailsRef.current) {
+      if (window.innerWidth < 1024) {
+        paymentDetailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [paymentMethod, showPayment]);
 
   const { activeShift, openShift, closeShift } = useShiftStore();
   const [showCloseShift, setShowCloseShift] = useState(false);
@@ -1305,11 +1314,11 @@ export default function POSScreen() {
             </div>
 
             {/* Two-Column Layout: Left (Amount + Methods) | Right (Payment Details) */}
-            <div className="flex-1 overflow-hidden min-h-0">
-              <div className="flex flex-col lg:flex-row h-full min-h-0">
+            <div className="flex-1 overflow-y-auto lg:overflow-hidden min-h-0">
+              <div className="flex flex-col lg:flex-row min-h-full lg:h-full lg:min-h-0">
                 
                 {/* LEFT COLUMN — Amount + Payment Methods */}
-                <div className="lg:w-[420px] xl:w-[480px] flex-shrink-0 p-5 lg:p-8 space-y-5 lg:space-y-6 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 overflow-y-auto">
+                <div className="lg:w-[420px] xl:w-[480px] flex-shrink-0 p-5 lg:p-8 space-y-5 lg:space-y-6 border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-800 lg:overflow-y-auto">
                   
                   {/* Net Amount Due Card */}
                   <div className="rounded-2xl p-6 lg:p-8 text-center relative overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700/50 shadow-lg">
@@ -1418,7 +1427,7 @@ export default function POSScreen() {
                 </div>
 
                 {/* RIGHT COLUMN — Payment Details */}
-                <div className="flex-1 p-5 lg:p-8 min-h-0 overflow-y-auto flex flex-col">
+                <div ref={paymentDetailsRef} className="flex-1 p-5 lg:p-8 min-h-0 lg:overflow-y-auto flex flex-col">
                   
                   {/* Cash Payment */}
                   {paymentMethod === "cash" && (
