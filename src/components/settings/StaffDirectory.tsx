@@ -109,25 +109,32 @@ export default function StaffDirectory() {
 
       <div className="space-y-3">
         {staff.map((user) => (
-          <div key={user.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-pos-border">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold">
+          <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-pos-border">
+            <div className="flex items-start sm:items-center gap-4 overflow-hidden w-full">
+              <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold flex-shrink-0">
                 {user.full_name.charAt(0)}
               </div>
-              <div>
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  {user.full_name}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 truncate">
+                  <span className="truncate">{user.full_name}</span>
                   {user.is_active ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
                   ) : (
-                    <XCircle className="w-3.5 h-3.5 text-red-500" />
+                    <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                   )}
                 </h4>
-                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {user.email}</span>
-                  {user.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {user.phone}</span>}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span className="flex items-center gap-1 min-w-0 max-w-full">
+                    <Mail className="w-3 h-3 flex-shrink-0" /> 
+                    <span className="truncate">{user.email}</span>
+                  </span>
+                  {user.phone && (
+                    <span className="flex items-center gap-1 flex-shrink-0">
+                      <Phone className="w-3 h-3" /> {user.phone}
+                    </span>
+                  )}
                   <span className={cn(
-                    "px-2 py-0.5 rounded-full capitalize font-medium",
+                    "px-2 py-0.5 rounded-full capitalize font-medium flex-shrink-0",
                     user.role === "admin" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
                     user.role === "manager" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
                     "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
@@ -137,7 +144,7 @@ export default function StaffDirectory() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
               <button onClick={() => openEdit(user)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors">
                 <Edit2 className="w-4 h-4" />
               </button>
