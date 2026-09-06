@@ -125,8 +125,13 @@ CREATE INDEX IF NOT EXISTS idx_mpesa_transactions_status ON public.mpesa_transac
 CREATE TABLE IF NOT EXISTS public.settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     shop_name VARCHAR(255) NOT NULL DEFAULT 'SuperMarket POS',
+    shop_address TEXT,
+    shop_phone VARCHAR(50),
+    shop_email VARCHAR(255),
+    shop_logo_url TEXT,
     tax_rate DECIMAL(5, 2) NOT NULL DEFAULT 16,
     currency VARCHAR(10) NOT NULL DEFAULT 'KES',
+    receipt_footer TEXT,
     mpesa_enabled BOOLEAN DEFAULT true,
     dark_mode_default BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,

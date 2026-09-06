@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import StaffDirectory from "./StaffDirectory";
 
 export default function SettingsPage() {
-  const { settings, setSettings } = useSettingsStore();
+  const { settings, saveSettings } = useSettingsStore();
   const { darkMode, toggleDarkMode, themeColor, setThemeColor } = useUIStore();
 
   const [activeTab, setActiveTab] = useState("general");
@@ -34,9 +34,9 @@ export default function SettingsPage() {
     setTimeout(() => setSaveStatus("idle"), 3000);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      setSettings({
+      await saveSettings({
         id: settings?.id || "1",
         shop_name: shopName,
         shop_address: shopAddress,

@@ -235,6 +235,8 @@ export const useUIStore = create<UIState>()(
 interface SettingsState {
   settings: AppSettings | null;
   setSettings: (settings: AppSettings) => void;
+  fetchSettings: () => Promise<void>;
+  saveSettings: (settings: AppSettings) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -242,6 +244,42 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       settings: null,
       setSettings: (settings) => set({ settings }),
+      fetchSettings: async () => {
+        try {
+          const res = await fetch('/api/settings');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.settings) {
+              set({ settings: data.settings });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch settings", error);
+        }
+      },
+      saveSettings: async (newSettings) => {
+        try {
+          const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newSettings),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.settings) {
+              set({ settings: data.settings });
+            } else {
+              set({ settings: newSettings });
+            }
+          } else {
+            // Still update locally if failed
+            set({ settings: newSettings });
+          }
+        } catch (error) {
+          console.error("Failed to save settings", error);
+          set({ settings: newSettings });
+        }
+      },
     }),
     {
       name: "pos-settings",

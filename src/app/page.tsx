@@ -21,7 +21,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuthStore, useUIStore, useBranchStore } from "@/store";
+import { useAuthStore, useUIStore, useBranchStore, useSettingsStore } from "@/store";
 
 import dynamic from "next/dynamic";
 import { AppLoadingSkeleton } from "@/components/ui/Skeleton";
@@ -56,6 +56,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set());
   const { user, isAuthenticated, setUser, logout } = useAuthStore();
+  const { fetchSettings } = useSettingsStore();
   const {
     sidebarOpen,
     setSidebarOpen,
@@ -69,7 +70,10 @@ export default function Home() {
   const [showBranchPicker, setShowBranchPicker] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) fetchBranches();
+    if (isAuthenticated) {
+      fetchBranches();
+    }
+    fetchSettings();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
