@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Fingerprint, Lock, AlertCircle, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Capacitor } from "@capacitor/core";
+import { NativeBiometric } from "@capgo/capacitor-native-biometric";
 
 interface ManagerAuthProps {
   isOpen: boolean;
@@ -33,11 +35,24 @@ export default function ManagerAuth({
       setError("");
       setSuccess("");
       setPassword("");
-      if (window.PublicKeyCredential) {
-        setMethod("fingerprint");
-      } else {
+      const checkBiometric = async () => {
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const result = await NativeBiometric.isAvailable();
+            if (result.isAvailable) {
+              setMethod("fingerprint");
+              return;
+            }
+          } catch (err) {
+            // Biometric not available natively
+          }
+        } else if (window.PublicKeyCredential) {
+          setMethod("fingerprint");
+          return;
+        }
         setMethod("password");
-      }
+      };
+      checkBiometric();
     }
   }, [isOpen]);
 
@@ -107,6 +122,49 @@ export default function ManagerAuth({
   };
 
   const handleFingerprint = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        setIsVerifying(true);
+        setError("");
+        const result = await NativeBiometric.isAvailable();
+        if (!result.isAvailable) {
+          throw new Error("Biometric authentication not supported on this device.");
+        }
+        await NativeBiometric.verifyIdentity({
+          reason: "Authenticate for POS Manager Action",
+          title: "Manager Authorization",
+          subtitle: "Verify your identity",
+          description: "Use your biometric to authorize this action",
+        });
+
+        // If native biometric succeeds, log action via API
+        const response = await fetch("/api/manager-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ method: "webauthn", action }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Biometric auth failed.");
+
+        setSuccess("Biometric verified!");
+        setTimeout(() => {
+          onAuthorize(data.managerId);
+          setSuccess("");
+          onClose();
+        }, 600);
+      } catch (err: any) {
+        if (err.code === "user_cancel" || err.message?.includes("cancel")) {
+          setIsVerifying(false);
+          return; // Ignore user cancellation
+        }
+        setError(err.message || "Biometric authentication failed.");
+      } finally {
+        setIsVerifying(false);
+      }
+      return;
+    }
+
+    // WebAuthn fallback for web
     if (!window.PublicKeyCredential) {
       setError("Biometric authentication not supported on this device.");
       return;
