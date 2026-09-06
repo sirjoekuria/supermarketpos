@@ -332,7 +332,7 @@ export default function MpesaPayment({
   return (
     <section className="flex-grow bg-white dark:bg-[#1a1f2e] rounded-2xl overflow-hidden flex flex-col relative transition-all duration-300 border border-gray-200 dark:border-gray-700/50 h-full">
       {status === "success" && (
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-50 rounded-2xl" />
+        <canvas ref={canvasRef} className="fixed lg:absolute inset-0 w-full h-full pointer-events-none z-[65] lg:z-50 lg:rounded-2xl" />
       )}
 
       {/* Green Gradient Header */}
@@ -516,89 +516,84 @@ export default function MpesaPayment({
         )}
 
         {status === "initiating" && (
-          <div className="text-center py-10 my-auto flex-1 flex flex-col items-center justify-center">
-            <Loader2 className="w-12 h-12 text-[#0d7a3e] dark:text-[#4ade80] animate-spin mx-auto mb-4" />
-            <p className="text-gray-900 dark:text-white font-bold text-lg">Contacting Safaricom...</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">Initiating secure STK Push request</p>
+          <div className="fixed inset-0 lg:static z-[60] bg-white dark:bg-[#1a1f2e] lg:bg-transparent p-6 lg:p-0 flex flex-col items-center justify-center w-full min-w-0">
+            <Loader2 className="w-16 h-16 text-[#0d7a3e] dark:text-[#4ade80] animate-spin mx-auto mb-6" />
+            <p className="text-gray-900 dark:text-white font-bold text-2xl text-center">Contacting Safaricom...</p>
+            <p className="text-base text-gray-500 dark:text-gray-400 mt-2 text-center">Initiating secure STK Push request</p>
           </div>
         )}
 
         {status === "pending" && (
-          <div className="flex flex-col items-center justify-center w-full py-4 my-auto flex-1">
-            <header className="flex flex-col items-center mb-6">
-              <div className="relative mb-4">
+          <div className="fixed inset-0 lg:static z-[60] bg-white dark:bg-[#1a1f2e] lg:bg-transparent p-6 lg:p-0 flex flex-col items-center justify-center w-full min-w-0">
+            <header className="flex flex-col items-center mb-8">
+              <div className="relative mb-5">
                 <div className="absolute inset-0 bg-[#4ade80] blur-md opacity-40 rounded-full"></div>
-                <div className="relative bg-[#1a2234] border border-white/10 p-2 rounded-lg">
-                  <Smartphone className="w-6 h-6 text-[#4ade80]" />
+                <div className="relative bg-[#1a2234] border border-white/10 p-3 rounded-xl">
+                  <Smartphone className="w-8 h-8 text-[#4ade80]" />
                 </div>
               </div>
-              <h1 className="text-2xl font-bold mb-2 tracking-tight text-gray-900 dark:text-white">Check Phone Prompt!</h1>
-              <p className="text-center text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+              <h1 className="text-3xl font-bold mb-3 tracking-tight text-gray-900 dark:text-white text-center">Check Phone Prompt!</h1>
+              <p className="text-center text-gray-500 dark:text-gray-400 text-base leading-relaxed max-w-sm mx-auto">
                 The customer has been sent an STK prompt. Please ask them to enter their M-Pesa PIN.
               </p>
             </header>
-            <main className="w-full flex flex-col items-center justify-center">
-              <div className="w-full bg-gray-50 dark:bg-[#0f1117] rounded-3xl p-6 flex flex-col items-center border border-gray-200 dark:border-gray-700/50 shadow-xl relative overflow-hidden">
-                <div className="text-3xl font-bold mb-8 tracking-tight text-gray-900 dark:text-white">{formatCurrency(amount)}</div>
-                <div className="relative w-[150px] h-[150px] flex items-center justify-center mb-8">
+            <main className="w-full max-w-md flex flex-col items-center justify-center">
+              <div className="w-full bg-gray-50 dark:bg-[#0f1117] rounded-[2rem] p-8 flex flex-col items-center border border-gray-200 dark:border-gray-700/50 shadow-xl relative overflow-hidden">
+                <div className="text-4xl font-bold mb-8 tracking-tight text-gray-900 dark:text-white">{formatCurrency(amount)}</div>
+                <div className="relative w-[160px] h-[160px] flex items-center justify-center mb-8">
                   <svg className="absolute inset-0 transform -rotate-90 w-full h-full">
-                    <circle cx="75" cy="75" fill="transparent" r="60" stroke="rgba(0,0,0,0.05)" strokeWidth="8"></circle>
-                    <circle className="blur-[8px] opacity-60 transition-all duration-1000" cx="75" cy="75" fill="transparent" r="60" stroke="#4ade80" strokeDasharray="377" strokeDashoffset={377 - (377 * (60 - countdown)) / 60} strokeWidth="12"></circle>
-                    <circle className="transition-all duration-1000" strokeLinecap="round" cx="75" cy="75" fill="transparent" r="60" stroke="#0d7a3e" strokeDasharray="377" strokeDashoffset={377 - (377 * (60 - countdown)) / 60} strokeWidth="8"></circle>
+                    <circle cx="80" cy="80" fill="transparent" r="70" stroke="rgba(0,0,0,0.05)" strokeWidth="8"></circle>
+                    <circle className="blur-[8px] opacity-60 transition-all duration-1000" cx="80" cy="80" fill="transparent" r="70" stroke="#4ade80" strokeDasharray="440" strokeDashoffset={440 - (440 * (60 - countdown)) / 60} strokeWidth="12"></circle>
+                    <circle className="transition-all duration-1000" strokeLinecap="round" cx="80" cy="80" fill="transparent" r="70" stroke="#0d7a3e" strokeDasharray="440" strokeDashoffset={440 - (440 * (60 - countdown)) / 60} strokeWidth="8"></circle>
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white dark:bg-[#1a1f2e] p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-                      <Smartphone className="w-8 h-8 text-gray-600 dark:text-gray-300" />
+                    <div className="bg-white dark:bg-[#1a1f2e] p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                      <Smartphone className="w-10 h-10 text-gray-600 dark:text-gray-300" />
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-full py-2 px-5 mb-2">
+                <div className="flex items-center space-x-3 bg-gray-100 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-full py-2.5 px-6 mb-3">
                   <span className="relative flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ade80] opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0d7a3e]"></span>
                   </span>
-                  <span className="text-sm font-medium tracking-wide text-gray-700 dark:text-gray-300">Waiting: {countdown}s</span>
+                  <span className="text-base font-medium tracking-wide text-gray-700 dark:text-gray-300">Waiting: {countdown}s</span>
                 </div>
-                <p className="text-[10px] text-gray-400 font-mono select-all mt-2 break-all max-w-full px-2 text-center">ID: {checkoutRequestId}</p>
+                <p className="text-[11px] text-gray-400 font-mono select-all mt-2 break-all max-w-full px-2 text-center">ID: {checkoutRequestId}</p>
               </div>
             </main>
           </div>
         )}
 
         {status === "success" && (
-          <div className="text-center py-10 relative z-10 my-auto flex-1 flex flex-col items-center justify-center">
-            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-gray-50 dark:bg-[#0f1117] border border-[#0d7a3e]/30 dark:border-[#4ade80]/30 flex items-center justify-center shadow-[0_0_20px_rgba(13,122,62,0.2)] dark:shadow-[0_0_20px_rgba(74,222,128,0.2)]">
-              <CheckCircle2 className="w-10 h-10 text-[#0d7a3e] dark:text-[#4ade80] animate-bounce" />
+          <div className="fixed inset-0 lg:static z-[60] bg-white dark:bg-[#1a1f2e] lg:bg-transparent p-6 lg:p-0 flex flex-col items-center justify-center w-full min-w-0">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-50 dark:bg-[#0f1117] border border-[#0d7a3e]/30 dark:border-[#4ade80]/30 flex items-center justify-center shadow-[0_0_30px_rgba(13,122,62,0.2)] dark:shadow-[0_0_30px_rgba(74,222,128,0.2)]">
+              <CheckCircle2 className="w-12 h-12 text-[#0d7a3e] dark:text-[#4ade80] animate-bounce" />
             </div>
-            <div className="flex items-center justify-center gap-1.5 mb-1">
-              <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
-              <h3 className="text-gray-900 dark:text-white font-extrabold text-2xl tracking-tight">Payment Successful!</h3>
-              <Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" />
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
+              <h3 className="text-gray-900 dark:text-white font-extrabold text-3xl tracking-tight">Payment Successful!</h3>
+              <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-[260px] mx-auto mt-2 leading-relaxed">Transaction has been completed and verified successfully.</p>
+            <p className="text-base text-gray-500 dark:text-gray-400 max-w-[300px] mx-auto mt-3 leading-relaxed text-center">Transaction has been completed and verified successfully.</p>
           </div>
         )}
 
         {status === "failed" && (() => {
-          const isWrongPin = /wrong.*pin|incorrect.*pin|invalid.*pin|initiator.*invalid|wrong.*credentials/i.test(error);
-          const isInsufficientFunds = /insufficient|balance/i.test(error);
-          const isTimeout = /timed? ?out|did not enter/i.test(error);
-          const errorLabel = isWrongPin ? "Wrong PIN Entered" : isInsufficientFunds ? "Insufficient M-Pesa Balance" : isTimeout ? "Payment Timed Out" : "Payment Failed";
-          const borderColor = isWrongPin || isInsufficientFunds ? "border-orange-300 dark:border-orange-700/50" : "border-red-300 dark:border-red-700/50";
-          const labelColor = isWrongPin || isInsufficientFunds ? "text-orange-600 dark:text-orange-400" : "text-red-600 dark:text-red-400";
           return (
-            <div className="text-center py-4 my-auto flex-1 flex flex-col items-center justify-center w-full min-w-0">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 dark:bg-[#0f1117] border ${borderColor} flex items-center justify-center shadow-md flex-shrink-0`}>
-                <XCircle className={`w-9 h-9 ${isWrongPin || isInsufficientFunds ? "text-orange-500 dark:text-orange-400" : "text-red-500 dark:text-red-400"}`} />
+            <div className="fixed inset-0 lg:static z-[60] bg-white dark:bg-[#1a1f2e] lg:bg-transparent p-6 lg:p-0 flex flex-col items-center justify-center w-full min-w-0">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700/50 flex items-center justify-center shadow-lg flex-shrink-0">
+                <XCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
               </div>
-              <h3 className="text-gray-900 dark:text-white font-bold text-xl px-2 break-words">{errorLabel}</h3>
-              <div className={`mt-4 w-full p-4 bg-gray-50 dark:bg-[#0f1117] border ${borderColor} rounded-xl text-left overflow-hidden`}>
-                <p className={`text-xs font-semibold ${labelColor} uppercase tracking-wider mb-1`}>Reason:</p>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300 leading-relaxed break-words overflow-wrap-anywhere">{error || "An unknown error occurred while verifying the transaction."}</p>
+              <h3 className="text-red-600 dark:text-red-400 font-bold text-2xl px-2 break-words text-center mb-2">Payment Failed</h3>
+              <div className="mt-2 w-full max-w-md p-5 bg-gray-50 dark:bg-[#0f1117] border border-red-200 dark:border-red-900/50 rounded-2xl text-center overflow-hidden">
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-relaxed break-words overflow-wrap-anywhere">
+                  {error || "An unknown error occurred while verifying the transaction."}
+                </p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full">
-                <button onClick={() => { setStatus("idle"); setError(""); setCountdown(60); }} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95">Try Again</button>
-                <button onClick={onCancel} className="flex-1 py-3 bg-gray-100 dark:bg-[#0f1117] hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-95">Cancel</button>
+              <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-md">
+                <button onClick={() => { setStatus("idle"); setError(""); setCountdown(60); }} className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-lg">Try Again</button>
+                <button onClick={onCancel} className="flex-1 py-4 bg-gray-100 dark:bg-[#0f1117] hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-95 text-lg">Cancel</button>
               </div>
             </div>
           );
