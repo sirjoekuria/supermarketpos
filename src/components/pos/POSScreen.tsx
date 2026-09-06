@@ -30,7 +30,8 @@ type SplitPaymentMethod = "cash" | "mpesa";
 export default function POSScreen() {
   const {
     items, addItem: addCartItem, clearCart, getTotals,
-    selectedCustomer, pointsRedeemed, setSelectedCustomer, setPointsRedeemed
+    selectedCustomer, pointsRedeemed, setSelectedCustomer, setPointsRedeemed,
+    suspendedSales, suspendSale, resumeSale, discardSuspendedSale
   } = useCartStore();
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
@@ -62,6 +63,7 @@ export default function POSScreen() {
   const [error, setError] = useState("");
   const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
   const [showVoidAuth, setShowVoidAuth] = useState(false);
+  const [showSuspendedSales, setShowSuspendedSales] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const paymentDetailsRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +79,22 @@ export default function POSScreen() {
   const [showCloseShift, setShowCloseShift] = useState(false);
   const [shiftCashInput, setShiftCashInput] = useState("");
   const [shiftError, setShiftError] = useState("");
+  const [expectedCashHint, setExpectedCashHint] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (showCloseShift && activeShift) {
+      fetch(`/api/shifts?action=expected_cash&shift_id=${activeShift.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.expected_cash !== undefined) {
+            setExpectedCashHint(data.expected_cash);
+          }
+        })
+        .catch(console.error);
+    } else {
+      setExpectedCashHint(null);
+    }
+  }, [showCloseShift, activeShift]);
 
   const getExpiryStatus = (product: Product) => {
     if (!product.expiry_date) return "none";
@@ -983,7 +1001,13 @@ export default function POSScreen() {
                <Lock className="w-12 h-12 text-amber-500 mx-auto" />
                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Close Shift</h2>
                <p className="text-sm text-gray-500 dark:text-gray-400">Count the physical cash in your drawer and enter it below.</p>
-               {shiftError && <p className="text-xs text-red-500">{shiftError}</p>}
+               {expectedCashHint !== null && (
+                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 p-3 rounded-xl text-sm font-medium mt-3 text-left flex justify-between items-center">
+                   <span>Expected Cash:</span>
+                   <span className="font-bold text-lg">{formatCurrency(expectedCashHint)}</span>
+                 </div>
+               )}
+               {shiftError && <p className="text-xs text-red-500 mt-2">{shiftError}</p>}
                <div className="text-left mt-4">
                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Cash in Drawer</label>
                  <input 
@@ -1288,14 +1312,41 @@ export default function POSScreen() {
                 <CreditCard className="w-5 h-5" />
                 Checkout {formatCurrency(totals.total)}
               </button>
-              <button
-                onClick={() => setShowVoidAuth(true)}
-                className="w-full py-2.5 text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 text-sm font-medium transition-colors flex items-center justify-center gap-1"
-                title="Requires manager authorization"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                Void Transaction
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowVoidAuth(true)}
+                  className="flex-1 py-2.5 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 text-sm font-medium transition-colors flex items-center justify-center gap-1 rounded-xl"
+                  title="Requires manager authorization"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Void Transaction
+                </button>
+                <button
+                  onClick={() => {
+                    const note = prompt("Enter a note for this suspended sale (optional):");
+                    if (note !== null) {
+                      suspendSale(note);
+                    }
+                  }}
+                  className="flex-1 py-2.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm font-medium transition-colors flex items-center justify-center gap-1 rounded-xl"
+                >
+                  <Split className="w-3.5 h-3.5" />
+                  Suspend Sale
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* View Suspended Sales Button (visible when cart is empty or via icon) */}
+          {suspendedSales.length > 0 && (
+            <div className="p-4 border-t border-gray-200 dark:border-pos-border space-y-3 flex-shrink-0">
+               <button
+                  onClick={() => setShowSuspendedSales(true)}
+                  className="w-full py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+               >
+                  <Split className="w-5 h-5" />
+                  View Suspended Sales ({suspendedSales.length})
+               </button>
             </div>
           )}
         </div>
@@ -1841,6 +1892,78 @@ export default function POSScreen() {
           onClose={() => setShowReceipt(false)}
           onPrint={() => {}}
         />
+      )}
+
+      {/* Suspended Sales Modal */}
+      {showSuspendedSales && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-[#0f1117] rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-800">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Split className="w-5 h-5 text-blue-500" /> Suspended Sales
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Resume incomplete sales. (If customer paid via M-Pesa, resume sale & click checkout {">"} M-Pesa {">"} Enter Code)
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSuspendedSales(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-gray-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {suspendedSales.length === 0 ? (
+                <div className="text-center text-gray-500 py-12">No suspended sales found.</div>
+              ) : (
+                <div className="space-y-4">
+                  {suspendedSales.map(draft => (
+                    <div key={draft.id} className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between hover:border-blue-300 dark:hover:border-blue-700 transition-colors bg-gray-50/50 dark:bg-[#1a1f2e]/50">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {draft.selectedCustomer ? draft.selectedCustomer.name : "Walk-in Customer"}
+                          </span>
+                          <span className="text-xs text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                            {new Date(draft.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          {draft.items.length} items &bull; {formatCurrency(draft.items.reduce((s, i) => s + i.total, 0))}
+                        </p>
+                        {draft.note && (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 italic mt-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded inline-block">
+                            "{draft.note}"
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button 
+                          onClick={() => discardSuspendedSale(draft.id)}
+                          className="flex-1 sm:flex-none px-4 py-2 border border-red-200 dark:border-red-900/50 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Discard
+                        </button>
+                        <button 
+                          onClick={() => {
+                            resumeSale(draft.id);
+                            setShowSuspendedSales(false);
+                          }}
+                          className="flex-1 sm:flex-none px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-600/20"
+                        >
+                          Resume Sale
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <BarcodeScanner

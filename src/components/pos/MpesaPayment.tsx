@@ -495,6 +495,9 @@ export default function MpesaPayment({
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                       Ask the customer for their M-Pesa SMS confirmation code and type it here exactly.
                     </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg mt-2">
+                      <strong>Tip for recovering payments:</strong> If a customer paid but the machine crashed, you can enter their code here to safely link their payment without double charging them.
+                    </p>
                     <div className="mt-auto pt-4 space-y-3">
                       <button
                         onClick={handleManualConfirm}

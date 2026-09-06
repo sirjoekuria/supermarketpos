@@ -121,3 +121,51 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
   }
 }
+
+// DELETE /api/customers/[id] - Delete a customer (Admin/Manager only)
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const actorRole = searchParams.get("actorRole");
+    const actorId = searchParams.get("actorId");
+
+    if (actorRole !== "admin" && actorRole !== "manager") {
+      return NextResponse.json({ error: "Unauthorized. Only managers and admins can delete customers." }, { status: 403 });
+    }
+
+    const supabase = getAdminClient();
+
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("id", id)
+      .maybeSingle();
+
+    const { error: deleteError } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    }
+
+    if (customer) {
+      writeAuditLog({
+        actor: actorId ? { id: actorId, email: "", full_name: "", role: actorRole || "" } : null,
+        action: "customer_deleted",
+        entityType: "customer",
+        entityId: id,
+        details: { customer_name: customer.name },
+      }).catch((err) => console.warn("Customer deletion audit log failed:", err));
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete customer." },
+      { status: 500 }
+    );
+  }
+}

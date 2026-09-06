@@ -127,8 +127,46 @@ export async function GET(req: Request) {
     const cashier_id = searchParams.get("cashier_id");
     const status = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "100", 10);
+    const action = searchParams.get("action");
+    const shift_id = searchParams.get("shift_id");
 
     const supabase = getAdminClient();
+
+    if (action === "expected_cash" && shift_id) {
+      const { data: shift, error: shiftError } = await supabase
+        .from("shifts")
+        .select("*")
+        .eq("id", shift_id)
+        .single();
+      if (shiftError || !shift) return NextResponse.json({ error: "Shift not found" }, { status: 404 });
+
+      const { data: sales, error: salesError } = await supabase
+        .from("sales")
+        .select("payment_method, total, split_payments")
+        .eq("cashier_id", shift.cashier_id)
+        .gte("created_at", shift.opened_at);
+      
+      let cashSalesTotal = 0;
+      for (const sale of sales || []) {
+        if (sale.payment_method === 'cash') {
+          cashSalesTotal += Number(sale.total);
+        } else if (sale.payment_method === 'split' && sale.split_payments) {
+          const sp = typeof sale.split_payments === 'string' 
+              ? JSON.parse(sale.split_payments) 
+              : sale.split_payments;
+              
+          sp.forEach((p: any) => {
+            if (p.method === 'cash') {
+              cashSalesTotal += Number(p.amount);
+            }
+          });
+        }
+      }
+      
+      const expected_cash = Number(shift.starting_cash) + cashSalesTotal;
+      return NextResponse.json({ expected_cash, cashSalesTotal, starting_cash: shift.starting_cash });
+    }
+
     let query = supabase
       .from("shifts")
       .select("*, app_users(full_name)")

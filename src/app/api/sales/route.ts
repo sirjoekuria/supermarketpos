@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const items = body.items as SaleItemPayload[] | undefined;
-    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, total_profit, payment_method, payment_status = "completed", actor, mpesa_transaction_id, payment_phone } = body;
+    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, total_profit, payment_method, payment_status = "completed", actor, mpesa_transaction_id, payment_phone, cashier_id, split_payments } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Sale must include at least one item." }, { status: 400 });
@@ -100,6 +100,8 @@ export async function POST(request: Request) {
         payment_method,
         payment_status,
         customer_id: activeCustomerId || null,
+        cashier_id: cashier_id || actor?.id || null,
+        split_payments: split_payments || null,
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
         branch_id: body.branch_id || null,

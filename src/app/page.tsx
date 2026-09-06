@@ -81,7 +81,17 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const hash = window.location.hash.replace("#", "");
+    if (hash && NAV_ITEMS.some((i) => i.id === hash)) {
+      setActiveTab(hash);
+    }
+  }, [setActiveTab]);
+
+  useEffect(() => {
+    if (activeTab && isMounted) {
+      window.history.replaceState(null, "", `#${activeTab}`);
+    }
+  }, [activeTab, isMounted]);
 
   useEffect(() => {
     setMountedTabs((prev) => {

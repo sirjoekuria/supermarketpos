@@ -14,6 +14,16 @@ export interface LastScannedProduct {
   scannedAt: string;
 }
 
+export interface SuspendedSale {
+  id: string;
+  items: CartItem[];
+  selectedCustomer: Customer | null;
+  pointsRedeemed: number;
+  lastScannedProduct: LastScannedProduct | null;
+  timestamp: string;
+  note?: string;
+}
+
 interface CartState {
   items: CartItem[];
   selectedCustomer: Customer | null;
@@ -29,6 +39,10 @@ interface CartState {
   setSelectedCustomer: (customer: Customer | null) => void;
   setPointsRedeemed: (points: number) => void;
   setLastScannedProduct: (product: LastScannedProduct | null) => void;
+  suspendedSales: SuspendedSale[];
+  suspendSale: (note?: string) => void;
+  resumeSale: (id: string) => void;
+  discardSuspendedSale: (id: string) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -38,6 +52,46 @@ export const useCartStore = create<CartState>()(
       selectedCustomer: null,
       pointsRedeemed: 0,
       lastScannedProduct: null,
+      suspendedSales: [],
+      suspendSale: (note) => {
+        set((state) => {
+          if (state.items.length === 0) return state;
+          const newSuspended: SuspendedSale = {
+            id: `draft_${Date.now()}`,
+            items: [...state.items],
+            selectedCustomer: state.selectedCustomer,
+            pointsRedeemed: state.pointsRedeemed,
+            lastScannedProduct: state.lastScannedProduct,
+            timestamp: new Date().toISOString(),
+            note,
+          };
+          return {
+            suspendedSales: [...state.suspendedSales, newSuspended],
+            items: [],
+            selectedCustomer: null,
+            pointsRedeemed: 0,
+            lastScannedProduct: null,
+          };
+        });
+      },
+      resumeSale: (id) => {
+        set((state) => {
+          const draft = state.suspendedSales.find(s => s.id === id);
+          if (!draft) return state;
+          return {
+            items: draft.items,
+            selectedCustomer: draft.selectedCustomer,
+            pointsRedeemed: draft.pointsRedeemed,
+            lastScannedProduct: draft.lastScannedProduct,
+            suspendedSales: state.suspendedSales.filter(s => s.id !== id),
+          };
+        });
+      },
+      discardSuspendedSale: (id) => {
+        set((state) => ({
+          suspendedSales: state.suspendedSales.filter((s) => s.id !== id),
+        }));
+      },
       addItem: (product, quantity = 1) => {
         set((state) => {
           const existingItem = state.items.find((item) => item.product.id === product.id);

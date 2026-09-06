@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Users, Search, Plus, UserPlus, Gift, Star, Award, ShieldAlert,
   ArrowUpRight, ArrowDownLeft, Settings, History, Loader2,
-  X, Check, AlertCircle, RefreshCw, Smartphone, Mail, Calendar, ChevronLeft,
+  X, Check, AlertCircle, RefreshCw, Smartphone, Mail, Calendar, ChevronLeft, Trash2,
 } from "lucide-react";
 import { useAuthStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";
@@ -36,6 +36,11 @@ export default function CustomersPage() {
   const [adjustError, setAdjustError] = useState("");
   const [adjustSuccess, setAdjustSuccess] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
+
+  // Customer Deletion State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Fetch Customers list
   const fetchCustomers = async (search = "") => {
@@ -103,6 +108,8 @@ export default function CustomersPage() {
     setAdjustForm({ amount: "", reason: "" });
     setAdjustError("");
     setAdjustSuccess(false);
+    setShowDeleteConfirm(false);
+    setDeleteError("");
   };
 
   // Handle Register Customer Submit
@@ -202,6 +209,30 @@ export default function CustomersPage() {
       setAdjustError("Network error. Could not connect to API.");
     } finally {
       setIsAdjusting(false);
+    }
+  };
+
+  // Handle Delete Customer
+  const handleDeleteCustomer = async () => {
+    if (!selectedCustomer) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/customers/${selectedCustomer.id}?actorRole=${user?.role}&actorId=${user?.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setSelectedCustomer(null);
+        setShowDeleteConfirm(false);
+        fetchCustomers();
+      } else {
+        setDeleteError(data.error || "Failed to delete customer.");
+      }
+    } catch (err) {
+      setDeleteError("Network error. Could not connect to API.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -431,29 +462,38 @@ export default function CustomersPage() {
                       </p>
                     </div>
                     
-                    {/* Admin Adjustments Tool */}
-                    <div className="flex items-end">
+                    {/* Admin Tools */}
+                    <div className="flex flex-col justify-end gap-2">
                       {(user?.role === "admin" || user?.role === "manager") ? (
-                        <button
-                          onClick={() => {
-                            setShowAdjustPanel(!showAdjustPanel);
-                            setAdjustError("");
-                            setAdjustSuccess(false);
-                          }}
-                          className={cn(
-                            "px-4 py-3 border rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all w-full",
-                            showAdjustPanel
-                              ? "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
-                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                          )}
-                        >
-                          <Settings className="w-4 h-4" />
-                          {showAdjustPanel ? "Cancel Adjustment" : "Correct Balance"}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => {
+                              setShowAdjustPanel(!showAdjustPanel);
+                              setAdjustError("");
+                              setAdjustSuccess(false);
+                            }}
+                            className={cn(
+                              "px-4 py-2 border rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all w-full",
+                              showAdjustPanel
+                                ? "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-pos-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                            )}
+                          >
+                            <Settings className="w-4 h-4" />
+                            {showAdjustPanel ? "Cancel Adjustment" : "Correct Balance"}
+                          </button>
+                          <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="px-4 py-2 border rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all w-full bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete Customer
+                          </button>
+                        </>
                       ) : (
                         <div className="w-full flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/10 border border-yellow-200 dark:border-yellow-900/30 rounded-xl text-yellow-600 dark:text-yellow-400 text-xs">
                           <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-                          Manager credentials needed to adjust points.
+                          Manager credentials needed to manage points or customers.
                         </div>
                       )}
                     </div>
@@ -707,6 +747,43 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in scale-in duration-300 p-6 text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Delete Customer?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to completely remove <strong>{selectedCustomer?.name}</strong>? This will delete their point balance and history. This action cannot be undone.
+            </p>
+            {deleteError && (
+              <div className="mb-4 text-xs text-red-600 bg-red-50 p-2 rounded-lg">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(""); }}
+                className="flex-1 py-2.5 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteCustomer}
+                className="flex-1 py-2.5 rounded-xl font-semibold bg-red-600 hover:bg-red-700 text-white transition-colors flex items-center justify-center gap-2"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
     </div>
   );
