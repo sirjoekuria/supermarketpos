@@ -598,7 +598,7 @@ export default function Reports() {
                               {new Date(s.opened_at).toLocaleString("en-KE")}
                               {s.closed_at && <div className="text-xs text-gray-400">to {new Date(s.closed_at).toLocaleString("en-KE")}</div>}
                             </td>
-                            <td className="py-3 text-sm font-medium text-gray-900 dark:text-white">{s.cashier_name || "Unknown"}</td>
+                            <td className="py-3 text-sm font-medium text-gray-900 dark:text-white">{s.app_users?.full_name || "Unknown"}</td>
                             <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{formatCurrency(s.starting_cash)}</td>
                             <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{formatCurrency(s.expected_cash)}</td>
                             <td className="py-3 text-sm text-right text-gray-700 dark:text-gray-300">{s.actual_cash !== null ? formatCurrency(s.actual_cash) : "-"}</td>
