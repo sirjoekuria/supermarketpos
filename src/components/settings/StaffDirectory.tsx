@@ -45,18 +45,37 @@ export default function StaffDirectory() {
       return;
     }
 
-    if (editingStaff) {
-      // For now, just update local store until PUT /api/users is implemented
-      updateStaff(editingStaff.id, form);
-      setShowModal(false);
-    } else {
-      if (!form.password || form.password.length < 6) {
-        setError("Password must be at least 6 characters.");
-        return;
-      }
-      setIsLoading(true);
-      setError("");
-      try {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      if (editingStaff) {
+        if (form.password && form.password.length > 0 && form.password.length < 6) {
+          setError("Password must be at least 6 characters.");
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch("/api/users", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, id: editingStaff.id }),
+        });
+        const data = await response.json();
+        
+        if (!response.ok) {
+          setError(data.error || "Failed to update staff.");
+          return;
+        }
+        
+        updateStaff(editingStaff.id, data.user);
+        setShowModal(false);
+      } else {
+        if (!form.password || form.password.length < 6) {
+          setError("Password must be at least 6 characters.");
+          setIsLoading(false);
+          return;
+        }
         const response = await fetch("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,11 +90,11 @@ export default function StaffDirectory() {
         
         addStaff(data.user);
         setShowModal(false);
-      } catch (err: any) {
-        setError(err.message || "Connection error.");
-      } finally {
-        setIsLoading(false);
       }
+    } catch (err: any) {
+      setError(err.message || "Connection error.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -186,7 +205,18 @@ export default function StaffDirectory() {
                 </select>
               </label>
               
-              {!editingStaff && (
+              {editingStaff ? (
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Set New Password</span>
+                  <input
+                    type="password"
+                    value={form.password || ""}
+                    onChange={e => { setForm({ ...form, password: e.target.value }); setError(""); }}
+                    placeholder="Leave blank to keep current password"
+                    className="w-full mt-1 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm"
+                  />
+                </label>
+              ) : (
                 <label className="block">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Set Initial Password</span>
                   <input

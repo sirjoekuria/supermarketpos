@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, writeAuditLog, type StaffRole } from "@/lib/server-auth";
 
@@ -57,6 +57,51 @@ export async function POST(request: Request) {
       action: "user_created_by_admin",
       entityType: "app_user",
       entityId: data.id,
+      details: { email, role },
+    });
+
+    return NextResponse.json({ user: data });
+  } catch (error: any) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, full_name, email, phone, role, password, is_active } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "User ID is required." }, { status: 400 });
+    }
+
+    const supabase = getAdminClient();
+    const updateData: any = {
+      full_name,
+      email: email?.trim().toLowerCase(),
+      phone: phone || null,
+      role,
+      is_active,
+    };
+
+    if (password && password.length >= 6) {
+      updateData.password_hash = hashPassword(password);
+    }
+
+    const { data, error } = await supabase
+      .from("app_users")
+      .update(updateData)
+      .eq("id", id)
+      .select("id, full_name, email, phone, role, is_active, approval_status, created_at")
+      .single();
+
+    if (error) throw error;
+
+    writeAuditLog({
+      action: password ? "user_updated_with_password_reset_by_admin" : "user_updated_by_admin",
+      entityType: "app_user",
+      entityId: id,
       details: { email, role },
     });
 
