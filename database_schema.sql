@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS public.app_users (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     full_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(50),
     role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'manager', 'cashier')),
     password_hash TEXT NOT NULL,
     approval_status VARCHAR(50) NOT NULL DEFAULT 'pending_manager' CHECK (approval_status IN ('approved', 'pending_admin', 'pending_manager', 'rejected')),
