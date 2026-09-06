@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 
 // GET /api/customers/[id]/history - Get point transaction history for a customer
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const customerId = params.id;
+    const { id: customerId } = await params;
     const supabase = getAdminClient();
 
     // Fetch point transactions and join with the sales (receipt_number)

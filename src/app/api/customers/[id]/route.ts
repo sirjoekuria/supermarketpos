@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
 // GET /api/customers/[id] - Fetch single customer details
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const supabase = getAdminClient();
 
     const { data: customer, error } = await supabase
@@ -27,9 +27,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PATCH /api/customers/[id] - Update customer details (and administrative point balance adjustment)
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const body = await request.json();
     const { name, phone, email, points_balance, adjustment_reason, actor } = body;
 
