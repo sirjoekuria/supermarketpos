@@ -592,7 +592,7 @@ export default function POSScreen() {
     return { cash_tendered: undefined, change_due: 0 };
   };
 
-  const handlePayment = async (mpesaTransactionId?: string) => {
+  const handlePayment = async (mpesaTransactionId?: string, paymentPhone?: string) => {
     if (items.length === 0) return;
     if (paymentMethod === "split" && splitPaidTotal < netTotal) {
       setError(`Split payment is short by ${formatCurrency(splitBalance)}`);
@@ -633,6 +633,7 @@ export default function POSScreen() {
         items: saleItems,
         split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
         customer_id: selectedCustomer?.id || null,
+        payment_phone: paymentPhone || (paymentMethod === "split" ? splitMpesaPhone : undefined),
         points_redeemed: pointsRedeemed,
         actor: user ? { id: user.id, email: user.email, full_name: user.full_name, role: user.role } : undefined,
         branch_id: currentBranchId || null,
@@ -813,7 +814,7 @@ export default function POSScreen() {
     }
   };
 
-  const handleMpesaSuccess = (transactionId: string) => { handlePayment(transactionId); };
+  const handleMpesaSuccess = (transactionId: string, phone?: string) => { handlePayment(transactionId, phone); };
   const handleMpesaFailure = (err: string) => { setError(err); setIsProcessing(false); };
 
   const cashChange =

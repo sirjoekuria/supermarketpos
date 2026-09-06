@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface MpesaPaymentProps {
   amount: number;
-  onSuccess: (transactionId: string) => void;
+  onSuccess: (transactionId: string, phone?: string) => void;
   onFailure: (error: string) => void;
   onCancel: () => void;
 }
@@ -81,7 +81,7 @@ export default function MpesaPayment({
     if (!verifiedTx) return;
     setStatus("success");
     setTimeout(() => {
-      onSuccess(verifiedTx.mpesaReceiptNumber);
+      onSuccess(verifiedTx.mpesaReceiptNumber, verifiedTx.phoneNumber);
     }, SUCCESS_FLASH_MS);
   };
 
@@ -268,7 +268,7 @@ export default function MpesaPayment({
       clearTimeout(timeoutId);
       clearInterval(countdownTimer);
       setStatus("success");
-      setTimeout(() => onSuccess(receipt), SUCCESS_FLASH_MS);
+      setTimeout(() => onSuccess(receipt, phone), SUCCESS_FLASH_MS);
     };
 
     const finishFailure = (message: string) => {

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const items = body.items as SaleItemPayload[] | undefined;
-    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, total_profit, payment_method, payment_status = "completed", actor, mpesa_transaction_id } = body;
+    const { customer_id, points_redeemed = 0, receipt_number, subtotal, tax_amount, discount_amount, total, total_profit, payment_method, payment_status = "completed", actor, mpesa_transaction_id, payment_phone } = body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: "Sale must include at least one item." }, { status: 400 });
@@ -28,13 +28,29 @@ export async function POST(request: Request) {
     let finalPointsEarned = 0;
     let customerPointsBalance = 0;
 
+    let activeCustomerId = customer_id;
+
+    if (!activeCustomerId && payment_phone) {
+      const sanitizedPhone = payment_phone.replace(/\D/g, "");
+      if (sanitizedPhone.length >= 9) {
+        const { data: matchedCustomers } = await supabase
+          .from("customers")
+          .select("id, phone")
+          .ilike("phone", `%${sanitizedPhone.slice(-9)}`);
+        
+        if (matchedCustomers && matchedCustomers.length > 0) {
+          activeCustomerId = matchedCustomers[0].id;
+        }
+      }
+    }
+
     // ── LOYALTY SYSTEM VALIDATION & ATOMIC CALCULATION ──
-    if (customer_id) {
+    if (activeCustomerId) {
       // 1. Fetch customer details
       const { data: customer, error: customerError } = await supabase
         .from("customers")
         .select("points_balance, name")
-        .eq("id", customer_id)
+        .eq("id", activeCustomerId)
         .single();
 
       if (customerError || !customer) {
@@ -83,7 +99,7 @@ export async function POST(request: Request) {
         total_profit: total_profit || 0,
         payment_method,
         payment_status,
-        customer_id: customer_id || null,
+        customer_id: activeCustomerId || null,
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
         branch_id: body.branch_id || null,
@@ -97,13 +113,13 @@ export async function POST(request: Request) {
     }
 
     // ── LOYALTY SYSTEM DEDUCTION & AUDIT LEDGER LOGGING ──
-    if (customer_id) {
+    if (activeCustomerId) {
       try {
         // Apply points updates to customer
         const { error: customerUpdateError } = await supabase
           .from("customers")
           .update({ points_balance: customerPointsBalance, updated_at: new Date().toISOString() })
-          .eq("id", customer_id);
+          .eq("id", activeCustomerId);
 
         if (customerUpdateError) throw customerUpdateError;
 
@@ -113,7 +129,7 @@ export async function POST(request: Request) {
 
         if (points_redeemed > 0) {
           ledgerEntries.push({
-            customer_id,
+            customer_id: activeCustomerId,
             sale_id: saleData.id,
             type: "redeem",
             points: -points_redeemed,
@@ -124,7 +140,7 @@ export async function POST(request: Request) {
 
         if (finalPointsEarned > 0) {
           ledgerEntries.push({
-            customer_id,
+            customer_id: activeCustomerId,
             sale_id: saleData.id,
             type: "earn",
             points: finalPointsEarned,
@@ -260,7 +276,7 @@ export async function POST(request: Request) {
         total,
         payment_method,
         item_count: items.length,
-        customer_id: customer_id || null,
+        customer_id: activeCustomerId || null,
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
       },
@@ -268,7 +284,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       sale: saleData, 
-      loyalty: customer_id ? {
+      loyalty: activeCustomerId ? {
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
         final_points_balance: customerPointsBalance
