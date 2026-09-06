@@ -111,6 +111,12 @@ export async function GET(request: Request) {
 
       // Any other ResultCode = explicit error
       if (data.ResultCode !== undefined && String(data.ResultCode) !== "0") {
+        // If it's a timeout (1037) or unknown, don't fail immediately. The prompt might still be on their phone.
+        // We will just let the frontend countdown expire, because sometimes callbacks come in later!
+        if (String(data.ResultCode) === "1037") {
+          return NextResponse.json({ status: "pending", message: data.ResultDesc || "Customer network is slow..." });
+        }
+
         // Terminal failure
         const result = { status: "failed", message: data.ResultDesc || "Payment failed." };
         setMpesaStatusCache(checkoutRequestId, "failed", result);

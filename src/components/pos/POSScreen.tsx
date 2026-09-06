@@ -56,7 +56,7 @@ export default function POSScreen() {
   });
   const [splitMpesaPhone, setSplitMpesaPhone] = useState("");
   const [splitMpesaStatus, setSplitMpesaStatus] = useState<"idle" | "initiating" | "pending" | "success" | "failed">("idle");
-  const [splitMpesaCountdown, setSplitMpesaCountdown] = useState(60);
+  const [splitMpesaCountdown, setSplitMpesaCountdown] = useState(120);
   const [splitMpesaCheckoutRequestId, setSplitMpesaCheckoutRequestId] = useState("");
   const [splitMpesaError, setSplitMpesaError] = useState("");
   const [error, setError] = useState("");
@@ -308,7 +308,7 @@ export default function POSScreen() {
       if (data.success && data.checkoutRequestId) {
         setSplitMpesaCheckoutRequestId(data.checkoutRequestId);
         setSplitMpesaStatus("pending");
-        setSplitMpesaCountdown(60);
+        setSplitMpesaCountdown(120);
       } else {
         throw new Error(data.message || "Failed to initiate payment");
       }

@@ -24,7 +24,7 @@ export default function MpesaPayment({
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(120);
   const [inputMode, setInputMode] = useState<"stk" | "manual">("stk");
   const [manualCode, setManualCode] = useState("");
   const [manualError, setManualError] = useState("");
@@ -242,7 +242,7 @@ export default function MpesaPayment({
       if (data.success && data.checkoutRequestId) {
         setCheckoutRequestId(data.checkoutRequestId);
         setStatus("pending");
-        setCountdown(60);
+        setCountdown(120);
       } else {
         throw new Error(data.message || "Failed to initiate payment");
       }
@@ -543,8 +543,8 @@ export default function MpesaPayment({
                 <div className="relative w-[160px] h-[160px] flex items-center justify-center mb-8">
                   <svg className="absolute inset-0 transform -rotate-90 w-full h-full">
                     <circle cx="80" cy="80" fill="transparent" r="70" stroke="rgba(0,0,0,0.05)" strokeWidth="8"></circle>
-                    <circle className="blur-[8px] opacity-60 transition-all duration-1000" cx="80" cy="80" fill="transparent" r="70" stroke="#4ade80" strokeDasharray="440" strokeDashoffset={440 - (440 * (60 - countdown)) / 60} strokeWidth="12"></circle>
-                    <circle className="transition-all duration-1000" strokeLinecap="round" cx="80" cy="80" fill="transparent" r="70" stroke="#0d7a3e" strokeDasharray="440" strokeDashoffset={440 - (440 * (60 - countdown)) / 60} strokeWidth="8"></circle>
+                    <circle className="blur-[8px] opacity-60 transition-all duration-1000" cx="80" cy="80" fill="transparent" r="70" stroke="#4ade80" strokeDasharray="440" strokeDashoffset={440 - (440 * (120 - countdown)) / 120} strokeWidth="12"></circle>
+                    <circle className="transition-all duration-1000" strokeLinecap="round" cx="80" cy="80" fill="transparent" r="70" stroke="#0d7a3e" strokeDasharray="440" strokeDashoffset={440 - (440 * (120 - countdown)) / 120} strokeWidth="8"></circle>
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="bg-white dark:bg-[#1a1f2e] p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
@@ -592,7 +592,7 @@ export default function MpesaPayment({
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-md">
-                <button onClick={() => { setStatus("idle"); setError(""); setCountdown(60); }} className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-lg">Try Again</button>
+                <button onClick={() => { setStatus("idle"); setError(""); setCountdown(120); }} className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-lg">Try Again</button>
                 <button onClick={onCancel} className="flex-1 py-4 bg-gray-100 dark:bg-[#0f1117] hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-95 text-lg">Cancel</button>
               </div>
             </div>

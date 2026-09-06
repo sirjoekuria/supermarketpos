@@ -26,6 +26,7 @@ export default function Cart() {
   const [pendingAction, setPendingAction] = useState<{ type: string; data: any } | null>(null);
   const [auditLog, setAuditLog] = useState<any[]>([]);
   const [showAuditLog, setShowAuditLog] = useState(false);
+  const [selectedForRemoval, setSelectedForRemoval] = useState<Set<string>>(new Set());
   const totals = getTotals();
 
   // Loyalty Customer Search state
@@ -139,7 +140,42 @@ export default function Cart() {
       }]);
     }
 
+    if (type === "remove_multiple") {
+      const itemNames: string[] = [];
+      data.productIds.forEach((id: string) => {
+        const item = items.find(i => i.product.id === id);
+        if (item) {
+          itemNames.push(item.product.name);
+          removeItem(id);
+        }
+      });
+      
+      setAuditLog([...auditLog, {
+        id: Date.now().toString(),
+        action: "remove_multiple",
+        description: `Removed ${data.productIds.length} items from cart`,
+        itemName: itemNames.join(", "),
+        manager: { name: user?.full_name || "Unknown", email: user?.email || "" },
+        timestamp,
+        authorizedAt: timestamp,
+      }]);
+      setSelectedForRemoval(new Set());
+    }
+
     setPendingAction(null);
+  };
+
+  const handleBulkRemoveAuth = () => {
+    if (selectedForRemoval.size === 0) return;
+    setPendingAction({ type: "remove_multiple", data: { productIds: Array.from(selectedForRemoval) } });
+    setShowManagerAuth(true);
+  };
+
+  const toggleSelection = (productId: string) => {
+    const newSet = new Set(selectedForRemoval);
+    if (newSet.has(productId)) newSet.delete(productId);
+    else newSet.add(productId);
+    setSelectedForRemoval(newSet);
   };
 
   if (items.length === 0) {
@@ -206,6 +242,14 @@ export default function Cart() {
             )}
           >
             <div className="flex items-start gap-3">
+              <div className="flex items-center h-14">
+                <input
+                  type="checkbox"
+                  checked={selectedForRemoval.has(item.product.id)}
+                  onChange={() => toggleSelection(item.product.id)}
+                  className="w-4 h-4 text-red-600 rounded border-gray-300 dark:border-gray-600 focus:ring-red-500 bg-white dark:bg-gray-700 cursor-pointer"
+                />
+              </div>
               <div className="w-14 h-14 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                 {item.product.image_url ? (
                   <img
@@ -296,8 +340,24 @@ export default function Cart() {
       </div>
 
       {/* Cart Totals */}
-      <div className="border-t border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/20 p-4 space-y-2 flex-shrink-0">
-        <div className="flex justify-between text-sm">
+      <div className="border-t border-gray-200 dark:border-pos-border bg-gray-50 dark:bg-gray-800/20 p-4 space-y-2 flex-shrink-0 relative">
+        
+        {/* Floating Bulk Remove Action */}
+        {selectedForRemoval.size > 0 && (
+          <div className="absolute left-0 right-0 -top-[52px] px-4 py-2 bg-red-50 dark:bg-red-900/30 border-y border-red-100 dark:border-red-900/50 flex items-center justify-between backdrop-blur-sm z-10 shadow-sm animate-in slide-in-from-bottom-4">
+            <span className="text-sm font-bold text-red-600 dark:text-red-400">
+              {selectedForRemoval.size} item{selectedForRemoval.size > 1 ? "s" : ""} selected
+            </span>
+            <button
+              onClick={handleBulkRemoveAuth}
+              className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Remove Selected
+            </button>
+          </div>
+        )}
+
+        <div className="flex justify-between text-sm mt-2">
           <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
           <span className="text-gray-900 dark:text-white font-medium">
             {formatCurrency(totals.subtotal)}

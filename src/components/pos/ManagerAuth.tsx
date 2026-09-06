@@ -29,14 +29,21 @@ export default function ManagerAuth({
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (isOpen && method === "password") {
-      setTimeout(() => emailRef.current?.focus(), 100);
-    }
-    // Reset state on open
     if (isOpen) {
       setError("");
       setSuccess("");
       setPassword("");
+      if (window.PublicKeyCredential) {
+        setMethod("fingerprint");
+      } else {
+        setMethod("password");
+      }
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && method === "password") {
+      setTimeout(() => emailRef.current?.focus(), 100);
     }
   }, [isOpen, method]);
 
