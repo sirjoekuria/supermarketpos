@@ -1720,7 +1720,13 @@ export default function POSScreen() {
 
                         <button
                           onClick={() => handlePayment()}
-                          disabled={splitPaidTotal < netTotal || isProcessing}
+                          disabled={
+                            splitPaidTotal < netTotal || 
+                            isProcessing || 
+                            splitMpesaStatus === "initiating" || 
+                            splitMpesaStatus === "pending" ||
+                            (parseAmount(splitPayments.mpesa) > 0 && !splitReferences.mpesa.trim())
+                          }
                           className="w-full py-4 bg-[#0d7a3e] dark:bg-[#4ade80] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] disabled:opacity-50 text-white dark:text-[#0f1117] rounded-2xl font-bold transition-all active:scale-[0.98] shadow-lg mt-auto"
                         >
                           {isProcessing ? (
