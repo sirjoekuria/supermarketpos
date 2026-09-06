@@ -1419,17 +1419,19 @@ export default function POSScreen() {
                     {[
                       { id: "cash", label: "Cash", icon: Banknote },
                       { id: "mpesa", label: "M-Pesa", icon: Smartphone },
-                      { id: "card", label: "Card", icon: CreditCard },
+                      { id: "card", label: "Card", icon: CreditCard, disabled: true },
                       { id: "split", label: "Split", icon: Split },
-                    ].map(({ id, label, icon: Icon }) => (
+                    ].map(({ id, label, icon: Icon, disabled }) => (
                       <button
                         key={id}
+                        disabled={disabled}
                         onClick={() => { setPaymentMethod(id); setError(""); }}
                         className={cn(
                           "rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all border-2",
                           paymentMethod === id
                             ? "bg-green-50 dark:bg-green-900/20 border-[#0d7a3e] dark:border-[#4ade80] text-[#0d7a3e] dark:text-[#4ade80] shadow-[0_0_20px_rgba(76,175,80,0.15)] dark:shadow-[0_0_20px_rgba(74,222,128,0.2)]"
-                            : "bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-gray-700/50 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                            : "bg-white dark:bg-[#1a1f2e] border-gray-200 dark:border-gray-700/50 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600",
+                          disabled && "opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800 hover:border-gray-200 dark:hover:border-gray-700/50"
                         )}
                       >
                         <Icon className="w-7 h-7" />
