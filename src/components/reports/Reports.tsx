@@ -285,6 +285,7 @@ export default function Reports() {
               { id: "products", label: "Product Performance", icon: ShoppingBag},
               { id: "cashiers", label: "Cashier Performance", icon: Users      },
               { id: "shifts",   label: "Shifts",              icon: Calendar   },
+              { id: "zreport",  label: "Z-Report",            icon: Activity   },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -624,6 +625,102 @@ export default function Reports() {
                     </table>
                   </div>
                 )}
+              </div>
+            )}
+            {/* ── Z-Report ──────────────────────────────────────────────── */}
+            {reportType === "zreport" && (
+              <div className="space-y-4">
+                {/* Z-Report Header */}
+                <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6" id="z-report-printable">
+                  <div className="text-center border-b border-dashed border-gray-300 dark:border-gray-600 pb-4 mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">END OF DAY Z-REPORT</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{new Date().toLocaleString("en-KE")}</p>
+                  </div>
+
+                  {/* Summary Totals */}
+                  <div className="space-y-2 mb-6">
+                    <div className="flex justify-between py-2 border-b border-gray-100 dark:border-pos-border">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Total Sales</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(m?.totalSales ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-gray-100 dark:border-pos-border">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Total Profit</span>
+                      <span className="text-sm font-bold text-green-600 dark:text-green-400">{formatCurrency(m?.totalProfit ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-gray-100 dark:border-pos-border">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Total Transactions</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatNumber(m?.totalTransactions ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-gray-100 dark:border-pos-border">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Items Sold</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatNumber(m?.totalItems ?? 0)}</span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Average Ticket</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(m?.avgTicket ?? 0)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="mb-6">
+                    <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Payment Breakdown</h3>
+                    <div className="space-y-2">
+                      {paymentBreakdown.map(p => (
+                        <div key={p.method} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-pos-border">
+                          <div>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{p.method}</span>
+                            <span className="ml-2 text-xs text-gray-400">{p.count} txn{p.count !== 1 ? 's' : ''}</span>
+                          </div>
+                          <span className="text-sm font-bold text-primary-600 dark:text-primary-400">{formatCurrency(p.amount)}</span>
+                        </div>
+                      ))}
+                      {paymentBreakdown.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-4">No payment data available.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Top 5 Products */}
+                  <div className="mb-4">
+                    <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Top 5 Products</h3>
+                    <div className="space-y-1">
+                      {productPerformance.slice(0, 5).map((p, i) => (
+                        <div key={p.product_id} className="flex justify-between items-center py-1.5">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{i + 1}. {p.name}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{p.units_sold} sold</span>
+                        </div>
+                      ))}
+                      {productPerformance.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-4">No product data available.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="border-t border-dashed border-gray-300 dark:border-gray-600 pt-4 text-center">
+                    <p className="text-xs text-gray-400">*** END OF Z-REPORT ***</p>
+                    <p className="text-xs text-gray-400">Generated by SuperMarket POS</p>
+                  </div>
+                </div>
+
+                {/* Print Button */}
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('z-report-printable');
+                    if (!el) return;
+                    const win = window.open('', '_blank');
+                    if (!win) return;
+                    win.document.write(`<html><head><title>Z-Report</title><style>body{font-family:monospace;padding:20px;max-width:380px;margin:auto}h2{text-align:center}*{box-sizing:border-box}</style></head><body>${el.innerHTML}</body></html>`);
+                    win.document.close();
+                    win.focus();
+                    win.print();
+                    win.close();
+                  }}
+                  className="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Download className="w-5 h-5" /> Print Z-Report
+                </button>
               </div>
             )}
           </div>

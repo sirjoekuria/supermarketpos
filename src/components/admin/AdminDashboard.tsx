@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 
 const DAILY_STATS = {
   totalSales: 48750.0,
@@ -83,7 +84,6 @@ function StatCard({ title, value, icon: Icon, trend, trendUp, color }: StatCardP
 
 export default function AdminDashboard() {
   const [dateRange, setDateRange] = useState("today");
-  const maxSales = Math.max(...HOURLY_SALES.map((d) => d.sales));
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto h-full">
@@ -123,27 +123,25 @@ export default function AdminDashboard() {
         {/* Hourly Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Sales Overview</h3>
-          <div className="h-64 flex items-end gap-2">
-            {HOURLY_SALES.map((data, idx) => {
-              const height = (data.sales / maxSales) * 100;
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                  <div
-                    className="w-full bg-primary-500/20 dark:bg-primary-500/30 rounded-t-lg relative group cursor-pointer"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div
-                      className="absolute bottom-0 left-0 right-0 bg-primary-500 rounded-t-lg transition-all group-hover:bg-primary-400"
-                      style={{ height: "100%" }}
-                    />
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      {formatCurrency(data.sales)}
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{data.hour}</span>
-                </div>
-              );
-            })}
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={HOURLY_SALES} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} tickFormatter={(value) => `Ksh ${value/1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                <Tooltip 
+                  formatter={(value: number) => [formatCurrency(value), "Sales"]}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Area type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -239,29 +237,20 @@ export default function AdminDashboard() {
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Top Products</h3>
             <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">View All</button>
           </div>
-          <div className="space-y-4">
-            {TOP_PRODUCTS.map((product, idx) => (
-              <div key={product.id} className="flex items-center gap-4">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500 dark:text-gray-400">
-                  {idx + 1}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(product.revenue)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary-500 rounded-full"
-                        style={{ width: `${(product.sales / TOP_PRODUCTS[0].sales) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-400 w-12 text-right">{product.sales} sold</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="h-64 mt-4 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={TOP_PRODUCTS} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e5e7eb" opacity={0.5} />
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#4b5563' }} width={120} />
+                <Tooltip 
+                  formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{fill: 'transparent'}}
+                />
+                <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
