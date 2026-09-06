@@ -49,8 +49,8 @@ export async function GET(request: Request) {
     }
 
     // ── DIRECT SAFARICOM QUERY ──
-    // Fallback when callback is delayed — start after 2s so confirmation feels immediate.
-    if (elapsed < 2) {
+    // Fallback when callback is delayed — start after 15s to allow customer to receive and process the STK push.
+    if (elapsed < 15) {
       return NextResponse.json({ status: "pending", message: "Waiting for M-Pesa confirmation..." });
     }
 
