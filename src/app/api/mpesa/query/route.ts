@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 import { getMpesaAccessToken, getMpesaConfig, mpesaTimestamp, stkPassword, updateMpesaTransaction } from "@/lib/mpesa";
@@ -7,20 +8,20 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const checkoutRequestId = url.searchParams.get("checkoutRequestId");
-    // elapsed seconds since STK push — client sends this so we know when to start querying Safaricom directly
+    // elapsed seconds since STK push â€” client sends this so we know when to start querying Safaricom directly
     const elapsed = parseFloat(url.searchParams.get("elapsed") || "0");
 
     if (!checkoutRequestId) {
       return NextResponse.json({ status: "failed", message: "Missing CheckoutRequestID." }, { status: 400 });
     }
 
-    // ── IN-MEMORY CACHE: callback or prior query already confirmed status ──
+    // â”€â”€ IN-MEMORY CACHE: callback or prior query already confirmed status â”€â”€
     const cached = getMpesaStatusCache(checkoutRequestId);
     if (cached) {
       return NextResponse.json(cached);
     }
 
-    // ── FAST PATH: check the DB first (works in production where callback updates it) ──
+    // â”€â”€ FAST PATH: check the DB first (works in production where callback updates it) â”€â”€
     try {
       const supabase = getAdminClient();
       const { data: existing } = await supabase
@@ -45,11 +46,11 @@ export async function GET(request: Request) {
         return NextResponse.json(result);
       }
     } catch {
-      // DB unavailable — fall through to Safaricom direct query
+      // DB unavailable â€” fall through to Safaricom direct query
     }
 
-    // ── DIRECT SAFARICOM QUERY ──
-    // Fallback when callback is delayed — start after 15s to allow customer to receive and process the STK push.
+    // â”€â”€ DIRECT SAFARICOM QUERY â”€â”€
+    // Fallback when callback is delayed â€” start after 15s to allow customer to receive and process the STK push.
     if (elapsed < 15) {
       return NextResponse.json({ status: "pending", message: "Waiting for M-Pesa confirmation..." });
     }
@@ -57,9 +58,9 @@ export async function GET(request: Request) {
     try {
       const config = getMpesaConfig();
       const timestamp = mpesaTimestamp();
-      const token = await getMpesaAccessToken(); // cached — only fetches once per hour
+      const token = await getMpesaAccessToken(); // cached â€” only fetches once per hour
 
-      // 4-second timeout on Safaricom API — don't let slow responses block our polling
+      // 4-second timeout on Safaricom API â€” don't let slow responses block our polling
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
 
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
       }
 
       if (!response.ok) {
-        // Safaricom not ready yet — customer hasn't been prompted
+        // Safaricom not ready yet â€” customer hasn't been prompted
         return NextResponse.json({ status: "pending", message: "Waiting for customer to pay..." });
       }
 
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
         return NextResponse.json(result);
       }
 
-      // Safaricom returned 200 but no ResultCode — still processing
+      // Safaricom returned 200 but no ResultCode â€” still processing
       return NextResponse.json({ status: "pending", message: "Payment is being processed..." });
 
     } catch (err: unknown) {
@@ -142,8 +143,9 @@ export async function GET(request: Request) {
     }
   } catch (error) {
     return NextResponse.json(
-      { status: "failed", message: error instanceof Error ? error.message : "Could not query payment." },
+      { status: "failed", message: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

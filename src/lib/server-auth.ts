@@ -99,6 +99,45 @@ export async function writeAuditLog(input: {
       details: input.details || {},
     });
   } catch (error) {
-    console.warn("Audit log write skipped:", error);
+    console.error("Audit log write skipped:", error);
   }
+}
+
+// Granular Authorization Matrix
+export const PERMISSIONS = {
+  admin: {
+    canDeleteUsers: true,
+    canApproveManagers: true,
+    canViewAllAuditLogs: true,
+    canManageBranches: true,
+    canManageSettings: true,
+  },
+  manager: {
+    canApproveCashiers: true,
+    canViewReports: true,
+    canManageStock: true,
+    canManageProducts: true,
+    canViewAllSales: true,
+    canIssueRefunds: true,
+  },
+  cashier: {
+    canCreateSale: true,
+    canViewOwnSales: true,
+    canViewProducts: true,
+    canManageOwnShift: true,
+  }
+};
+
+export function hasPermission(role: StaffRole, permission: string): boolean {
+  if (role === 'admin') return true; // Admins can do everything
+  if (role === 'manager' && (PERMISSIONS.manager as Record<string, boolean>)[permission]) return true;
+  if (role === 'cashier' && (PERMISSIONS.cashier as Record<string, boolean>)[permission]) return true;
+  return false;
+}
+
+export function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') return input;
+  // Strip HTML tags to prevent XSS. 
+  // SQL Injection is handled natively by Supabase query parameterization.
+  return input.replace(/<[^>]*>?/gm, '').trim();
 }

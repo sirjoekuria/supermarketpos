@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, writeAuditLog } from "@/lib/server-auth";
 import { isRateLimited } from "@/lib/rate-limit";
@@ -165,4 +166,5 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: err.message || "Failed to reset password." }, { status: 500 });
   }
 }
+
 

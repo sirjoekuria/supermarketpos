@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, writeAuditLog, type StaffRole } from "@/lib/server-auth";
 
@@ -12,7 +13,8 @@ export async function GET() {
     if (error) throw error;
     return NextResponse.json({ users: data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
 
@@ -60,7 +62,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ user: data });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+
 

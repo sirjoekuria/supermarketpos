@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 
@@ -27,7 +28,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     // Format the sales data nested structure so it matches PointTransaction interface
@@ -46,7 +48,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return NextResponse.json({ history: formattedHistory });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch points ledger." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }

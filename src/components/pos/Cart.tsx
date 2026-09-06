@@ -195,7 +195,7 @@ export default function Cart() {
       {selectedCustomer && (
         <div className="p-4 border-b border-gray-200 dark:border-pos-border bg-gray-50/50 dark:bg-gray-800/20 flex-shrink-0 relative">
           {/* Active Customer Display Card */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary-500/10 to-indigo-500/10 border border-primary-500/30 rounded-xl animate-in slide-in-from-top duration-300">
+          <div className="flex items-center justify-between p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-500/30 rounded-xl animate-in slide-in-from-top duration-300">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0">
                 <UserCheck className="w-5 h-5 text-primary-500" />

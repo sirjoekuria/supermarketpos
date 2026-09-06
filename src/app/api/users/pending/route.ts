@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { findApprovedActor, getAdminClient, publicUser } from "@/lib/server-auth";
 
@@ -20,10 +21,13 @@ export async function GET(request: Request) {
       .eq("approval_status", pendingStatus)
       .order("created_at", { ascending: false });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
 
     return NextResponse.json({ users: (data || []).map(publicUser) });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load approvals." }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+

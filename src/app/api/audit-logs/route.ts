@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { findApprovedActor, getAdminClient } from "@/lib/server-auth";
 
@@ -36,7 +37,8 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
 
     return NextResponse.json({ 
       logs: data || [],
@@ -48,6 +50,8 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load audit logs." }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+

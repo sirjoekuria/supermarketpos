@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -29,17 +30,18 @@ export async function GET(request: Request) {
       .select("*, product:products(*)")
       .eq("branch_id", branchId);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     return NextResponse.json({ stock: data });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch branch stock" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
 
-// PATCH — upsert stock for a product at a branch
+// PATCH â€” upsert stock for a product at a branch
 // body: { branch_id, product_id, stock_quantity, min_stock_level? }
 export async function PATCH(request: Request) {
   try {
@@ -66,12 +68,14 @@ export async function PATCH(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     return NextResponse.json({ stock: data });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update branch stock" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     const from = `${startDate}T00:00:00.000Z`;
     const to   = `${endDate}T23:59:59.999Z`;
 
-    // ── Fetch all sales in range ──────────────────────────────────────────────
+    // â”€â”€ Fetch all sales in range â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let salesQuery = supabase
       .from("sales")
       .select(`
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     const { data: sales, error: salesError } = await salesQuery;
 
     if (salesError) {
-      // Fallback: join may fail if FK name differs — retry with simpler select
+      // Fallback: join may fail if FK name differs â€” retry with simpler select
       const { data: salesSimple, error: salesSimpleError } = await supabase
         .from("sales")
         .select(`
@@ -73,14 +74,14 @@ export async function GET(request: Request) {
     return buildResponse(sales ?? []);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch reports." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
 
 function buildResponse(sales: any[]) {
-  // ── Aggregate top-level metrics ───────────────────────────────────────────
+  // â”€â”€ Aggregate top-level metrics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalSales       = sales.reduce((s, r) => s + Number(r.total || 0), 0);
   const totalProfit      = sales.reduce((s, r) => s + Number(r.total_profit || 0), 0);
   const totalTransactions = sales.length;
@@ -91,7 +92,7 @@ function buildResponse(sales: any[]) {
   const avgTicket        = totalTransactions > 0 ? totalSales / totalTransactions : 0;
   const profitMargin     = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
 
-  // ── Daily trend ───────────────────────────────────────────────────────────
+  // â”€â”€ Daily trend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const dailyMap: Record<string, { date: string; sales: number; profit: number; transactions: number; items: number }> = {};
   for (const sale of sales) {
     const day = (sale.created_at as string).slice(0, 10); // "YYYY-MM-DD"
@@ -105,7 +106,7 @@ function buildResponse(sales: any[]) {
   }
   const dailyTrend = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
 
-  // ── Payment method breakdown ──────────────────────────────────────────────
+  // â”€â”€ Payment method breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const paymentMap: Record<string, { method: string; amount: number; count: number }> = {};
   for (const sale of sales) {
     const m = sale.payment_method || "unknown";
@@ -115,7 +116,7 @@ function buildResponse(sales: any[]) {
   }
   const paymentBreakdown = Object.values(paymentMap);
 
-  // ── Product performance ───────────────────────────────────────────────────
+  // â”€â”€ Product performance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const productMap: Record<string, {
     product_id: string; name: string; category: string;
     units_sold: number; revenue: number; cost: number; profit: number;
@@ -124,7 +125,7 @@ function buildResponse(sales: any[]) {
     for (const item of (sale.sale_items ?? [])) {
       const pid  = item.product_id;
       const name = item.product?.name ?? "Unknown";
-      const cat  = item.product?.categories?.name ?? item.product?.category_id ?? "—";
+      const cat  = item.product?.categories?.name ?? item.product?.category_id ?? "â€”";
       if (!productMap[pid]) {
         productMap[pid] = { product_id: pid, name, category: cat, units_sold: 0, revenue: 0, cost: 0, profit: 0 };
       }
@@ -138,7 +139,7 @@ function buildResponse(sales: any[]) {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 20); // top 20
 
-  // ── Cashier performance ───────────────────────────────────────────────────
+  // â”€â”€ Cashier performance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const cashierMap: Record<string, {
     cashier_id: string; name: string;
     sales: number; profit: number; transactions: number; items: number;
@@ -171,3 +172,4 @@ function buildResponse(sales: any[]) {
     cashierPerformance,
   });
 }
+

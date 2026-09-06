@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 
@@ -65,8 +66,9 @@ export async function GET(request: Request) {
 
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Failed to verify transaction." },
+      { success: false, message: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

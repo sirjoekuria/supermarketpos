@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── LOYALTY SYSTEM VALIDATION & ATOMIC CALCULATION ──
+    // â”€â”€ LOYALTY SYSTEM VALIDATION & ATOMIC CALCULATION â”€â”€
     if (activeCustomerId) {
       // 1. Fetch customer details
       const { data: customer, error: customerError } = await supabase
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
       customerPointsBalance += finalPointsEarned;
     }
 
-    // ── RECORD SALE ──
+    // â”€â”€ RECORD SALE â”€â”€
     const { data: saleData, error: saleError } = await supabase
       .from("sales")
       .insert({
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: saleError.message }, { status: 400 });
     }
 
-    // ── LOYALTY SYSTEM DEDUCTION & AUDIT LEDGER LOGGING ──
+    // â”€â”€ LOYALTY SYSTEM DEDUCTION & AUDIT LEDGER LOGGING â”€â”€
     if (activeCustomerId) {
       try {
         // Apply points updates to customer
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── RECORD SALE ITEMS ──
+    // â”€â”€ RECORD SALE ITEMS â”€â”€
     const saleItems = items.map((item) => ({
       sale_id: saleData.id,
       product_id: item.product_id,
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
     }
 
-    // ── LINK M-PESA TRANSACTION RECORD ──
+    // â”€â”€ LINK M-PESA TRANSACTION RECORD â”€â”€
     try {
       if (payment_method === "mpesa" && mpesa_transaction_id) {
         const code = mpesa_transaction_id.trim().toUpperCase();
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
       console.warn("M-Pesa transaction linking failed:", linkErr.message || linkErr);
     }
 
-    // ── STOCK QUANTITY UPDATES (Parallel, Non-blocking for UI speed) ──
+    // â”€â”€ STOCK QUANTITY UPDATES (Parallel, Non-blocking for UI speed) â”€â”€
     try {
       const branchId = body.branch_id;
       await Promise.all(
@@ -267,7 +268,7 @@ export async function POST(request: Request) {
       console.warn("Stock decrement failed:", stockErr);
     }
 
-    // ── AUDIT LOGS (Non-blocking background promise) ──
+    // â”€â”€ AUDIT LOGS (Non-blocking background promise) â”€â”€
     writeAuditLog({
       actor: actor || null,
       action: "sale_recorded",
@@ -294,8 +295,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to record sale." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

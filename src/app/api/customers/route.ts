@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 import { sanitizeString } from "@/lib/sanitize";
@@ -22,13 +23,14 @@ export async function GET(request: Request) {
       .limit(50); // limit to 50 results to keep it performant
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     return NextResponse.json({ customers });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch customers." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -78,14 +80,16 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     return NextResponse.json({ customer });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to register customer." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

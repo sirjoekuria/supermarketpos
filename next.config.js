@@ -13,9 +13,9 @@ const nextConfig = {
     unoptimized: true,
   },
 
-  // Optimize for mobile
+  // Optimize for mobile and remove debug logs, but keep errors for tracking
   compiler: {
-    removeConsole: isProd,
+    removeConsole: isProd ? { exclude: ['error'] } : false,
   },
 
   // Strict mode - disabled in dev for faster hot reloads (double-renders slow things down)
@@ -63,7 +63,7 @@ const nextConfig = {
           source: '/api/:path*',
           headers: [
             { key: 'Access-Control-Allow-Credentials', value: 'true' },
-            { key: 'Access-Control-Allow-Origin', value: '*' },
+            { key: 'Access-Control-Allow-Origin', value: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000' },
             { key: 'Access-Control-Allow-Methods', value: 'GET,DELETE,PATCH,POST,PUT' },
             { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
           ],

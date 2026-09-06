@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
@@ -34,13 +35,14 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     return NextResponse.json({ transactions: data || [], total: count || 0 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch transactions" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, transaction: newTx });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create transaction" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -180,8 +182,9 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true, message: "Transaction deleted successfully." });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete transaction" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

@@ -68,7 +68,7 @@ export default function CustomerDisplay() {
   if (!customerDisplay) return null;
 
   return (
-    <div className="fixed inset-0 z-40 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="fixed inset-0 z-40 bg-slate-900 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-white/10">
         <div className="flex items-center gap-2 sm:gap-3">

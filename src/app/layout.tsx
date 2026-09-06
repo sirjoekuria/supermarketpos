@@ -13,19 +13,19 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SuperMarket POS - Modern Point of Sale",
-  description: "A fast, scalable Point of Sale system for supermarkets and retail shops",
-  keywords: ["POS", "Point of Sale", "Supermarket", "Retail Management", "Inventory", "Sales"],
-  authors: [{ name: "RocScrew" }],
+  title: "Premium Point of Sale System",
+  description: "Advanced POS & Inventory Management software for professional retail operations.",
+  keywords: ["POS", "Retail", "Sales Management", "Inventory Control", "Cloud POS"],
+  authors: [{ name: "POS Admin" }],
   openGraph: {
-    title: "SuperMarket POS",
-    description: "Modern POS and Inventory Management System",
+    title: "Premium POS",
+    description: "Enterprise-grade point of sale and inventory management.",
     type: "website",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "SuperMarket POS",
-    description: "Modern POS and Inventory Management System",
+    card: "summary",
+    title: "Premium POS",
+    description: "Enterprise-grade point of sale and inventory management.",
   },
 };
 

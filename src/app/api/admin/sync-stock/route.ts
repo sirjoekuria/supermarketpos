@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/server-auth";
 
@@ -98,8 +99,9 @@ export async function POST() {
   } catch (error) {
     console.error("Sync stock error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal server error" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

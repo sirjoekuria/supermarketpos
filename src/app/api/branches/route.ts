@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
@@ -9,11 +10,12 @@ export async function GET() {
       .from("branches")
       .select("*")
       .order("name");
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     return NextResponse.json({ branches: data });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch branches" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -40,7 +42,8 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
 
     // Create branch_stock entries for ALL existing products in this new branch.
     // New branches start with 0 stock so each branch maintains its own independent stock.
@@ -72,7 +75,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // fire-and-forget — never block the response waiting for audit log
+    // fire-and-forget â€” never block the response waiting for audit log
     writeAuditLog({
       action: "branch_created",
       entityType: "branch",
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ branch });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create branch" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -111,7 +114,8 @@ export async function PATCH(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
 
     writeAuditLog({
       action: "branch_updated",
@@ -123,7 +127,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ branch });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update branch" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -143,7 +147,8 @@ export async function DELETE(request: Request) {
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", id);
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
 
     writeAuditLog({
       action: "branch_deactivated",
@@ -155,9 +160,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to deactivate branch" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+
 

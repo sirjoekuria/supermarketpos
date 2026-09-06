@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { getAdminClient } from '@/lib/server-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -140,3 +141,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

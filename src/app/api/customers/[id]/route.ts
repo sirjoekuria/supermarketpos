@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
@@ -14,13 +15,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     return NextResponse.json({ customer });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch customer details." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -116,7 +118,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ customer: updatedCustomer });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update customer." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -164,7 +166,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete customer." },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 import { sanitizeString } from "@/lib/sanitize";
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     // 2. Fetch all active branches
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
       console.error("Error fetching branches:", branchesError);
     }
 
-    // 3. Create branch_stock entries — stock only for the selected branch, 0 for others
+    // 3. Create branch_stock entries â€” stock only for the selected branch, 0 for others
     const stockQuantity = Number(body.stock_quantity) || 0;
     const minStockLevel = Number(body.min_stock_level) || 5;
     const targetBranchId = body.branch_id as string | undefined;
@@ -77,7 +79,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ product });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to create product" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -115,7 +117,8 @@ export async function PATCH(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     // 2. Sync to branch_stock if stock_quantity or min_stock_level was updated
@@ -169,7 +172,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ product });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update product" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
@@ -199,7 +202,8 @@ export async function DELETE(request: Request) {
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     if (existingProduct) {
@@ -217,9 +221,10 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete product" },
+      { error: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+
 

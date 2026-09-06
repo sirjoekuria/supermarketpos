@@ -45,7 +45,7 @@ const NAV_ITEMS = [
   { id: "inventory", label: "Inventory", icon: Package, roles: ["admin", "manager"] },
   { id: "customers", label: "Customers", icon: Users, roles: ["admin", "cashier", "manager"] },
   { id: "reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"] },
-  { id: "mpesa", label: "M-Pesa Codes", icon: Smartphone, roles: ["admin", "manager"] },
+  { id: "mpesa", label: "M-Pesa Codes", icon: Smartphone, roles: ["admin", "manager", "cashier"] },
   { id: "branches", label: "Branches", icon: Building2, roles: ["admin"] },
   { id: "approvals", label: "Approvals", icon: UserCheck, roles: ["admin", "manager"] },
   { id: "audit", label: "Audit Log", icon: ClipboardList, roles: ["admin"] },

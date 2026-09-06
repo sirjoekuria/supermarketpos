@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, publicUser, verifyPassword, writeAuditLog, type StaffUserRow } from "@/lib/server-auth";
 import { isRateLimited } from "@/lib/rate-limit";
@@ -61,7 +62,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ user: publicUser(user) });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Login failed." }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+
 

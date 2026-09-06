@@ -366,10 +366,10 @@ export default function MpesaManagement() {
                       </td>
                       <td className="px-6 py-4 text-right whitespace-nowrap text-sm">
                         <button
-                          disabled={isLinked}
+                          disabled={isLinked || user?.role === "cashier"}
                           onClick={() => handleDeleteTransaction(tx.id)}
                           className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          title={isLinked ? "Cannot delete linked transaction" : "Delete record"}
+                          title={isLinked ? "Cannot delete linked transaction" : (user?.role === "cashier" ? "Cashiers cannot delete records" : "Delete record")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -410,7 +410,7 @@ export default function MpesaManagement() {
       {showAddModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden relative animate-fade-in">
-            <div className="bg-gradient-to-r from-green-600 to-green-500 px-6 py-4">
+            <div className="bg-green-600 px-6 py-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Smartphone className="w-5 h-5" />
                 Register M-Pesa Code

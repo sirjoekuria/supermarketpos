@@ -1,9 +1,10 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, publicUser, type ApprovalStatus, type StaffRole, writeAuditLog } from "@/lib/server-auth";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_RE = /^[a-zA-ZÀ-ÿ\s'\-]{2,80}$/; // letters, spaces, hyphens, apostrophes
+const NAME_RE = /^[a-zA-ZÃ€-Ã¿\s'\-]{2,80}$/; // letters, spaces, hyphens, apostrophes
 
 const ROLES: StaffRole[] = ["admin", "manager", "cashier"];
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
 
     // Input validation
     if (!NAME_RE.test(fullName)) {
-      return NextResponse.json({ error: "Full name must be 2–80 characters and contain only letters." }, { status: 400 });
+      return NextResponse.json({ error: "Full name must be 2â€“80 characters and contain only letters." }, { status: 400 });
     }
     if (!EMAIL_RE.test(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
@@ -58,7 +59,8 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
     }
 
     writeAuditLog({
@@ -70,7 +72,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ user: publicUser(data), approval_status: approvalStatus });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Registration failed." }, { status: 500 });
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
+
 

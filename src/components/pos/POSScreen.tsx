@@ -1643,9 +1643,21 @@ export default function POSScreen() {
                                   min="0"
                                   step="1"
                                   value={splitPayments[method]}
-                                  onChange={(e) =>
-                                    setSplitPayments((current) => ({ ...current, [method]: e.target.value }))
-                                  }
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSplitPayments((current) => {
+                                      const updated = { ...current, [method]: val };
+                                      const numVal = parseAmount(val);
+                                      const otherMethod = method === "cash" ? "mpesa" : "cash";
+                                      
+                                      if (val !== "") {
+                                        const remaining = Math.max(netTotal - numVal, 0);
+                                        updated[otherMethod] = remaining > 0 ? String(remaining) : "";
+                                      }
+                                      
+                                      return updated;
+                                    });
+                                  }}
                                   placeholder="0"
                                   className="w-full px-4 py-3 bg-gray-50 dark:bg-[#1a1f2e] border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white text-lg font-mono focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80] transition-colors"
                                 />

@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient, verifyPassword } from "@/lib/server-auth";
 
@@ -80,3 +81,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 });
   }
 }
+

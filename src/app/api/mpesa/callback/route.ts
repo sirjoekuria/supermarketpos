@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { extractCallbackMetadata, updateMpesaTransaction } from "@/lib/mpesa";
 import { setMpesaStatusCache } from "@/lib/mpesa-status-cache";
@@ -68,8 +69,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ResultCode: 0, ResultDesc: "Accepted" });
   } catch (error) {
     return NextResponse.json(
-      { ResultCode: 1, ResultDesc: error instanceof Error ? error.message : "Callback processing failed." },
+      { ResultCode: 1, ResultDesc: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

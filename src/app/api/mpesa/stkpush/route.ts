@@ -1,3 +1,4 @@
+﻿export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 import { getMpesaAccessToken, getMpesaConfig, mpesaTimestamp, normalizePhone, stkPassword } from "@/lib/mpesa";
@@ -80,8 +81,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error instanceof Error ? error.message : "Could not initiate M-Pesa payment." },
+      { success: false, message: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
 }
+

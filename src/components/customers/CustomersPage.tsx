@@ -238,10 +238,10 @@ export default function CustomersPage() {
 
   // Determine loyalty tier based on point balance
   const getLoyaltyTier = (points: number) => {
-    if (points >= 5000) return { name: "Platinum VIP", color: "from-teal-600 to-emerald-600", border: "border-teal-400" };
-    if (points >= 1500) return { name: "Gold Elite", color: "from-amber-500 to-yellow-600", border: "border-amber-400" };
-    if (points >= 500) return { name: "Silver Choice", color: "from-slate-400 to-slate-600", border: "border-slate-300" };
-    return { name: "Bronze Member", color: "from-orange-500 to-amber-700", border: "border-orange-600" };
+    if (points >= 5000) return { name: "Platinum VIP", color: "bg-teal-600", border: "border-teal-400" };
+    if (points >= 1500) return { name: "Gold Elite", color: "bg-amber-500", border: "border-amber-400" };
+    if (points >= 500) return { name: "Silver Choice", color: "bg-slate-500", border: "border-slate-300" };
+    return { name: "Bronze Member", color: "bg-orange-600", border: "border-orange-600" };
   };
 
   const currentTier = selectedCustomer ? getLoyaltyTier(selectedCustomer.points_balance) : null;
@@ -387,7 +387,7 @@ export default function CustomersPage() {
                 
                 {/* Premium Loyalty Card Graphic */}
                 <div className={cn(
-                  "relative w-full md:w-80 h-44 rounded-2xl p-5 text-white flex flex-col justify-between overflow-hidden shadow-xl bg-gradient-to-br",
+                  "relative w-full md:w-80 h-44 rounded-2xl p-5 text-white flex flex-col justify-between overflow-hidden shadow-xl",
                   currentTier?.color
                 )}>
                   {/* Decorative Elements */}
