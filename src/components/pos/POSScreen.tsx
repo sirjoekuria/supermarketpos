@@ -678,8 +678,8 @@ export default function POSScreen() {
         total_profit: totalProfit,
       };
 
-      // ── Optimistic checkout: cash & confirmed M-Pesa show receipt immediately ────
-      const isInstantPayment = paymentMethod === "cash" || paymentMethod === "mpesa";
+      // ── Optimistic checkout: cash shows receipt immediately ────
+      const isInstantPayment = paymentMethod === "cash";
 
       if (!isOnline || isInstantPayment) {
         const raw = localStorage.getItem("pos_offline_queue") || "[]";
@@ -807,10 +807,10 @@ export default function POSScreen() {
         payment_status: "completed",
         mpesa_transaction_id: mpesaTransactionId,
         split_payments: paymentMethod === "split" ? splitBreakdown : undefined,
-        customer_id: activeCustomer?.id || "",
+        customer_id: activeCustomer?.id || data.customer?.id || "",
         customer: activeCustomer && data.loyalty
           ? { ...activeCustomer, points_balance: data.loyalty.final_points_balance }
-          : activeCustomer || undefined,
+          : data.customer || activeCustomer || undefined,
         points_earned: data.loyalty?.points_earned || 0,
         points_redeemed: pointsRedeemed,
         loyalty: data.loyalty || undefined,
@@ -825,13 +825,13 @@ export default function POSScreen() {
       setCompletedSale(sale);
 
       // Trigger Loyalty SMS (Online)
-      if (settings?.sms_loyalty_enabled && activeCustomer && (data.loyalty?.points_earned > 0 || pointsRedeemed > 0)) {
+      if (settings?.sms_loyalty_enabled && sale.customer && (data.loyalty?.points_earned > 0 || pointsRedeemed > 0)) {
         fetch("/api/sms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            to: activeCustomer.phone,
-            message: `Hi ${activeCustomer.name.split(" ")[0]}, you earned ${data.loyalty.points_earned} pts and redeemed ${pointsRedeemed} pts. New Balance: ${data.loyalty.final_points_balance} pts. Thank you for shopping with ${settings.shop_name || "us"}!`,
+            to: sale.customer.phone,
+            message: `Hi ${sale.customer.name.split(" ")[0]}, you earned ${data.loyalty.points_earned} pts and redeemed ${pointsRedeemed} pts. New Balance: ${data.loyalty.final_points_balance} pts. Thank you for shopping with ${settings.shop_name || "us"}!`,
             apiKey: settings.sms_api_key,
             username: settings.sms_username,
           }),

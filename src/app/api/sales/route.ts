@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, writeAuditLog } from "@/lib/server-auth";
 
@@ -291,6 +291,12 @@ export async function POST(request: Request) {
         points_earned: finalPointsEarned,
         points_redeemed: points_redeemed,
         final_points_balance: customerPointsBalance
+      } : undefined,
+      customer: activeCustomerId && !customer_id ? {
+        id: activeCustomerId,
+        name: customer?.name || "Customer",
+        phone: payment_phone,
+        points_balance: customerPointsBalance
       } : undefined
     });
   } catch (error) {
