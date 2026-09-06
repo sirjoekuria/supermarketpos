@@ -47,7 +47,7 @@ export default function InventoryManagement() {
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const { products, isLoading, error, fetchProducts, subscribeToRealtime } = useProductStore();
-  const { currentBranchId, branches, fetchBranches } = useBranchStore();
+  const { currentBranchId, branches, fetchBranches, setCurrentBranch } = useBranchStore();
   const currentBranch = branches.find((b) => b.id === currentBranchId);
 
   useEffect(() => {
@@ -838,16 +838,19 @@ export default function InventoryManagement() {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Branch *</span>
                 <select
                   value={currentBranchId || ""}
-                  disabled
-                  className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none"
+                  onChange={async (e) => {
+                    setCurrentBranch(e.target.value || null);
+                    await fetchProducts();
+                  }}
+                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="">{branches.length ? "Select a branch from the top menu" : "Loading branches..."}</option>
+                  <option value="">{branches.length ? "— Select a branch —" : "Loading branches..."}</option>
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Stock quantity applies only to this branch. Other branches start at 0.
+                  Stock quantity is tracked per branch. Selecting a branch here updates stock for that branch.
                 </p>
               </label>
 

@@ -559,7 +559,7 @@ export default function MpesaPayment({
                   </span>
                   <span className="text-sm font-medium tracking-wide text-gray-700 dark:text-gray-300">Waiting: {countdown}s</span>
                 </div>
-                <p className="text-[10px] text-gray-400 font-mono select-all mt-2">ID: {checkoutRequestId}</p>
+                <p className="text-[10px] text-gray-400 font-mono select-all mt-2 break-all max-w-full px-2 text-center">ID: {checkoutRequestId}</p>
               </div>
             </main>
           </div>
@@ -587,16 +587,16 @@ export default function MpesaPayment({
           const borderColor = isWrongPin || isInsufficientFunds ? "border-orange-300 dark:border-orange-700/50" : "border-red-300 dark:border-red-700/50";
           const labelColor = isWrongPin || isInsufficientFunds ? "text-orange-600 dark:text-orange-400" : "text-red-600 dark:text-red-400";
           return (
-            <div className="text-center py-8 my-auto flex-1 flex flex-col items-center justify-center">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 dark:bg-[#0f1117] border ${borderColor} flex items-center justify-center shadow-md`}>
+            <div className="text-center py-4 my-auto flex-1 flex flex-col items-center justify-center w-full min-w-0">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 dark:bg-[#0f1117] border ${borderColor} flex items-center justify-center shadow-md flex-shrink-0`}>
                 <XCircle className={`w-9 h-9 ${isWrongPin || isInsufficientFunds ? "text-orange-500 dark:text-orange-400" : "text-red-500 dark:text-red-400"}`} />
               </div>
-              <h3 className="text-gray-900 dark:text-white font-bold text-xl">{errorLabel}</h3>
-              <div className={`mt-4 mx-auto max-w-[320px] p-4 bg-gray-50 dark:bg-[#0f1117] border ${borderColor} rounded-xl text-left`}>
+              <h3 className="text-gray-900 dark:text-white font-bold text-xl px-2 break-words">{errorLabel}</h3>
+              <div className={`mt-4 w-full p-4 bg-gray-50 dark:bg-[#0f1117] border ${borderColor} rounded-xl text-left overflow-hidden`}>
                 <p className={`text-xs font-semibold ${labelColor} uppercase tracking-wider mb-1`}>Reason:</p>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-300 leading-relaxed">{error || "An unknown error occurred while verifying the transaction."}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-300 leading-relaxed break-words overflow-wrap-anywhere">{error || "An unknown error occurred while verifying the transaction."}</p>
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full">
                 <button onClick={() => { setStatus("idle"); setError(""); setCountdown(60); }} className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-md active:scale-95">Try Again</button>
                 <button onClick={onCancel} className="flex-1 py-3 bg-gray-100 dark:bg-[#0f1117] hover:bg-gray-200 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl transition-all active:scale-95">Cancel</button>
               </div>

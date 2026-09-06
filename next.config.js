@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
 
 const isProd = process.env.NODE_ENV === 'production';
 const isCapacitorBuild = process.env.CAPACITOR_BUILD === 'true';
@@ -17,15 +18,21 @@ const nextConfig = {
     removeConsole: isProd,
   },
 
-  // Strict mode for development
-  reactStrictMode: true,
+  // Strict mode - disabled in dev for faster hot reloads (double-renders slow things down)
+  reactStrictMode: false,
 
   // Performance optimizations
   poweredByHeader: false,
   compress: true,
-  experimental: {
-    optimizePackageImports: ['lucide-react', 'recharts', 'date-fns', '@supabase/supabase-js'],
+  // Removed optimizePackageImports because scanning lucide-react on OneDrive takes minutes
+
+  // Fix for OneDrive projects outside the git root (Next.js 16 Turbopack)
+  turbopack: {
+    root: __dirname,
   },
+
+  // Fix package-lock.json warning when project is outside git root (OneDrive)
+  outputFileTracingRoot: path.join(__dirname),
 
   // Headers for security (only applies when NOT in static export mode)
   ...(!isCapacitorBuild ? {
