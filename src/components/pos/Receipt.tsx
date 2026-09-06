@@ -245,6 +245,11 @@ export default function Receipt({ sale, settings, onClose }: ReceiptProps) {
             <p className="text-center font-bold text-[11px] uppercase">
               {sale.customer?.name || "WALK-IN CUSTOMER"}
             </p>
+            {sale.customer && (
+              <p className="text-center font-bold text-[10px]">
+                LOYALTY BALANCE: {sale.loyalty?.final_points_balance ?? sale.customer.points_balance ?? 0} PTS
+              </p>
+            )}
             <p className="text-center text-[10px]">{formatReceiptDate(sale.created_at)}</p>
             <p className="text-center text-[9px] mb-1">
               SALE #{sale.receipt_number.slice(-5)} TILL #4 RECEIPT #{sale.receipt_number.slice(-3)}
