@@ -1,7 +1,7 @@
 {
 	"appId": "com.rocscrewsupermarket.pos",
 	"appName": "Rocscrew Supermarket POS",
-	"webDir": "out",
+	"webDir": "public",
 	"server": {
 		"androidScheme": "https",
 		"url": "https://supermarketpos.vercel.app",

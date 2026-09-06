@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.rocscrewsupermarket.pos',
   appName: 'Rocscrew Supermarket POS',
-  webDir: 'out',
+  webDir: 'public',
   server: {
     androidScheme: 'https',
     url: 'https://supermarketpos.vercel.app',
@@ -14,10 +14,10 @@ const config: CapacitorConfig = {
   },
   android: {
     buildOptions: {
-      keystorePath: '~/.android/debug.keystore',
-      keystorePassword: 'android',
-      keystoreAlias: 'androiddebugkey',
-      keystoreAliasPassword: 'android',
+      keystorePath: 'release.keystore',
+      keystorePassword: 'december25',
+      keystoreAlias: 'releasekey',
+      keystoreAliasPassword: 'december25',
       releaseType: 'APK',
     },
   },
