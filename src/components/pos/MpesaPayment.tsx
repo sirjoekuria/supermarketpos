@@ -38,6 +38,19 @@ export default function MpesaPayment({
     customerName: string;
   } | null>(null);
 
+  // Pre-payment detection state
+  const [prePayments, setPrePayments] = useState<{
+    id: string;
+    mpesa_receipt_number: string;
+    amount: number;
+    phone_number: string;
+    customer_name: string;
+    created_at: string;
+  }[]>([]);
+  const [prePayChecking, setPrePayChecking] = useState(false);
+  const [prePayChecked, setPrePayChecked] = useState(false);
+  const [selectedPrePay, setSelectedPrePay] = useState<string | null>(null);
+
   const handleManualConfirm = async () => {
     const code = manualCode.trim().toUpperCase();
     if (code.length < 8) {
@@ -76,6 +89,46 @@ export default function MpesaPayment({
   };
 
   const SUCCESS_FLASH_MS = 400;
+
+  // Pre-payment lookup handler
+  const checkPrePayment = async () => {
+    if (!validatePhone(phone)) {
+      setError("Please enter a valid phone number first.");
+      return;
+    }
+    setPrePayChecking(true);
+    setPrePayChecked(false);
+    setPrePayments([]);
+    setSelectedPrePay(null);
+    try {
+      const res = await fetch(`/api/mpesa/prepayment?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      setPrePayments(data.payments || []);
+      setPrePayChecked(true);
+    } catch (err) {
+      console.error("Pre-payment check failed", err);
+      setPrePayChecked(true);
+    } finally {
+      setPrePayChecking(false);
+    }
+  };
+
+  const applyPrePayment = (txId: string, code: string, txPhone: string) => {
+    setSelectedPrePay(txId);
+    setStatus("success");
+    setTimeout(() => {
+      onSuccess(code, txPhone);
+    }, SUCCESS_FLASH_MS);
+  };
+
+  const timeAgo = (iso: string) => {
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return "just now";
+    if (mins === 1) return "1 min ago";
+    if (mins < 60) return `${mins} mins ago`;
+    const hrs = Math.floor(mins / 60);
+    return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+  };
 
   const handleCompleteManualCheckout = () => {
     if (!verifiedTx) return;
@@ -394,7 +447,13 @@ export default function MpesaPayment({
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setError(""); }}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setError("");
+                      setPrePayments([]);
+                      setPrePayChecked(false);
+                      setSelectedPrePay(null);
+                    }}
                     placeholder="e.g. 0712345678"
                     className={cn(
                       "w-full bg-gray-50 dark:bg-[#0f1117] border rounded-xl py-4 pl-12 pr-4 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none transition-colors text-base",
@@ -407,11 +466,58 @@ export default function MpesaPayment({
                     <AlertCircle className="w-4 h-4 shrink-0" />{error}
                   </p>
                 )}
+
+                {/* ── PRE-PAYMENT DETECTION SECTION ── */}
+                {phone.replace(/\D/g, "").length >= 9 && (
+                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-3 space-y-2 bg-gray-50/50 dark:bg-gray-800/20">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer Pre-Paid?</p>
+                      <button
+                        type="button"
+                        onClick={checkPrePayment}
+                        disabled={prePayChecking}
+                        className="text-xs px-3 py-1.5 bg-[#0d7a3e] hover:bg-[#0a6332] text-white font-bold rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                      >
+                        {prePayChecking ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        {prePayChecking ? "Checking..." : "Check Pre-Payment"}
+                      </button>
+                    </div>
+
+                    {prePayChecked && prePayments.length === 0 && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-1">
+                        No pre-payment found for this number in the last 4 hours.
+                      </p>
+                    )}
+
+                    {prePayments.map(tx => (
+                      <div key={tx.id} className="flex items-center justify-between gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                            <span className="text-sm font-bold text-green-700 dark:text-green-400">{formatCurrency(tx.amount)}</span>
+                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{tx.mpesa_receipt_number}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {tx.customer_name || "Unknown"} · {timeAgo(tx.created_at)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => applyPrePayment(tx.id, tx.mpesa_receipt_number, tx.phone_number)}
+                          className="shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          Apply ✓
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                   A payment prompt (STK Push) will be sent instantly to the phone number entered above.
                 </p>
                 {/* Request STK Push Button */}
-                <div className="mt-auto pt-4">
+                <div className="mt-auto pt-2">
                   <button
                     onClick={initiateSTKPush}
                     className="w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-[0.98] bg-[#0d7a3e] dark:bg-[#4ade80] dark:text-[#0f1117] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] shadow-lg dark:shadow-[0_0_25px_rgba(74,222,128,0.3)]"
