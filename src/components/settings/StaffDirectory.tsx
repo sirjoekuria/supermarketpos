@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStaffStore } from "@/store";
 import { Loader2, UserCog, Plus, Edit2, Trash2, Shield, Mail, Phone, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import type { User } from "@/types";
 import { cn } from "@/lib/utils";
 
 export default function StaffDirectory() {
-  const { staff, addStaff, updateStaff, deleteStaff } = useStaffStore();
+  const { staff, addStaff, updateStaff, deleteStaff, fetchStaff } = useStaffStore();
+  
+  useEffect(() => {
+    fetchStaff();
+  }, [fetchStaff]);
+
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);

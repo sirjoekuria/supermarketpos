@@ -439,24 +439,18 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
 interface StaffState {
   staff: User[];
+  setStaff: (users: User[]) => void;
   addStaff: (user: User) => void;
   updateStaff: (id: string, user: Partial<User>) => void;
   deleteStaff: (id: string) => void;
+  fetchStaff: () => Promise<void>;
 }
 
 export const useStaffStore = create<StaffState>()(
   persist(
     (set) => ({
-      staff: [
-        {
-          id: "1",
-          email: "admin@supermarket.local",
-          full_name: "System Admin",
-          role: "admin",
-          is_active: true,
-          created_at: new Date().toISOString()
-        }
-      ],
+      staff: [],
+      setStaff: (users) => set({ staff: users }),
       addStaff: (user) => set((state) => ({ staff: [...state.staff, user] })),
       updateStaff: (id, user) => set((state) => ({
         staff: state.staff.map(s => s.id === id ? { ...s, ...user } : s)
@@ -464,6 +458,17 @@ export const useStaffStore = create<StaffState>()(
       deleteStaff: (id) => set((state) => ({
         staff: state.staff.filter(s => s.id !== id)
       })),
+      fetchStaff: async () => {
+        try {
+          const res = await fetch("/api/users");
+          const data = await res.json();
+          if (res.ok && data.users) {
+            set({ staff: data.users });
+          }
+        } catch (e) {
+          console.error("Failed to fetch staff:", e);
+        }
+      },
     }),
     {
       name: "pos-staff",
