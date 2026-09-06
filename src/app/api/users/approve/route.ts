@@ -44,8 +44,10 @@ export async function POST(request: Request) {
       .select("*")
       .single();
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
 
     writeAuditLog({
       actor,

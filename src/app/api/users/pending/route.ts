@@ -21,8 +21,10 @@ export async function GET(request: Request) {
       .eq("approval_status", pendingStatus)
       .order("created_at", { ascending: false });
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
 
     return NextResponse.json({ users: (data || []).map(publicUser) });
   } catch (error) {

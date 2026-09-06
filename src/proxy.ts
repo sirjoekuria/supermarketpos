@@ -13,7 +13,7 @@ const WINDOW_MS = 60 * 1000;
 export function proxy(request: NextRequest) {
   // Only rate limit API routes
   if (request.nextUrl.pathname.startsWith('/api')) {
-    const ip = request.ip ?? request.headers.get('x-forwarded-for') ?? 'unknown-ip';
+    const ip = request.headers.get('x-forwarded-for') ?? 'unknown-ip';
 
     const now = Date.now();
     const windowStart = now - WINDOW_MS;

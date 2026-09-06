@@ -30,8 +30,10 @@ export async function GET(request: Request) {
       .select("*, product:products(*)")
       .eq("branch_id", branchId);
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
     return NextResponse.json({ stock: data });
   } catch (error) {
     return NextResponse.json(
@@ -68,8 +70,10 @@ export async function PATCH(request: Request) {
       .select()
       .single();
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
     return NextResponse.json({ stock: data });
   } catch (error) {
     return NextResponse.json(

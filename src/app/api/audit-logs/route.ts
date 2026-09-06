@@ -1,8 +1,6 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { findApprovedActor, getAdminClient } from "@/lib/server-auth";
-
-export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
@@ -25,7 +23,7 @@ export async function GET(request: Request) {
       .from("audit_logs")
       .select("*", { count: "exact", head: true });
       
-    if (countError) return NextResponse.json({ error: countError.message }, { status: 400 });
+    if (countError) throw countError;
 
     const total = count || 0;
     const totalPages = Math.ceil(total / limit);
@@ -37,8 +35,7 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) throw error;
 
     return NextResponse.json({ 
       logs: data || [],
@@ -54,4 +51,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
   }
 }
-

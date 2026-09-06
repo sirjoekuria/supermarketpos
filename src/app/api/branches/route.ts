@@ -10,8 +10,10 @@ export async function GET() {
       .from("branches")
       .select("*")
       .order("name");
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
     return NextResponse.json({ branches: data });
   } catch (error) {
     return NextResponse.json(
@@ -42,8 +44,10 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
 
     // Create branch_stock entries for ALL existing products in this new branch.
     // New branches start with 0 stock so each branch maintains its own independent stock.
@@ -114,8 +118,10 @@ export async function PATCH(request: Request) {
       .select()
       .single();
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
 
     writeAuditLog({
       action: "branch_updated",
@@ -147,8 +153,10 @@ export async function DELETE(request: Request) {
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", id);
 
-    if (error) console.error('API Error:', error);
-    return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    if (error) {
+      console.error('API Error:', error);
+      return NextResponse.json({ error: 'An unexpected server error occurred.' }, { status: 500 });
+    }
 
     writeAuditLog({
       action: "branch_deactivated",

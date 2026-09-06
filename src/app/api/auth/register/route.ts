@@ -1,10 +1,10 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { getAdminClient, hashPassword, publicUser, type ApprovalStatus, type StaffRole, writeAuditLog } from "@/lib/server-auth";
 import { isRateLimited } from "@/lib/rate-limit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_RE = /^[a-zA-ZÃ€-Ã¿\s'\-]{2,80}$/; // letters, spaces, hyphens, apostrophes
+const NAME_RE = /^[a-zA-Z\s'\-]{2,80}$/; // letters, spaces, hyphens, apostrophes
 
 const ROLES: StaffRole[] = ["admin", "manager", "cashier"];
 

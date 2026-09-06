@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const actorId = request.headers.get("x-user-id");
@@ -19,7 +19,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
     }
 
-    const targetUserId = params.id;
+    const { id: targetUserId } = await params;
     if (!targetUserId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
