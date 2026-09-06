@@ -1045,7 +1045,20 @@ export default function POSScreen() {
                     setSearchQuery(e.target.value);
                     handleSearch(e.target.value);
                   }}
-                  placeholder="Search products..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      const trimmed = searchQuery.trim();
+                      const exactMatch = products.find(p => p.barcode === trimmed || p.barcode.endsWith(trimmed));
+                      if (exactMatch) {
+                        const added = tryAddItem(exactMatch);
+                        if (added) {
+                          setSearchQuery("");
+                          setSearchResults([]);
+                        }
+                      }
+                    }
+                  }}
+                  placeholder="Search products or scan barcode..."
                   className="w-full pl-11 pr-10 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-pos-border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm"
                 />
                 {searchQuery && (
