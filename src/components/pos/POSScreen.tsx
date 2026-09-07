@@ -21,6 +21,7 @@ const BarcodeScanner = dynamic(() => import("./BarcodeScanner"), { ssr: false })
 const MpesaPayment = dynamic(() => import("./MpesaPayment"), { ssr: false });
 const ReceiptComponent = dynamic(() => import("./Receipt"), { ssr: false });
 const CustomerDisplay = dynamic(() => import("./CustomerDisplay"), { ssr: false });
+const ConfettiOverlay = dynamic(() => import("./ConfettiOverlay"), { ssr: false });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type CompletedSale = any;
@@ -46,6 +47,7 @@ export default function POSScreen() {
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [showReceipt, setShowReceipt] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [splitPayments, setSplitPayments] = useState<Record<SplitPaymentMethod, string>>({
@@ -746,6 +748,8 @@ export default function POSScreen() {
         }
 
         setShowReceipt(true);
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 4500);
         clearCart();
         setShowPayment(false);
         setCashReceived("");
@@ -840,6 +844,8 @@ export default function POSScreen() {
       }
 
       setShowReceipt(true);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4500);
       clearCart();
       setShowPayment(false);
       setCashReceived("");
@@ -1948,6 +1954,9 @@ export default function POSScreen() {
       )}
 
       {/* Receipt Modal */}
+      {/* 🎉 Confetti on every successful payment */}
+      {showConfetti && <ConfettiOverlay />}
+
       {showReceipt && completedSale && (
         <ReceiptComponent
           sale={completedSale}
