@@ -391,24 +391,24 @@ export default function SettingsPage() {
 
               {/* ── MASTER LOYALTY TOGGLE ── */}
               <div className={cn(
-                "rounded-2xl border-2 p-5 transition-all",
+                "rounded-2xl border p-5 transition-all shadow-sm",
                 loyaltyEnabled
-                  ? "bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700"
-                  : "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-pos-border"
+                  ? "bg-white dark:bg-pos-card border-primary-300 dark:border-primary-800/60"
+                  : "bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-pos-border"
               )}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                       loyaltyEnabled
-                        ? "bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-400"
+                        ? "bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-700/50"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700"
                     )}>
                       <Gift className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900 dark:text-white">Loyalty Points System</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <p className="font-bold text-gray-900 dark:text-white text-base">Loyalty Points System</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 font-medium">
                         {loyaltyEnabled
                           ? "✅ Customers earn & redeem points on every purchase"
                           : "⛔ Loyalty points are disabled system-wide"}
@@ -418,27 +418,26 @@ export default function SettingsPage() {
                   <button
                     onClick={() => setLoyaltyEnabled(!loyaltyEnabled)}
                     className={cn(
-                      "relative inline-flex h-7 w-13 items-center rounded-full transition-colors shrink-0",
-                      loyaltyEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
+                      "relative inline-flex h-7 w-14 items-center rounded-full transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-primary-500",
+                      loyaltyEnabled ? "bg-primary-600" : "bg-gray-300 dark:bg-gray-600"
                     )}
-                    style={{ minWidth: "3rem" }}
                   >
                     <span className={cn(
                       "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-md",
-                      loyaltyEnabled ? "translate-x-6" : "translate-x-1"
+                      loyaltyEnabled ? "translate-x-7" : "translate-x-1"
                     )} />
                   </button>
                 </div>
 
                 {loyaltyEnabled && (
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="bg-white dark:bg-pos-card rounded-xl p-3 text-center border border-primary-200 dark:border-primary-800/50">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Points per KES</p>
-                      <p className="text-lg font-extrabold text-primary-600 dark:text-primary-400">1 pt / 100</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-700/60">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Points per KES</p>
+                      <p className="text-base font-extrabold text-primary-600 dark:text-primary-400 mt-0.5">1 pt / 100 KES</p>
                     </div>
-                    <div className="bg-white dark:bg-pos-card rounded-xl p-3 text-center border border-primary-200 dark:border-primary-800/50">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Min Redemption</p>
-                      <p className="text-lg font-extrabold text-primary-600 dark:text-primary-400">100 pts</p>
+                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center border border-gray-200 dark:border-gray-700/60">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Min Redemption</p>
+                      <p className="text-base font-extrabold text-primary-600 dark:text-primary-400 mt-0.5">100 pts</p>
                     </div>
                   </div>
                 )}
