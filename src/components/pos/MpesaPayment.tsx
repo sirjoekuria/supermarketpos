@@ -358,7 +358,8 @@ export default function MpesaPayment({
       }
 
       if (active) {
-        const nextInterval = elapsed < 15 ? 200 : 500;
+        // Fast-poll for first 45 s (customer entering PIN), then ease off
+        const nextInterval = elapsed < 45 ? 200 : 800;
         timeoutId = setTimeout(checkStatus, nextInterval);
       }
     };
@@ -368,7 +369,7 @@ export default function MpesaPayment({
     countdownTimer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          finishFailure("Payment timed out. Customer did not enter their PIN within 60 seconds.");
+          finishFailure("Payment timed out. Customer did not enter their M-Pesa PIN within 2 minutes.");
           return 0;
         }
         return prev - 1;
