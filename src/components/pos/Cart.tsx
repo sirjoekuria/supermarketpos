@@ -6,8 +6,7 @@ import {
   User, UserCheck, Search, X, Star, UserPlus, Loader2, Check,
   AlertCircle, Gift, Lock, Eye
 } from "lucide-react";
-import { useCartStore } from "@/store";
-import { useAuthStore } from "@/store";
+import { useCartStore, useAuthStore, useSettingsStore } from "@/store";
 import { formatCurrency } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { Customer } from "@/types";
@@ -20,6 +19,8 @@ export default function Cart() {
     selectedCustomer, setSelectedCustomer, lastScannedProduct
   } = useCartStore();
   const { user } = useAuthStore();
+  const { settings } = useSettingsStore();
+  const loyaltyEnabled = settings?.loyalty_enabled !== false;
 
   const [discountInput, setDiscountInput] = useState<Record<string, string>>({});
   const [showManagerAuth, setShowManagerAuth] = useState(false);
@@ -192,7 +193,7 @@ export default function Cart() {
     <div className="flex flex-col h-full bg-white dark:bg-pos-card overflow-hidden">
       
       {/* ── CUSTOMER & LOYALTY SELECTOR PANEL ── */}
-      {selectedCustomer && (
+      {loyaltyEnabled && selectedCustomer && (
         <div className="p-4 border-b border-gray-200 dark:border-pos-border bg-gray-50/50 dark:bg-gray-800/20 flex-shrink-0 relative">
           {/* Active Customer Display Card */}
           <div className="flex items-center justify-between p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-500/30 rounded-xl animate-in slide-in-from-top duration-300">
@@ -372,8 +373,8 @@ export default function Cart() {
           </div>
         )}
 
-        {/* Estimated Earning Display (if customer selected) */}
-        {selectedCustomer && (
+        {/* Estimated Earning Display (if customer selected & loyalty is enabled) */}
+        {loyaltyEnabled && selectedCustomer && (
           <div className="flex justify-between text-xs text-amber-600 dark:text-amber-400 font-semibold border-t border-dashed border-gray-200 dark:border-gray-700/50 pt-2">
             <span className="flex items-center gap-1">
               <Gift className="w-3.5 h-3.5" />

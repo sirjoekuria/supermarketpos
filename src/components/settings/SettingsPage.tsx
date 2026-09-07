@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Save, Building2, Receipt, Palette, Shield, Users, CheckCircle2, X, MessageSquare, Printer } from "lucide-react";
+import { Save, Building2, Receipt, Palette, Shield, Users, CheckCircle2, X, MessageSquare, Printer, Gift } from "lucide-react";
 import { useSettingsStore, useUIStore } from "@/store";
 import { cn } from "@/lib/utils";
 import StaffDirectory from "./StaffDirectory";
@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [mpesaEnabled, setMpesaEnabled] = useState(settings?.mpesa_enabled ?? true);
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(settings?.auto_print_receipt ?? false);
   const [smsLoyaltyEnabled, setSmsLoyaltyEnabled] = useState(settings?.sms_loyalty_enabled ?? false);
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState(settings?.loyalty_enabled ?? true);
   const [smsApiKey, setSmsApiKey] = useState(settings?.sms_api_key || "");
   const [smsUsername, setSmsUsername] = useState(settings?.sms_username || "");
   const [showPinChange, setShowPinChange] = useState(false);
@@ -50,6 +51,7 @@ export default function SettingsPage() {
         dark_mode_default: settings?.dark_mode_default ?? false,
         auto_print_receipt: autoPrintReceipt,
         sms_loyalty_enabled: smsLoyaltyEnabled,
+        loyalty_enabled: loyaltyEnabled,
         sms_api_key: smsApiKey,
         sms_username: smsUsername,
         created_at: settings?.created_at || new Date().toISOString(),
@@ -385,11 +387,69 @@ export default function SettingsPage() {
 
           {/* Loyalty SMS */}
           {activeTab === "loyalty" && (
-            <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6 space-y-5">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-gray-400" />
-                Loyalty SMS Settings
-              </h3>
+            <div className="space-y-4">
+
+              {/* ── MASTER LOYALTY TOGGLE ── */}
+              <div className={cn(
+                "rounded-2xl border-2 p-5 transition-all",
+                loyaltyEnabled
+                  ? "bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700"
+                  : "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-pos-border"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center",
+                      loyaltyEnabled
+                        ? "bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-400"
+                    )}>
+                      <Gift className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">Loyalty Points System</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {loyaltyEnabled
+                          ? "✅ Customers earn & redeem points on every purchase"
+                          : "⛔ Loyalty points are disabled system-wide"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setLoyaltyEnabled(!loyaltyEnabled)}
+                    className={cn(
+                      "relative inline-flex h-7 w-13 items-center rounded-full transition-colors shrink-0",
+                      loyaltyEnabled ? "bg-primary-500" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                    style={{ minWidth: "3rem" }}
+                  >
+                    <span className={cn(
+                      "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-md",
+                      loyaltyEnabled ? "translate-x-6" : "translate-x-1"
+                    )} />
+                  </button>
+                </div>
+
+                {loyaltyEnabled && (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="bg-white dark:bg-pos-card rounded-xl p-3 text-center border border-primary-200 dark:border-primary-800/50">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Points per KES</p>
+                      <p className="text-lg font-extrabold text-primary-600 dark:text-primary-400">1 pt / 100</p>
+                    </div>
+                    <div className="bg-white dark:bg-pos-card rounded-xl p-3 text-center border border-primary-200 dark:border-primary-800/50">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Min Redemption</p>
+                      <p className="text-lg font-extrabold text-primary-600 dark:text-primary-400">100 pts</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── SMS NOTIFICATIONS ── */}
+              <div className="bg-white dark:bg-pos-card rounded-2xl border border-gray-200 dark:border-pos-border p-6 space-y-5">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-gray-400" />
+                  Loyalty SMS Notifications
+                </h3>
 
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-pos-border">
                 <div>
@@ -449,6 +509,7 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
+          </div>
           )}
 
           {/* Security */}

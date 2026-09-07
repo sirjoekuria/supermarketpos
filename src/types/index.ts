@@ -154,6 +154,7 @@ export interface AppSettings {
   mpesa_enabled: boolean;
   dark_mode_default: boolean;
   auto_print_receipt?: boolean;
+  loyalty_enabled?: boolean;
   sms_loyalty_enabled?: boolean;
   sms_api_key?: string;
   sms_username?: string;

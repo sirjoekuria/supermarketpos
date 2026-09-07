@@ -51,6 +51,17 @@ export async function POST(request: Request) {
       }
     }
 
+    // Check if loyalty points system is enabled in settings
+    const { data: settingsRow } = await supabase
+      .from("settings")
+      .select("loyalty_enabled")
+      .limit(1)
+      .maybeSingle();
+
+    if (settingsRow?.loyalty_enabled === false) {
+      activeCustomerId = undefined;
+    }
+
     // ── LOYALTY SYSTEM VALIDATION & ATOMIC CALCULATION ──
     if (activeCustomerId) {
       // 1. Fetch customer details

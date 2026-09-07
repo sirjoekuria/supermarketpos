@@ -37,6 +37,7 @@ export default function POSScreen() {
   const { user, logout } = useAuthStore();
   const { darkMode, toggleDarkMode, customerDisplay, toggleCustomerDisplay, toggleSidebar } = useUIStore();
   const { settings } = useSettingsStore();
+  const loyaltyEnabled = settings?.loyalty_enabled !== false;
   const { products, isLoading, error: productsError, fetchProducts, subscribeToRealtime } = useProductStore();
   const { currentBranchId } = useBranchStore();
 
@@ -734,7 +735,7 @@ export default function POSScreen() {
         setCompletedSale(offlineSale);
 
         // Trigger Loyalty SMS (Offline/Optimistic)
-        if (settings?.sms_loyalty_enabled && activeCustomer && (optimisticPoints > 0 || pointsRedeemed > 0)) {
+        if (loyaltyEnabled && settings?.sms_loyalty_enabled && activeCustomer && (optimisticPoints > 0 || pointsRedeemed > 0)) {
           fetch("/api/sms", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -830,7 +831,7 @@ export default function POSScreen() {
       setCompletedSale(sale);
 
       // Trigger Loyalty SMS (Online)
-      if (settings?.sms_loyalty_enabled && sale.customer && (data.loyalty?.points_earned > 0 || pointsRedeemed > 0)) {
+      if (loyaltyEnabled && settings?.sms_loyalty_enabled && sale.customer && (data.loyalty?.points_earned > 0 || pointsRedeemed > 0)) {
         fetch("/api/sms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1468,7 +1469,8 @@ export default function POSScreen() {
                   </div>
 
                   {/* Loyalty Points */}
-                  <div className="flex justify-center">
+                  {loyaltyEnabled && (
+                    <div className="flex justify-center">
                     {selectedCustomer ? (
                       <div className="w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-xl p-3 space-y-2">
                         <div className="text-center">
@@ -1531,8 +1533,8 @@ export default function POSScreen() {
                       >
                         <Gift className="w-4 h-4" /> Add Loyalty Points
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Payment Method Buttons — 2x2 Grid */}
                   <div className="grid grid-cols-2 gap-3">
@@ -1881,7 +1883,7 @@ export default function POSScreen() {
       )}
 
       {/* Loyalty Lookup Modal */}
-      {showLoyaltyPrompt && !selectedCustomer && (
+      {loyaltyEnabled && showLoyaltyPrompt && !selectedCustomer && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md p-0 sm:p-4">
           <div className="bg-white dark:bg-[#0f1117] text-gray-900 dark:text-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden">
             <div className="flex justify-between items-center px-6 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
