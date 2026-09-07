@@ -1533,8 +1533,9 @@ export default function POSScreen() {
                       >
                         <Gift className="w-4 h-4" /> Add Loyalty Points
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
 
                   {/* Payment Method Buttons — 2x2 Grid */}
                   <div className="grid grid-cols-2 gap-3">
