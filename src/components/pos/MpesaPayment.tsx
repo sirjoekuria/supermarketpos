@@ -398,9 +398,9 @@ export default function MpesaPayment({
 
       <div className="p-5 flex flex-col space-y-5 relative flex-1">
         {/* Amount to Pay */}
-        <div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Amount to Pay</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(amount)}</p>
+        <div className="text-center bg-gray-50 dark:bg-[#0f1117] border border-gray-200 dark:border-gray-700/60 rounded-2xl py-4 px-6">
+          <p className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Amount to Pay</p>
+          <p className="text-4xl font-extrabold text-gray-900 dark:text-white">{formatCurrency(amount)}</p>
         </div>
 
         {status === "idle" && (
