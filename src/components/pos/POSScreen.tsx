@@ -905,7 +905,7 @@ export default function POSScreen() {
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-pos-card rounded-full animate-pulse"></span>
               </button>
               {showLowStockAlert && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+                <div className="fixed left-4 right-4 top-[72px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 bg-white dark:bg-pos-card border border-gray-200 dark:border-pos-border rounded-2xl shadow-2xl z-50 overflow-hidden">
                   <div className="p-4 border-b border-gray-100 dark:border-pos-border flex items-center justify-between">
                     <h4 className="font-bold text-sm text-gray-900 dark:text-white">⚠️ Low Stock Alerts</h4>
                     <button onClick={() => setShowLowStockAlert(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xs">✕</button>
