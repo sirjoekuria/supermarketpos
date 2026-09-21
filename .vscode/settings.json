@@ -5,6 +5,8 @@
     "builder.autoDetectDevServer": true,
     "builder.launchType": "editor",
     "java.configuration.updateBuildConfiguration": "disabled",
+    "java.autobuild.enabled": false,
+    "java.configuration.checkProjectSettingsExclusions": false,
     "java.import.exclusions": [
         "**/node_modules/**",
         "**/.metadata/**",
