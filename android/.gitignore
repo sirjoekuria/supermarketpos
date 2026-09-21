@@ -43,3 +43,9 @@ gradle.properties
 captures/
 .externalNativeBuild
 .cxx/
+
+# Eclipse IDE
+.project
+.classpath
+.settings/
+

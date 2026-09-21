@@ -25,7 +25,14 @@ export default function MpesaPayment({
   const [checkoutRequestId, setCheckoutRequestId] = useState("");
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(120);
-  const [inputMode, setInputMode] = useState<"stk" | "manual">("stk");
+  const [inputMode, setInputMode] = useState<"amount_fetch" | "stk" | "manual">("amount_fetch");
+  const [moneyPaidInput, setMoneyPaidInput] = useState<string>(amount ? amount.toString() : "");
+  const [amountFetchPhone, setAmountFetchPhone] = useState("");
+  const [isFetchingAmount, setIsFetchingAmount] = useState(false);
+  const [fetchAmountError, setFetchAmountError] = useState("");
+  const [isPollingAmount, setIsPollingAmount] = useState(false);
+  const [pollCountdown, setPollCountdown] = useState(60);
+
   const [manualCode, setManualCode] = useState("");
   const [manualError, setManualError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
@@ -37,6 +44,13 @@ export default function MpesaPayment({
     phoneNumber: string;
     customerName: string;
   } | null>(null);
+
+  // Sync moneyPaidInput when amount prop changes
+  useEffect(() => {
+    if (amount) {
+      setMoneyPaidInput(amount.toString());
+    }
+  }, [amount]);
 
   // Pre-payment detection state
   const [prePayments, setPrePayments] = useState<{
@@ -50,6 +64,74 @@ export default function MpesaPayment({
   const [prePayChecking, setPrePayChecking] = useState(false);
   const [prePayChecked, setPrePayChecked] = useState(false);
   const [selectedPrePay, setSelectedPrePay] = useState<string | null>(null);
+
+  // Fetch unlinked payment by money paid
+  const fetchByAmount = async (quiet = false) => {
+    const val = parseFloat(moneyPaidInput);
+    if (isNaN(val) || val <= 0) {
+      setFetchAmountError("Enter a valid money paid amount");
+      return;
+    }
+
+    if (!quiet) setIsFetchingAmount(true);
+    setFetchAmountError("");
+
+    try {
+      let queryUrl = `/api/mpesa/prepayment?amount=${val}`;
+      if (amountFetchPhone.trim()) {
+        queryUrl += `&phone=${encodeURIComponent(amountFetchPhone.trim())}`;
+      }
+      const res = await fetch(queryUrl);
+      const data = await res.json();
+      const payments = data.payments || [];
+
+      setPrePayments(payments);
+      setPrePayChecked(true);
+
+      if (payments.length === 1) {
+        // Single match found: auto-complete!
+        const tx = payments[0];
+        applyPrePayment(tx.id, tx.mpesa_receipt_number, tx.phone_number);
+      } else if (payments.length > 1) {
+        setIsPollingAmount(false);
+      } else if (!quiet) {
+        // No payment found yet -> start polling automatically
+        setIsPollingAmount(true);
+        setPollCountdown(60);
+      }
+    } catch (err) {
+      if (!quiet) setFetchAmountError("Failed to fetch payment. Please try again.");
+    } finally {
+      if (!quiet) setIsFetchingAmount(false);
+    }
+  };
+
+  // Live polling for payment by amount
+  useEffect(() => {
+    if (!isPollingAmount || status !== "idle" || inputMode !== "amount_fetch") return;
+
+    let active = true;
+    const interval = setInterval(async () => {
+      if (!active) return;
+      await fetchByAmount(true);
+    }, 3000);
+
+    const timer = setInterval(() => {
+      setPollCountdown((prev) => {
+        if (prev <= 1) {
+          setIsPollingAmount(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      clearInterval(timer);
+    };
+  }, [isPollingAmount, status, inputMode, moneyPaidInput, amountFetchPhone]);
 
   const handleManualConfirm = async () => {
     const code = manualCode.trim().toUpperCase();
@@ -405,42 +487,189 @@ export default function MpesaPayment({
         </div>
 
         {status === "idle" && (
-          <div className="flex flex-col space-y-5 flex-1">
-            {/* Toggle Switches for STK Push / Enter Code */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">STK Push</span>
-                <button
-                  onClick={() => setInputMode("stk")}
-                  className={cn(
-                    "relative w-12 h-6 rounded-full transition-colors",
-                    inputMode === "stk" ? "bg-[#0d7a3e] dark:bg-[#4ade80]" : "bg-gray-300 dark:bg-gray-600"
-                  )}
-                >
-                  <div className={cn(
-                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform",
-                    inputMode === "stk" ? "left-6" : "left-0.5"
-                  )} />
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Enter Code</span>
-                <button
-                  onClick={() => setInputMode("manual")}
-                  className={cn(
-                    "relative w-12 h-6 rounded-full transition-colors",
-                    inputMode === "manual" ? "bg-[#0d7a3e] dark:bg-[#4ade80]" : "bg-gray-300 dark:bg-gray-600"
-                  )}
-                >
-                  <div className={cn(
-                    "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform",
-                    inputMode === "manual" ? "left-6" : "left-0.5"
-                  )} />
-                </button>
-              </div>
+          <div className="flex flex-col space-y-4 flex-1">
+            {/* 3 Mode Navigation Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-[#0f1117] rounded-xl border border-gray-200 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => { setInputMode("amount_fetch"); setPrePayChecked(false); setIsPollingAmount(false); }}
+                className={cn(
+                  "py-2.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                  inputMode === "amount_fetch"
+                    ? "bg-white dark:bg-[#1a1f2e] text-[#0d7a3e] dark:text-[#4ade80] shadow-sm border border-gray-200/50 dark:border-gray-700/50"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                )}
+              >
+                <span>💸 Money Paid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setInputMode("stk"); setIsPollingAmount(false); }}
+                className={cn(
+                  "py-2.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                  inputMode === "stk"
+                    ? "bg-white dark:bg-[#1a1f2e] text-[#0d7a3e] dark:text-[#4ade80] shadow-sm border border-gray-200/50 dark:border-gray-700/50"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                )}
+              >
+                <span>📱 STK Push</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setInputMode("manual"); setIsPollingAmount(false); }}
+                className={cn(
+                  "py-2.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+                  inputMode === "manual"
+                    ? "bg-white dark:bg-[#1a1f2e] text-[#0d7a3e] dark:text-[#4ade80] shadow-sm border border-gray-200/50 dark:border-gray-700/50"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                )}
+              >
+                <span>🔤 Enter Code</span>
+              </button>
             </div>
 
-            {inputMode === "stk" ? (
+            {/* MODE 1: FETCH BY MONEY PAID */}
+            {inputMode === "amount_fetch" && (
+              <div className="flex flex-col space-y-4 flex-1">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                      Money Paid by Customer (KES)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={moneyPaidInput}
+                      onChange={(e) => {
+                        setMoneyPaidInput(e.target.value);
+                        setFetchAmountError("");
+                        setPrePayChecked(false);
+                        setIsPollingAmount(false);
+                      }}
+                      placeholder="e.g. 500"
+                      className={cn(
+                        "w-full bg-gray-50 dark:bg-[#0f1117] border rounded-xl py-3 px-4 text-gray-900 dark:text-white font-mono font-bold text-lg focus:outline-none transition-colors",
+                        fetchAmountError ? "border-red-500" : "border-gray-200 dark:border-gray-700 focus:border-[#0d7a3e] dark:focus:border-[#4ade80]"
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">
+                      Customer Phone Number (Optional)
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={amountFetchPhone}
+                        onChange={(e) => {
+                          setAmountFetchPhone(e.target.value);
+                          setPrePayChecked(false);
+                        }}
+                        placeholder="e.g. 0712345678"
+                        className="w-full bg-gray-50 dark:bg-[#0f1117] border border-gray-200 dark:border-gray-700 rounded-xl py-3 pl-11 pr-4 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#0d7a3e] dark:focus:border-[#4ade80]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {fetchAmountError && (
+                  <p className="text-sm text-red-500 flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" />{fetchAmountError}
+                  </p>
+                )}
+
+                {/* Polling state banner */}
+                {isPollingAmount && (
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 border border-green-300 dark:border-green-800 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-600"></span>
+                        </span>
+                        <p className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
+                          Listening for KES {moneyPaidInput} payment...
+                        </p>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-green-600 dark:text-green-400">{pollCountdown}s</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                      Asking the customer to complete payment on their phone. Once M-Pesa completes, sale will finish automatically.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsPollingAmount(false)}
+                      className="text-xs text-red-500 hover:underline font-semibold"
+                    >
+                      Stop Auto-Listening
+                    </button>
+                  </div>
+                )}
+
+                {/* Multiple matching transactions found */}
+                {prePayChecked && prePayments.length > 1 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Found {prePayments.length} matching payments for KES {moneyPaidInput}:
+                    </p>
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {prePayments.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                              <span className="text-sm font-bold text-green-700 dark:text-green-400">{formatCurrency(tx.amount)}</span>
+                              <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{tx.mpesa_receipt_number}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              {tx.customer_name || "M-Pesa Customer"} ({tx.phone_number}) · {timeAgo(tx.created_at)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applyPrePayment(tx.id, tx.mpesa_receipt_number, tx.phone_number)}
+                            className="shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap shadow-sm"
+                          >
+                            Complete Sale ✓
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 0 matching transactions found */}
+                {prePayChecked && prePayments.length === 0 && !isPollingAmount && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
+                    <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                      No unlinked payment found for KES {moneyPaidInput} in the database yet.
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  Type the money paid by customer. The system automatically searches for matching incoming M-Pesa payments and completes the sale.
+                </p>
+
+                {/* Fetch Action Button */}
+                <div className="mt-auto pt-2">
+                  <button
+                    type="button"
+                    onClick={() => fetchByAmount(false)}
+                    disabled={isFetchingAmount}
+                    className="w-full py-4 rounded-2xl font-bold text-white transition-all active:scale-[0.98] bg-[#0d7a3e] dark:bg-[#4ade80] dark:text-[#0f1117] hover:bg-[#0a6332] dark:hover:bg-[#22c55e] shadow-lg dark:shadow-[0_0_25px_rgba(74,222,128,0.3)] flex items-center justify-center gap-2"
+                  >
+                    {isFetchingAmount && <Loader2 className="w-5 h-5 animate-spin" />}
+                    {isFetchingAmount ? "Fetching Payment..." : `Fetch & Complete Sale (KES ${moneyPaidInput || "0"})`}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MODE 2: STK PUSH */}
+            {inputMode === "stk" && (
               <div className="flex flex-col space-y-4 flex-1">
                 {/* Phone Input */}
                 <div className="relative">
@@ -468,52 +697,6 @@ export default function MpesaPayment({
                   </p>
                 )}
 
-                {/* ── PRE-PAYMENT DETECTION SECTION ── */}
-                {phone.replace(/\D/g, "").length >= 9 && (
-                  <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-3 space-y-2 bg-gray-50/50 dark:bg-gray-800/20">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Customer Pre-Paid?</p>
-                      <button
-                        type="button"
-                        onClick={checkPrePayment}
-                        disabled={prePayChecking}
-                        className="text-xs px-3 py-1.5 bg-[#0d7a3e] hover:bg-[#0a6332] text-white font-bold rounded-lg flex items-center gap-1.5 disabled:opacity-50 transition-colors"
-                      >
-                        {prePayChecking ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                        {prePayChecking ? "Checking..." : "Check Pre-Payment"}
-                      </button>
-                    </div>
-
-                    {prePayChecked && prePayments.length === 0 && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-1">
-                        No pre-payment found for this number in the last 4 hours.
-                      </p>
-                    )}
-
-                    {prePayments.map(tx => (
-                      <div key={tx.id} className="flex items-center justify-between gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                            <span className="text-sm font-bold text-green-700 dark:text-green-400">{formatCurrency(tx.amount)}</span>
-                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{tx.mpesa_receipt_number}</span>
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {tx.customer_name || "Unknown"} · {timeAgo(tx.created_at)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => applyPrePayment(tx.id, tx.mpesa_receipt_number, tx.phone_number)}
-                          className="shrink-0 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
-                        >
-                          Apply ✓
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                   A payment prompt (STK Push) will be sent instantly to the phone number entered above.
                 </p>
@@ -527,7 +710,10 @@ export default function MpesaPayment({
                   </button>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {/* MODE 3: ENTER CODE */}
+            {inputMode === "manual" && (
               <div className="flex flex-col space-y-4 flex-1">
                 {checkoutRequestId && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-xl text-left">
